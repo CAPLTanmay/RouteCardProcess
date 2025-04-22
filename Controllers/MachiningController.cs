@@ -16,17 +16,18 @@ namespace RouteCardProcess.Controllers
         }
 
         [HttpPost("check-or-create")]
-        public async Task<IActionResult> CheckOrCreateMachining([FromBody] MachiningMaster request)
+        public async Task<IActionResult> CheckOrCreateMachining([FromBody] MachiningDto request)
         {
+            // You could add logic here to check for an existing Machining if needed
             var existing = await _repo.GetByCompositeKeyAsync(request.WorkCenterNo, request.WorkOrderNo, request.OperationNo);
 
             if (existing != null)
             {
-                return Ok(new { message = "Machining already exists", machiningId = existing.MachiningID, machining = existing });
+                return Ok(new { message = "Machining already exists", machiningID = existing.MachiningID, machining = existing });
             }
 
-            var created = await _repo.CreateMachiningAsync(request);
-            return Ok(new { message = "New machiningId created", machiningId = created.MachiningID, machining = created });
+            var created = await _repo.CreateMachiningAsync(request);  // Call repository to handle the logic
+            return Ok(new { message = "New machining ID created", machiningID = created.MachiningID, machining = created });
         }
 
         [HttpPost("start-machining")]

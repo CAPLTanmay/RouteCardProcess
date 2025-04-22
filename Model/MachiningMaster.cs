@@ -1,5 +1,14 @@
 ﻿namespace RouteCardProcess.Model
 {
+    public class MachiningDto
+    {
+        public string? WorkCenterNo { get; set; }
+        public string? WorkOrderNo { get; set; }
+        public string? OperationNo { get; set; }
+        public string? OperatorId { get; set; }
+        public double IdealTime { get; set; } // IdealTime in minutes (converted to TimeSpan)
+    }
+
     public class MachiningMaster
     {
         public string? MachiningID { get; set; }

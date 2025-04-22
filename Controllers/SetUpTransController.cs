@@ -16,7 +16,7 @@ namespace RouteCardProcess.Controllers
         }
 
         [HttpPost("check-or-create")]
-        public async Task<IActionResult> CheckOrCreateSetup([FromBody] SetupMaster request)
+        public async Task<IActionResult> CheckOrCreateSetup([FromBody] SetupMasterDto request)
         {
             var existing = await _repo.GetByCompositeKeyAsync(request.WorkCenterNo, request.WorkOrderNo, request.OperationNo);
 
@@ -25,9 +25,10 @@ namespace RouteCardProcess.Controllers
                 return Ok(new { message = "Setup already exists", setUpID = existing.SetUpID, setup = existing });
             }
 
-            var created = await _repo.CreateSetupAsync(request);
-            return Ok(new { message = "New setupId created",setUpId=created.SetUpID, setup = created });
+            var created = await _repo.CreateSetupAsync(request);  // Call repository to handle the logic
+            return Ok(new { message = "New setupId created", setUpId = created.SetUpID, setup = created });
         }
+
 
         [HttpPost("start-setup")]
         public async Task<IActionResult> StartSetup([FromBody] SetupIdentifierRequest request)

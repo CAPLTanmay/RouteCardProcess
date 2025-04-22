@@ -2,6 +2,14 @@
 
 namespace RouteCardProcess.Model
 {
+    public class SetupMasterDto
+    {
+        public string? WorkCenterNo { get; set; }
+        public string? WorkOrderNo { get; set; }
+        public string? OperationNo { get; set; }
+        public string? OperatorId { get; set; }
+        public double IdealTime { get; set; } 
+    }
     public class SetupMaster
     {
         public string ?SetUpID { get; set; }
@@ -14,7 +22,6 @@ namespace RouteCardProcess.Model
         public DateTime OperatorStartTime { get; set; }
         public DateTime OperatorEndTime { get; set; }
     }
-
     public class SetupIdentifierRequest
     {
         public string SetUpID { get; set; }
@@ -24,15 +31,12 @@ namespace RouteCardProcess.Model
         public string SetUpID { get; set; }
         public string? PauseCode { get; set; }
     }
-
     public class SetupDelayRequest
     {
         public string SetUpID { get; set; }
         public string SetUpStatus { get; set; }
         public List<DelayRequest> Delays { get; set; }
     }
-
-
     public class DelayRequest
     {
         public string DelayReasonCode { get; set; }

@@ -21,17 +21,20 @@ namespace RouteCardProcess.Repositories
             return await connection.QueryFirstOrDefaultAsync<SetupMaster>(sql, new { workCenterNo, workOrderNo, operationNo });
         }
 
-        public async Task<SetupMaster> CreateSetupAsync(SetupMaster request)
+        public async Task<SetupMaster> CreateSetupAsync(SetupMasterDto request)
         {
+            // Convert IdealTime to TimeSpan in the repository
+            TimeSpan idealTime = ConvertMinutesToTimeSpan(request.IdealTime);
+
+            // Create SetupMaster object
             var setupId = Guid.NewGuid().ToString().Substring(0, 8);
             using var connection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
 
-
             var sql = @"INSERT INTO SetUp_Trans_Master
-                        (OperatorId, WorkCenterNo, WorkOrderNo, OperationNo, SetUpID, IdealTime, SetupStatus, OperatorStartTime, OperatorEndTime)
-                        OUTPUT INSERTED.*
-                        VALUES
-                        (@OperatorId, @WorkCenterNo, @WorkOrderNo, @OperationNo, @SetUpID, @IdealTime, @SetupStatus, @OperatorStartTime, @OperatorEndTime)";
+                    (OperatorId, WorkCenterNo, WorkOrderNo, OperationNo, SetUpID, IdealTime, SetupStatus, OperatorStartTime, OperatorEndTime)
+                    OUTPUT INSERTED.*
+                    VALUES
+                    (@OperatorId, @WorkCenterNo, @WorkOrderNo, @OperationNo, @SetUpID, @IdealTime, @SetupStatus, @OperatorStartTime, @OperatorEndTime)";
 
             var parameters = new
             {
@@ -40,7 +43,7 @@ namespace RouteCardProcess.Repositories
                 request.WorkOrderNo,
                 request.OperationNo,
                 SetUpID = setupId,
-                request.IdealTime,
+                IdealTime = idealTime,  // TimeSpan here
                 SetupStatus = "Setup Not Start",
                 OperatorStartTime = (DateTime?)null,
                 OperatorEndTime = (DateTime?)null,
@@ -49,7 +52,17 @@ namespace RouteCardProcess.Repositories
             return await connection.QuerySingleAsync<SetupMaster>(sql, parameters);
         }
 
-        public async Task<string> StartSetupAsync(string setUpId)
+        // Helper method to convert minutes to TimeSpan
+        private TimeSpan ConvertMinutesToTimeSpan(double minutes)
+        {
+            int totalMinutes = (int)minutes;
+            int hours = totalMinutes / 60;
+            int mins = totalMinutes % 60;
+            return new TimeSpan(hours, mins, 0);
+        }
+    
+
+    public async Task<string> StartSetupAsync(string setUpId)
         {
             using var connection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
             await connection.OpenAsync();
@@ -64,8 +77,9 @@ namespace RouteCardProcess.Repositories
                 if (setup == null)
                     return "Setup not found";
 
-                if (setup.SetupStatus != "Setup Not Start")
+               /* if (setup.SetupStatus != "Setup Not Start")
                     return "Setup already started or invalid status";
+               comment just for testing*/
 
                 var now = DateTime.Now;
 

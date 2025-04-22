@@ -21,16 +21,20 @@ namespace RouteCardProcess.Repositories
             return await connection.QueryFirstOrDefaultAsync<MachiningMaster>(sql, new { workCentreNo, workOrderNo, operationNo });
         }
 
-        public async Task<MachiningMaster> CreateMachiningAsync(MachiningMaster request)
+        public async Task<MachiningMaster> CreateMachiningAsync(MachiningDto request)
         {
+            // Convert IdealTime to TimeSpan in the repository
+            TimeSpan idealTime = ConvertMinutesToTimeSpan(request.IdealTime);
+
+            // Create Machining object
             var machiningId = Guid.NewGuid().ToString().Substring(0, 8);
             using var connection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
 
             var sql = @"INSERT INTO Machining_Trans_Master
-                        (OperatorId, WorkCentreNo, WorkOrderNo, OperationNo, MachiningID, IdealTime, MachiningStatus, OperatorStartTime, OperatorEndTime)
-                        OUTPUT INSERTED.*
-                        VALUES
-                        (@OperatorId, @WorkCentreNo, @WorkOrderNo, @OperationNo, @MachiningID, @IdealTime, @MachiningStatus, @OperatorStartTime, @OperatorEndTime)";
+                    (OperatorId, WorkCenterNo, WorkOrderNo, OperationNo, MachiningID, IdealTime, SetupStatus, OperatorStartTime, OperatorEndTime)
+                    OUTPUT INSERTED.*
+                    VALUES
+                    (@OperatorId, @WorkCenterNo, @WorkOrderNo, @OperationNo, @MachiningID, @IdealTime, @SetupStatus, @OperatorStartTime, @OperatorEndTime)";
 
             var parameters = new
             {
@@ -39,13 +43,22 @@ namespace RouteCardProcess.Repositories
                 request.WorkOrderNo,
                 request.OperationNo,
                 MachiningID = machiningId,
-                request.IdealTime,
-                MachiningStatus = "Machining Not Start",
+                IdealTime = idealTime,  // TimeSpan here
+                SetupStatus = "Machining Not Started",
                 OperatorStartTime = (DateTime?)null,
                 OperatorEndTime = (DateTime?)null,
             };
 
             return await connection.QuerySingleAsync<MachiningMaster>(sql, parameters);
+        }
+
+        // Helper method to convert minutes to TimeSpan
+        private TimeSpan ConvertMinutesToTimeSpan(double minutes)
+        {
+            int totalMinutes = (int)minutes;
+            int hours = totalMinutes / 60;
+            int mins = totalMinutes % 60;
+            return new TimeSpan(hours, mins, 0);
         }
 
         public async Task<string> StartMachiningAsync(string machiningId)
