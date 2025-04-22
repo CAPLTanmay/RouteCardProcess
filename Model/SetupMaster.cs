@@ -9,7 +9,6 @@ namespace RouteCardProcess.Model
         public string WorkOrderNo { get; set; }
         public string OperationNo { get; set; }
         public string OperatorId { get; set; }
-
         public TimeSpan? IdealTime { get; set; }
         public string ?SetupStatus { get; set; }
         public DateTime OperatorStartTime { get; set; }
