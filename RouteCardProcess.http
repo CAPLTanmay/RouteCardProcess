@@ -1,0 +1,6 @@
+@RouteCardProcess_HostAddress = http://localhost:5070
+
+GET {{RouteCardProcess_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
