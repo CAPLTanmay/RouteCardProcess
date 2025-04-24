@@ -15,7 +15,21 @@ namespace RouteCardProcess.Repositories
         public async Task<IEnumerable<LogInMaster>> GetAllAsync()
         {
             using var connection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
-            var sql = "SELECT TOP 1000 * FROM LogInMaster";
+            var sql = @"
+        SELECT TOP (1000) 
+              lm.[SrNo],
+              lm.[OperatorId],
+              lm.[OperatorName],
+              lm.[Password],
+              lm.[Role],
+              lm.[Extra1],
+              lm.[Extra2],
+              lm.[DepartmentId],
+              dm.[DepartmentName]
+        FROM [RouteCardProcess].[dbo].[LogInMaster] lm
+        LEFT JOIN [RouteCardProcess].[dbo].[DepartmentMaster] dm
+            ON lm.DepartmentId = dm.DepartmentId";
+
             return await connection.QueryAsync<LogInMaster>(sql);
         }
 
@@ -31,8 +45,13 @@ namespace RouteCardProcess.Repositories
         public async Task<LogInMaster?> ValidateLoginAsync(string operatorId, string password)
         {
             using var connection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
-            var sql = @"SELECT * FROM LogInMaster 
-                WHERE OperatorId = @OperatorId AND Password = @Password";
+            var sql = @"
+        SELECT 
+            lm.*, 
+            dm.DepartmentName
+        FROM LogInMaster lm
+        LEFT JOIN DepartmentMaster dm ON lm.DepartmentId = dm.DepartmentId
+        WHERE lm.OperatorId = @OperatorId AND lm.Password = @Password";
             return await connection.QueryFirstOrDefaultAsync<LogInMaster>(sql, new { OperatorId = operatorId, Password = password });
         }
 

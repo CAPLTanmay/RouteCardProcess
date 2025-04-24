@@ -1,4 +1,5 @@
-﻿using Dapper;
+﻿using System.Collections.Generic;
+using Dapper;
 using Microsoft.Data.SqlClient;
 using RouteCardProcess.Model;
 
@@ -23,18 +24,16 @@ namespace RouteCardProcess.Repositories
 
         public async Task<SetupMaster> CreateSetupAsync(SetupMasterDto request)
         {
-            // Convert IdealTime to TimeSpan in the repository
             TimeSpan idealTime = ConvertMinutesToTimeSpan(request.IdealTime);
-
-            // Create SetupMaster object
             var setupId = Guid.NewGuid().ToString().Substring(0, 8);
+
             using var connection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
 
             var sql = @"INSERT INTO SetUp_Trans_Master
-                    (OperatorId, WorkCenterNo, WorkOrderNo, OperationNo, SetUpID, IdealTime, SetupStatus, OperatorStartTime, OperatorEndTime)
-                    OUTPUT INSERTED.*
-                    VALUES
-                    (@OperatorId, @WorkCenterNo, @WorkOrderNo, @OperationNo, @SetUpID, @IdealTime, @SetupStatus, @OperatorStartTime, @OperatorEndTime)";
+                (OperatorId, WorkCenterNo, WorkOrderNo, OperationNo, SetUpID, IdealTime, SetupStatus, OperatorStartTime, OperatorEndTime)
+                OUTPUT INSERTED.*
+                VALUES
+                (@OperatorId, @WorkCenterNo, @WorkOrderNo, @OperationNo, @SetUpID, @IdealTime, @SetupStatus, @OperatorStartTime, @OperatorEndTime)";
 
             var parameters = new
             {
@@ -43,13 +42,27 @@ namespace RouteCardProcess.Repositories
                 request.WorkOrderNo,
                 request.OperationNo,
                 SetUpID = setupId,
-                IdealTime = idealTime,  // TimeSpan here
+                IdealTime = idealTime,
                 SetupStatus = "Setup Not Start",
                 OperatorStartTime = (DateTime?)null,
                 OperatorEndTime = (DateTime?)null,
             };
 
-            return await connection.QuerySingleAsync<SetupMaster>(sql, parameters);
+            try
+            {
+                return await connection.QuerySingleAsync<SetupMaster>(sql, parameters);
+            }
+            catch (SqlException ex)
+            {
+                // Check for Foreign Key violation (SQL error code 547)
+                if (ex.Number == 547 && ex.Message.Contains("FK_SetUp_Trans_Master_LogInMaster"))
+                {
+                    throw new Exception("Invalid Operator ID");
+                }
+
+                // Re-throw other errors
+                throw;
+            }
         }
 
         // Helper method to convert minutes to TimeSpan
@@ -60,9 +73,8 @@ namespace RouteCardProcess.Repositories
             int mins = totalMinutes % 60;
             return new TimeSpan(hours, mins, 0);
         }
-    
 
-    public async Task<string> StartSetupAsync(string setUpId)
+        public async Task<string> StartSetupAsync(string setUpId)
         {
             using var connection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
             await connection.OpenAsync();
@@ -77,9 +89,9 @@ namespace RouteCardProcess.Repositories
                 if (setup == null)
                     return "Setup not found";
 
-               /* if (setup.SetupStatus != "Setup Not Start")
-                    return "Setup already started or invalid status";
-               comment just for testing*/
+                /* if (setup.SetupStatus != "Setup Not Start")
+                     return "Setup already started or invalid status";
+                comment just for testing*/
 
                 var now = DateTime.Now;
 
@@ -233,7 +245,14 @@ namespace RouteCardProcess.Repositories
                         }, transaction);
                 }
 
-                // Step 3: If SetupStatus is 'Complete', update SetupEndTime
+                // Step 3: Update SetupStatus in SetUp_Trans_Master
+                await connection.ExecuteAsync(@"
+            UPDATE SetUp_Trans_Master
+            SET SetupStatus = @SetupStatus
+            WHERE SetUpID = @SetUpID",
+                    new { request.SetUpStatus, SetUpID = request.SetUpID }, transaction);
+
+                // Step 4: If SetupStatus is 'Complete', update SetupEndTime
                 if (request.SetUpStatus == "Complete")
                 {
                     await connection.ExecuteAsync(@"

@@ -25,9 +25,23 @@ namespace RouteCardProcess.Controllers
                 return Ok(new { message = "Setup already exists", setUpID = existing.SetUpID, setup = existing });
             }
 
-            var created = await _repo.CreateSetupAsync(request);  // Call repository to handle the logic
-            return Ok(new { message = "New setupId created", setUpId = created.SetUpID, setup = created });
+            try
+            {
+                var created = await _repo.CreateSetupAsync(request);
+                return Ok(new { message = "New setupId created", setUpId = created.SetUpID, setup = created });
+            }
+            catch (Exception ex)
+            {
+                if (ex.Message == "Invalid Operator ID")
+                {
+                    return BadRequest(new { message = ex.Message });
+                }
+
+                // Optional: Log the full exception
+                return StatusCode(500, new { message = "An unexpected error occurred.", error = ex.Message });
+            }
         }
+
 
 
         [HttpPost("start-setup")]
