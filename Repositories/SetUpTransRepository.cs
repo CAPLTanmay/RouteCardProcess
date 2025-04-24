@@ -66,13 +66,23 @@ namespace RouteCardProcess.Repositories
         }
 
         // Helper method to convert minutes to TimeSpan
-        private TimeSpan ConvertMinutesToTimeSpan(double minutes)
+        private TimeSpan ConvertMinutesToTimeSpan(string minutes)
         {
-            int totalMinutes = (int)minutes;
-            int hours = totalMinutes / 60;
-            int mins = totalMinutes % 60;
-            return new TimeSpan(hours, mins, 0);
+            // Try to parse the string to double
+            if (double.TryParse(minutes.Trim(), out double parsedMinutes))
+            {
+                int totalMinutes = (int)parsedMinutes;
+                int hours = totalMinutes / 60;
+                int mins = totalMinutes % 60;
+                return new TimeSpan(hours, mins, 0);
+            }
+            else
+            {
+                // You can handle invalid format however you'd like. Throwing an exception for now.
+                throw new ArgumentException("Invalid minutes format");
+            }
         }
+
 
         public async Task<string> StartSetupAsync(string setUpId)
         {

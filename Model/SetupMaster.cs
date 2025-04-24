@@ -8,7 +8,7 @@ namespace RouteCardProcess.Model
         public string? WorkOrderNo { get; set; }
         public string? OperationNo { get; set; }
         public string? OperatorId { get; set; }
-        public double IdealTime { get; set; } 
+        public string IdealTime { get; set; } 
     }
     public class SetupMaster
     {
