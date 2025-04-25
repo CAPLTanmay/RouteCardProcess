@@ -37,16 +37,33 @@
         public string? PauseCode { get; set; }
     }
 
+    public class AddQuantity
+    {
+        public string MachiningId { get; set; }
+        public string? TotalQty { get; set; }
+        public List<QuantityList> QuantityList{ get; set; }
+    }
+
+    public class QuantityList
+    {
+        public string MachiningStatus { get; set; }
+        public string ProcessedQty { get; set; }
+    }
+
+
     public class MachiningDelayRequest
     {
         public string MachiningId { get; set; }
-        public string MachiningStatus { get; set; }
-        public List<DelayRequest> Delays { get; set; }
+        public TimeSpan? TotalDelayedTime  { get; set; }
+        public string? TotalQty { get; set; }
+        public List<MachiningDelayReasonCode> Delays { get; set; }
     }
 
     public class MachiningDelayReasonCode
     {
-        public string DelayReasonCode { get; set; }
+        public string ProcessedQty { get; set; }
         public TimeSpan DelayTime { get; set; }
+        public string DelayReasonCode { get; set; }
+       
     }
 }

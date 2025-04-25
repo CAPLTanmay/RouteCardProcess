@@ -131,7 +131,10 @@ namespace RouteCardProcess.Repositories
                 await connection.ExecuteAsync(
                     @"INSERT INTO Machining_Details_Master (MachiningID, MachiningStartTime,TotalQty,ProcessedQty)
                       VALUES (@MachiningID, @MachiningStartTime,@TotalQty,@ProcessedQty)",
-                    new { MachiningID = machiningId, MachiningStartTime = now,
+                    new
+                    {
+                        MachiningID = machiningId,
+                        MachiningStartTime = now,
                         TotalQty = machining.TotalQty,
                         ProcessedQty = machining.ProcessedQty ?? 0
                     }, transaction);
@@ -228,66 +231,85 @@ namespace RouteCardProcess.Repositories
 
             return rowsAffected > 0;
         }
-        public async Task<bool> InsertDelaysAsync(MachiningDelayRequest request)
+
+        public async Task<bool> AddQuantitiesAsync(AddQuantity request)
         {
             using var connection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
             await connection.OpenAsync();
-            using var transaction = connection.BeginTransaction();
 
-            try
+            string getOperatorSql = @"
+            SELECT OperatorId 
+            FROM Machining_Trans_Master 
+            WHERE MachiningId = @MachiningId";
+
+            var operatorId = await connection.ExecuteScalarAsync<string>(getOperatorSql, new { request.MachiningId });
+
+            string sql = @"
+            INSERT INTO Qty_Bifurcation_Details 
+            (MachiningId, OperatorId, TotalQty, ProcessedQty, ProcessedQtyTime, QtyStatus)
+            VALUES 
+            (@MachiningId, @OperatorId, @TotalQty, @ProcessedQty, GETDATE(), @QtyStatus)";
+
+            
+            foreach (var item in request.QuantityList)
             {
-                var machining = await connection.QueryFirstOrDefaultAsync<dynamic>(
-                    @"SELECT OperatorId, MachiningStatus FROM Machining_Trans_Master WHERE MachiningID = @MachiningID",
-                    new { request.MachiningId }, transaction);
-
-                if (machining == null) return false;
-
-                TimeSpan totalDelay = TimeSpan.Zero;
-                foreach (var delay in request.Delays)
+                var parameters = new
                 {
-                    totalDelay += delay.DelayTime;
-                }
+                    MachiningId = request.MachiningId,
+                    OperatorId = operatorId,
+                    TotalQty = request.TotalQty,
+                    ProcessedQty = item.ProcessedQty,
+                    QtyStatus = item.MachiningStatus
+                };
 
-                foreach (var delay in request.Delays)
-                {
-                    await connection.ExecuteAsync(@"
-                        INSERT INTO Machining_Delay_Master 
-                        (MachiningID, OperatorId, MachiningStatus, DelayReasonCode, DelayTime, TotalDelayedTime)
-                        VALUES 
-                        (@MachiningID, @OperatorId, @MachiningStatus, @DelayReasonCode, @DelayTime, @TotalDelayedTime)",
-                        new
-                        {
-                            MachiningID = request.MachiningId,
-                            OperatorId = machining.OperatorId,
-                            MachiningStatus = request.MachiningStatus,
-                            delay.DelayReasonCode,
-                            delay.DelayTime,
-                            TotalDelayedTime = totalDelay.ToString()
-                        }, transaction);
-                }
-
-                if (request.MachiningStatus == "Complete")
-                {
-                    await connection.ExecuteAsync(@"
-                        UPDATE Machining_Trans_Details_Master
-                        SET MachiningEndTime = @EndTime
-                        WHERE MachiningID = @MachiningID",
-                        new
-                        {
-                            EndTime = DateTime.Now,
-                            MachiningID = request.MachiningId
-                        }, transaction);
-                }
-
-                transaction.Commit();
-                return true;
+                await connection.ExecuteAsync(sql, parameters);
             }
-            catch
-            {
-                transaction.Rollback();
-                throw;
-            }
+
+            return true;
         }
+
+        public async Task<bool> AddMachiningDelaysAsync(MachiningDelayRequest request)
+        {
+            using var connection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
+            await connection.OpenAsync();
+
+            // Step 1: Get OperatorId from Machining_Trans_Master
+            string getOperatorSql = @"
+            SELECT OperatorId 
+            FROM Machining_Trans_Master 
+            WHERE MachiningId = @MachiningId";
+
+            var operatorId = await connection.ExecuteScalarAsync<string>(getOperatorSql, new { request.MachiningId });
+
+            if (string.IsNullOrEmpty(operatorId))
+                throw new Exception("OperatorId not found for the given MachiningId");
+
+            // Step 2: Insert into Machining_Delay_Master
+            string insertSql = @"
+            INSERT INTO Machining_Delay_Master 
+            (MachiningId, OperatorId, MachiningStatus, TotalDelayedTime, ProcessQty, ProcessQtyDelayTime, ReasonCode)
+            VALUES 
+            (@MachiningId, @OperatorId, @MachiningStatus, @TotalDelayedTime, @ProcessedQty, @ProcessQtyDelayTime, @ReasonCode)";
+
+            foreach (var delay in request.Delays)
+            {
+                var parameters = new
+                {
+                    MachiningId = request.MachiningId,
+                    OperatorId = operatorId,
+                    MachiningStatus = "Delayed", // Adjust this based on your logic
+                    TotalDelayedTime = request.TotalDelayedTime,
+                    ProcessedQty = delay.ProcessedQty,
+                    ProcessQtyDelayTime = delay.DelayTime,
+                    ReasonCode = delay.DelayReasonCode
+                };
+
+                await connection.ExecuteAsync(insertSql, parameters);
+            }
+
+            return true;
+        }
+
 
     }
 }

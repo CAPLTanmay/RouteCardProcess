@@ -77,11 +77,24 @@ namespace RouteCardProcess.Controllers
             return NotFound(new { message = "Machining record not found." });
         }
 
+        [HttpPost("add-quantity")]
+        public async Task<IActionResult> AddQuantity([FromBody] AddQuantity request)
+        {
+            if (request == null || request.QuantityList == null || !request.QuantityList.Any())
+                return BadRequest("Invalid input");
+
+            var result = await _repo.AddQuantitiesAsync(request);
+            return result ? Ok("Inserted successfully") : StatusCode(500, "Insertion failed");
+        }
+
         [HttpPost("add-delays")]
         public async Task<IActionResult> AddDelays([FromBody] MachiningDelayRequest request)
         {
-            var result = await _repo.InsertDelaysAsync(request);
-            return result ? Ok(new { message = "Delays added successfully" }) : BadRequest(new { message = "Failed to add delays" });
+            if (request == null || request.Delays == null || !request.Delays.Any())
+                return BadRequest("Invalid input");
+
+            var result = await _repo.AddMachiningDelaysAsync(request);
+            return result ? Ok("Delays inserted successfully") : StatusCode(500, "Insertion failed");
         }
     }
 }
