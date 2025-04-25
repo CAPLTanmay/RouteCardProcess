@@ -26,8 +26,22 @@ namespace RouteCardProcess.Controllers
                 return Ok(new { message = "Machining already exists", machiningID = existing.MachiningID, machining = existing });
             }
 
-            var created = await _repo.CreateMachiningAsync(request);  // Call repository to handle the logic
-            return Ok(new { message = "New machining ID created", machiningID = created.MachiningID, machining = created });
+            try
+            {
+                var created = await _repo.CreateMachiningAsync(request);
+                return Ok(new { message = "New machining created", machiningID = created.MachiningID, machining = created });
+            }
+            catch (Exception ex)
+            {
+                if (ex.Message == "Invalid Operator ID")
+                {
+                    return BadRequest(new { message = ex.Message });
+                }
+
+                // Optional: Log the full exception
+                return StatusCode(500, new { message = "An unexpected error occurred.", error = ex.Message });
+            }
+
         }
 
         [HttpPost("start-machining")]

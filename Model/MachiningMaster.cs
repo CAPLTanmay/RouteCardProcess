@@ -6,7 +6,9 @@
         public string? WorkOrderNo { get; set; }
         public string? OperationNo { get; set; }
         public string? OperatorId { get; set; }
-        public double IdealTime { get; set; } // IdealTime in minutes (converted to TimeSpan)
+        public int? TotalQty { get; set; }
+        public int? ProcessedQty {  get; set; }
+        public string IdealTime { get; set; } // IdealTime in minutes (converted to TimeSpan)
     }
 
     public class MachiningMaster
@@ -20,6 +22,8 @@
         public string? MachiningStatus { get; set; }
         public DateTime OperatorStartTime { get; set; }
         public DateTime OperatorEndTime { get; set; }
+        public int TotalQty { get; set; }
+        public int ProcessedQty { get; set; }
     }
 
     public class MachiningIdentifierRequest
