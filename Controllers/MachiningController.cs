@@ -23,13 +23,13 @@ namespace RouteCardProcess.Controllers
 
             if (existing != null)
             {
-                return Ok(new { message = "Machining already exists", machiningID = existing.MachiningID, machining = existing });
+                return Ok(new { message = "Machining already exists", machiningID = existing.MachiningId, machining = existing });
             }
 
             try
             {
                 var created = await _repo.CreateMachiningAsync(request);
-                return Ok(new { message = "New machining created", machiningID = created.MachiningID, machining = created });
+                return Ok(new { message = "New machining created", machiningID = created.MachiningId, machining = created });
             }
             catch (Exception ex)
             {
@@ -47,7 +47,7 @@ namespace RouteCardProcess.Controllers
         [HttpPost("start-machining")]
         public async Task<IActionResult> StartMachining([FromBody] MachiningIdentifierRequest request)
         {
-            var result = await _repo.StartMachiningAsync(request.MachiningID);
+            var result = await _repo.StartMachiningAsync(request.MachiningId);
 
             if (result == "Machining started")
                 return Ok(new { message = result });
@@ -69,7 +69,7 @@ namespace RouteCardProcess.Controllers
         [HttpPost("end-machining")]
         public async Task<IActionResult> EndOperatorTime([FromBody] MachiningIdentifierRequest request)
         {
-            var success = await _repo.EndMachiningTimeAsync(request.MachiningID);
+            var success = await _repo.EndMachiningTimeAsync(request.MachiningId);
 
             if (success)
                 return Ok(new { message = "Operator end time updated successfully." });

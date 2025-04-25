@@ -156,7 +156,7 @@ namespace RouteCardProcess.Repositories
             {
                 var machining = await connection.QueryFirstOrDefaultAsync<dynamic>(
                     @"SELECT * FROM Machining_Trans_Master WHERE MachiningID = @MachiningID",
-                    new { MachiningID = request.MachiningID }, transaction);
+                    new { MachiningID = request.MachiningId }, transaction);
 
                 if (machining == null)
                     return "Machining ID not found";
@@ -238,7 +238,7 @@ namespace RouteCardProcess.Repositories
             {
                 var machining = await connection.QueryFirstOrDefaultAsync<dynamic>(
                     @"SELECT OperatorId, MachiningStatus FROM Machining_Trans_Master WHERE MachiningID = @MachiningID",
-                    new { request.MachiningID }, transaction);
+                    new { request.MachiningId }, transaction);
 
                 if (machining == null) return false;
 
@@ -257,7 +257,7 @@ namespace RouteCardProcess.Repositories
                         (@MachiningID, @OperatorId, @MachiningStatus, @DelayReasonCode, @DelayTime, @TotalDelayedTime)",
                         new
                         {
-                            MachiningID = request.MachiningID,
+                            MachiningID = request.MachiningId,
                             OperatorId = machining.OperatorId,
                             MachiningStatus = request.MachiningStatus,
                             delay.DelayReasonCode,
@@ -275,7 +275,7 @@ namespace RouteCardProcess.Repositories
                         new
                         {
                             EndTime = DateTime.Now,
-                            MachiningID = request.MachiningID
+                            MachiningID = request.MachiningId
                         }, transaction);
                 }
 
