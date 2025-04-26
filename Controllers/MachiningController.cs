@@ -81,20 +81,42 @@ namespace RouteCardProcess.Controllers
         public async Task<IActionResult> AddQuantity([FromBody] AddQuantity request)
         {
             if (request == null || request.QuantityList == null || !request.QuantityList.Any())
-                return BadRequest("Invalid input");
+                return BadRequest(new { success = false, message = "Invalid input" });
 
             var result = await _repo.AddQuantitiesAsync(request);
-            return result ? Ok("Inserted successfully") : StatusCode(500, "Insertion failed");
+            if (result)
+            {
+                return Ok(new
+                {
+                    success = true,
+                    message = "Quantity Inserted successfully",
+                    data = new { request.MachiningId, request.TotalQty, request.QuantityList }
+                });
+            }
+
+            return StatusCode(500, new { success = false, message = "Insertion failed" });
         }
+
 
         [HttpPost("add-delays")]
         public async Task<IActionResult> AddDelays([FromBody] MachiningDelayRequest request)
         {
             if (request == null || request.Delays == null || !request.Delays.Any())
-                return BadRequest("Invalid input");
+                return BadRequest(new { success = false, message = "Invalid input" });
 
             var result = await _repo.AddMachiningDelaysAsync(request);
-            return result ? Ok("Delays inserted successfully") : StatusCode(500, "Insertion failed");
+            if (result)
+            {
+                return Ok(new
+                {
+                    success = true,
+                    message = "Delays inserted successfully",
+                    data = new { request.MachiningId, request.TotalDelayedTime, request.Delays }
+                });
+            }
+
+            return StatusCode(500, new { success = false, message = "Insertion failed" });
         }
+
     }
 }
