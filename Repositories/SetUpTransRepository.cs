@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿using System.Data;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using RouteCardProcess.Model;
@@ -14,266 +14,141 @@ namespace RouteCardProcess.Repositories
             _config = config;
         }
 
+        private SqlConnection CreateConnection()
+        {
+            return new SqlConnection(_config.GetConnectionString("DefaultConnection"));
+        }
+
         public async Task<SetupMaster> GetByCompositeKeyAsync(string workCenterNo, string workOrderNo, string operationNo)
         {
-            using var connection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
-            var sql = @"SELECT TOP 1 * FROM SetUp_Trans_Master
-                        WHERE WorkCenterNo = @workCenterNo AND WorkOrderNo = @workOrderNo AND OperationNo = @operationNo";
-            return await connection.QueryFirstOrDefaultAsync<SetupMaster>(sql, new { workCenterNo, workOrderNo, operationNo });
+            using var connection = CreateConnection();
+            var parameters = new { WorkCenterNo = workCenterNo, WorkOrderNo = workOrderNo, OperationNo = operationNo };
+            return await connection.QueryFirstOrDefaultAsync<SetupMaster>("sp_GetSetUpByCompositeKey", parameters, commandType: CommandType.StoredProcedure);
         }
 
         public async Task<SetupMaster> CreateSetupAsync(SetupMasterDto request)
         {
             TimeSpan idealTime = ConvertMinutesToTimeSpan(request.IdealTime);
-            var setupId = Guid.NewGuid().ToString().Substring(0, 8);
+            var SetupId = Guid.NewGuid().ToString().Substring(0, 8);
 
-            using var connection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
-
-            var sql = @"INSERT INTO SetUp_Trans_Master
-                (OperatorId, WorkCenterNo, WorkOrderNo, OperationNo, SetUpID, IdealTime, SetupStatus, OperatorStartTime, OperatorEndTime)
-                OUTPUT INSERTED.*
-                VALUES
-                (@OperatorId, @WorkCenterNo, @WorkOrderNo, @OperationNo, @SetUpID, @IdealTime, @SetupStatus, @OperatorStartTime, @OperatorEndTime)";
-
+            using var connection = CreateConnection();
             var parameters = new
             {
                 request.OperatorId,
                 request.WorkCenterNo,
                 request.WorkOrderNo,
                 request.OperationNo,
-                SetUpID = setupId,
+                SetUpID = SetupId,
                 IdealTime = idealTime,
                 SetupStatus = "Setup Not Start",
                 OperatorStartTime = (DateTime?)null,
-                OperatorEndTime = (DateTime?)null,
+                OperatorEndTime = (DateTime?)null
             };
 
             try
             {
-                return await connection.QuerySingleAsync<SetupMaster>(sql, parameters);
+                return await connection.QuerySingleAsync<SetupMaster>("sp_CreateSetup", parameters, commandType: CommandType.StoredProcedure);
             }
             catch (SqlException ex)
             {
-                // Check for Foreign Key violation (SQL error code 547)
                 if (ex.Number == 547 && ex.Message.Contains("FK_SetUp_Trans_Master_LogInMaster"))
                 {
                     throw new Exception("Invalid Operator ID");
                 }
-
-                // Re-throw other errors
                 throw;
             }
         }
-
-        // Helper method to convert minutes to TimeSpan
-        private TimeSpan ConvertMinutesToTimeSpan(string minutes)
-        {
-            // Try to parse the string to double
-            if (double.TryParse(minutes.Trim(), out double parsedMinutes))
-            {
-                int totalMinutes = (int)parsedMinutes;
-                int hours = totalMinutes / 60;
-                int mins = totalMinutes % 60;
-                return new TimeSpan(hours, mins, 0);
-            }
-            else
-            {
-                // You can handle invalid format however you'd like. Throwing an exception for now.
-                throw new ArgumentException("Invalid minutes format");
-            }
-        }
-
 
         public async Task<string> StartSetupAsync(string setUpId)
         {
-            using var connection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
-            await connection.OpenAsync();
-            using var transaction = connection.BeginTransaction();
+            using var connection = CreateConnection();
+            var parameters = new { SetUpID = setUpId };
 
             try
             {
-                var setup = await connection.QueryFirstOrDefaultAsync<dynamic>(
-                    @"SELECT * FROM SetUp_Trans_Master WHERE SetUpID = @SetUpID",
-                    new { SetUpID = setUpId }, transaction);
-
-                if (setup == null)
-                    return "Setup not found";
-
-                /* if (setup.SetupStatus != "Setup Not Start")
-                     return "Setup already started or invalid status";
-                comment just for testing*/
-
-                var now = DateTime.Now;
-
-                // Update master setup status and start time
-                await connection.ExecuteAsync(
-                    @"UPDATE SetUp_Trans_Master 
-              SET SetupStatus = 'Setup Started', OperatorStartTime = @Now 
-              WHERE SetUpID = @SetUpID",
-                    new { Now = now, SetUpID = setUpId }, transaction);
-
-                // Insert new entry in details master
-                await connection.ExecuteAsync(
-                    @"INSERT INTO SetUp_Trans_Details_Master (SetUpID, SetupStartTime)
-              VALUES (@SetUpID, @SetupStartTime)",
-                    new { SetUpID = setUpId, SetupStartTime = now }, transaction);
-
-                transaction.Commit();
+                await connection.ExecuteAsync("sp_StartSetup", parameters, commandType: CommandType.StoredProcedure);
                 return "Setup started";
             }
-            catch
+            catch (Exception ex)
             {
-                transaction.Rollback();
-                throw;
+                throw new Exception("Error starting setup", ex);
             }
         }
+
         public async Task<string> TogglePauseAsync(SetupPauseRequest request)
         {
-            using var connection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
-            await connection.OpenAsync();
-            using var transaction = connection.BeginTransaction();
-
+            using var connection = CreateConnection();
             try
             {
-                // Get setup by SetUpID
-                var setup = await connection.QueryFirstOrDefaultAsync<dynamic>(
-                    @"SELECT * FROM SetUp_Trans_Master WHERE SetUpID = @SetUpID",
-                    new { SetUpID = request.SetUpID }, transaction);
+                var setupInfo = await connection.QueryFirstOrDefaultAsync<dynamic>("sp_GetSetupStatusAndOperator", new { SetUpID = request.SetUpID }, commandType: CommandType.StoredProcedure);
 
-                if (setup == null)
-                    return "Setup ID not found";
+                if (setupInfo == null) return "Invalid Setup ID";
 
-                var now = DateTime.Now;
+                string status = setupInfo.SetupStatus;
+                string operatorId = setupInfo.OperatorId;
 
-                if (setup.SetupStatus == "Setup Started")
+                if (status == "Setup Started")
                 {
-                    // Start Pause
-                    await connection.ExecuteAsync(
-                        @"INSERT INTO SetUp_Trans_Pause_Master (SetUpID, OperatorId, PauseStartTime,PauseCode)
-                  VALUES (@SetUpID, @OperatorId, @PauseStartTime,@PauseCode)",
-                        new { SetUpID = setup.SetUpID, OperatorId = setup.OperatorId, PauseStartTime = now, PauseCode = request.PauseCode }, transaction);
-
-                    await connection.ExecuteAsync(
-                        @"UPDATE SetUp_Trans_Master
-                  SET SetupStatus = 'Setup Pause'
-                  WHERE SetUpID = @SetUpID",
-                        new { setup.SetUpID }, transaction);
-
-                    transaction.Commit();
+                    var parameters = new { SetUpID = request.SetUpID, OperatorId = operatorId, PauseCode = request.PauseCode };
+                    await connection.ExecuteAsync("sp_TogglePause_Start", parameters, commandType: CommandType.StoredProcedure);
                     return "Setup paused";
                 }
-                else if (setup.SetupStatus == "Setup Pause")
+                else if (status == "Setup Pause")
                 {
-                    // Resume
-                    var pause = await connection.QueryFirstOrDefaultAsync<dynamic>(
-                        @"SELECT TOP 1 * FROM SetUp_Trans_Pause_Master
-                  WHERE SetUpID = @SetUpID AND PauseEndTime IS NULL
-                  ORDER BY SrNo DESC",
-                        new { setup.SetUpID }, transaction);
-
-                    if (pause == null)
-                        return "No active pause record found";
-
-                    await connection.ExecuteAsync(
-                        @"UPDATE SetUp_Trans_Pause_Master
-                  SET PauseEndTime = @PauseEndTime
-                  WHERE SrNo = @SrNo",
-                        new { PauseEndTime = now, SrNo = pause.SrNo }, transaction);
-
-                    await connection.ExecuteAsync(
-                        @"UPDATE SetUp_Trans_Master
-                  SET SetupStatus = 'Setup Started'
-                  WHERE SetUpID = @SetUpID",
-                        new { setup.SetUpID }, transaction);
-
-                    transaction.Commit();
+                    await connection.ExecuteAsync("sp_TogglePause_Resume", new { SetUpID = request.SetUpID }, commandType: CommandType.StoredProcedure);
                     return "Setup resumed";
                 }
+
                 return "Invalid setup status";
             }
-            catch
+            catch (Exception ex)
             {
-                transaction.Rollback();
-                throw;
+                throw new Exception("Error toggling pause", ex);
             }
         }
 
         public async Task<bool> EndSetupTimeAsync(string setUpId)
         {
-            using var connection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
-
-            var sql = @"UPDATE SetUp_Trans_Master
-                SET OperatorEndTime = GETDATE(),
-                    SetupStatus = 'Setup Stopped'
-                WHERE SetUpID = @SetUpID";
-
-            var rowsAffected = await connection.ExecuteAsync(sql, new { SetUpID = setUpId });
-
+            using var connection = CreateConnection();
+            var parameters = new { SetUpID = setUpId };
+            var rowsAffected = await connection.ExecuteAsync("sp_EndSetupTime", parameters, commandType: CommandType.StoredProcedure);
             return rowsAffected > 0;
         }
 
-
         public async Task<bool> InsertDelaysAsync(SetupDelayRequest request)
         {
-            using var connection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
+            using var connection = CreateConnection();
             await connection.OpenAsync();
             using var transaction = connection.BeginTransaction();
-
             try
             {
-                // Fetch operator and status from master
-                var setup = await connection.QueryFirstOrDefaultAsync<dynamic>(
-                    @"SELECT OperatorId, SetupStatus FROM SetUp_Trans_Master WHERE SetUpID = @SetUpID",
-                    new { request.SetUpID }, transaction);
+                var setup = await connection.QueryFirstOrDefaultAsync<dynamic>("sp_GetSetupOperatorAndStatus", new { SetUpID = request.SetUpID }, transaction, commandType: CommandType.StoredProcedure);
 
                 if (setup == null) return false;
 
-                // Step 1: Calculate total delay time
                 TimeSpan totalDelay = TimeSpan.Zero;
                 foreach (var delay in request.Delays)
                 {
                     totalDelay += delay.DelayTime;
                 }
 
-
-                // Step 2: Insert each delay record
                 foreach (var delay in request.Delays)
                 {
-                    await connection.ExecuteAsync(@"
-                INSERT INTO Setup_Delay_Master 
-                (SetUpID, OperatorId, SetupStatus, DelayReasonCode, DelayTime, TotalDelayedTime)
-                VALUES 
-                (@SetUpID, @OperatorId, @SetupStatus, @DelayReasonCode, @DelayTime, @TotalDelayedTime)",
-                        new
-                        {
-                            SetUpID = request.SetUpID,
-                            OperatorId = setup.OperatorId,
-                            SetupStatus = request.SetUpStatus,
-                            delay.DelayReasonCode,
-                            delay.DelayTime,
-                            TotalDelayedTime = totalDelay.ToString(), // or totalDelay.TotalMinutes, etc.
-                        }, transaction);
+                    await connection.ExecuteAsync("sp_InsertDelays", new
+                    {
+                        SetUpID = request.SetUpID,
+                        OperatorId = setup.OperatorId,
+                        SetupStatus = request.SetUpStatus,
+                        DelayReasonCode = delay.DelayReasonCode,
+                        DelayTime = delay.DelayTime,
+                        TotalDelayedTime = totalDelay
+                    }, transaction, commandType: CommandType.StoredProcedure);
                 }
 
-                // Step 3: Update SetupStatus in SetUp_Trans_Master
-                await connection.ExecuteAsync(@"
-            UPDATE SetUp_Trans_Master
-            SET SetupStatus = @SetupStatus
-            WHERE SetUpID = @SetUpID",
-                    new { request.SetUpStatus, SetUpID = request.SetUpID }, transaction);
-
-                // Step 4: If SetupStatus is 'Complete', update SetupEndTime
+                await connection.ExecuteAsync("sp_UpdateSetupStatus", new { request.SetUpStatus, SetUpID = request.SetUpID }, transaction, commandType: CommandType.StoredProcedure);
                 if (request.SetUpStatus == "Complete")
                 {
-                    await connection.ExecuteAsync(@"
-                UPDATE SetUp_Trans_Details_Master
-                SET SetupEndTime = @EndTime
-                WHERE SetUpID = @SetUpID",
-                        new
-                        {
-                            EndTime = DateTime.Now,
-                            SetUpID = request.SetUpID
-                        }, transaction);
+                    await connection.ExecuteAsync("sp_UpdateSetupEndTime", new { EndTime = DateTime.Now, SetUpID = request.SetUpID }, transaction, commandType: CommandType.StoredProcedure);
                 }
 
                 transaction.Commit();
@@ -286,5 +161,19 @@ namespace RouteCardProcess.Repositories
             }
         }
 
+        private TimeSpan ConvertMinutesToTimeSpan(string minutes)
+        {
+            if (double.TryParse(minutes.Trim(), out double parsedMinutes))
+            {
+                int totalMinutes = (int)parsedMinutes;
+                int hours = totalMinutes / 60;
+                int mins = totalMinutes % 60;
+                return new TimeSpan(hours, mins, 0);
+            }
+            else
+            {
+                throw new ArgumentException("Invalid minutes format");
+            }
+        }
     }
 }

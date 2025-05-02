@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using RouteCardProcess.Model;
 using RouteCardProcess.Repositories;
 
@@ -6,6 +7,7 @@ namespace RouteCardProcess.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class SetUpTransController : ControllerBase
     {
         private readonly SetUpTransRepository _repo;
@@ -22,37 +24,45 @@ namespace RouteCardProcess.Controllers
 
             if (existing != null)
             {
-                return Ok(new { message = "Setup already exists", setUpID = existing.SetUpID, setup = existing });
+                return Ok(new
+                {
+                    message = "Setup already exists",
+                    SetUpID = existing.SetUpID,
+                    setup = existing
+                });
             }
 
             try
             {
                 var created = await _repo.CreateSetupAsync(request);
-                return Ok(new { message = "New setupId created", setUpId = created.SetUpID, setup = created });
+                return Ok(new
+                {
+                    message = "New setupId created",
+                    SetUpId = created.SetUpID,
+                    setup = created
+                });
             }
             catch (Exception ex)
             {
                 if (ex.Message == "Invalid Operator ID")
-                {
                     return BadRequest(new { message = ex.Message });
-                }
 
-                // Optional: Log the full exception
-                return StatusCode(500, new { message = "An unexpected error occurred.", error = ex.Message });
+                return StatusCode(500, new
+                {
+                    message = "An unexpected error occurred.",
+                    error = ex.Message
+                });
             }
         }
-
-
 
         [HttpPost("start-setup")]
         public async Task<IActionResult> StartSetup([FromBody] SetupIdentifierRequest request)
         {
             var result = await _repo.StartSetupAsync(request.SetUpID);
 
-            if (result == "Setup started")
-                return Ok(new { message = result });
-
-            return BadRequest(new { message = result });
+            return result == "Setup started"
+                ? Ok(new { message = result })
+                : BadRequest(new { message = result });
         }
 
         [HttpPost("toggle-pause")]
@@ -60,10 +70,9 @@ namespace RouteCardProcess.Controllers
         {
             var result = await _repo.TogglePauseAsync(request);
 
-            if (result == "Setup paused" || result == "Setup resumed")
-                return Ok(new { message = result });
-
-            return BadRequest(new { message = result });
+            return (result == "Setup paused" || result == "Setup resumed")
+                ? Ok(new { message = result })
+                : BadRequest(new { message = result });
         }
 
         [HttpPost("end-setup")]
@@ -71,18 +80,19 @@ namespace RouteCardProcess.Controllers
         {
             var success = await _repo.EndSetupTimeAsync(request.SetUpID);
 
-            if (success)
-                return Ok(new { message = "Operator end time updated successfully." });
-
-            return NotFound(new { message = "Setup not found." });
+            return success
+                ? Ok(new { message = "Operator end time updated successfully." })
+                : NotFound(new { message = "Setup not found." });
         }
 
         [HttpPost("add-delays")]
         public async Task<IActionResult> AddDelays([FromBody] SetupDelayRequest request)
         {
             var result = await _repo.InsertDelaysAsync(request);
-            return result ? Ok(new { message = "Delays added successfully" }) : BadRequest(new { message = "Failed to add delays" });
-        }
 
+            return result
+                ? Ok(new { message = "Delays added successfully" })
+                : BadRequest(new { message = "Failed to add delays" });
+        }
     }
 }

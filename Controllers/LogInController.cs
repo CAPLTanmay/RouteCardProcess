@@ -1,18 +1,23 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using RouteCardProcess.Model;
 using RouteCardProcess.Repositories;
+using RouteCardProcess.Services;
 
 namespace RouteCardProcess.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class LogInController : ControllerBase
     {
         private readonly LogInRepository _repo;
+        private readonly JwtTokenService _jwtService;
 
-        public LogInController(LogInRepository repo)
+        public LogInController(LogInRepository repo, JwtTokenService jwtService)
         {
             _repo = repo;
+            _jwtService = jwtService;
         }
 
         [HttpGet]
@@ -23,37 +28,40 @@ namespace RouteCardProcess.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create(LogInMaster login)
+        public async Task<IActionResult> Create([FromBody] LogInMaster login)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
             var result = await _repo.AddAsync(login);
             return result > 0 ? Ok("User created") : StatusCode(500, "Insert failed");
         }
 
+        [AllowAnonymous]
         [HttpPost("validate")]
         public async Task<IActionResult> ValidateLogin([FromBody] LoginRequest request)
         {
-            var user = await _repo.ValidateLoginAsync(request.OperatorId, request.Password);
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
-            if (user != null)
-            {
-                return Ok(new { message = "Login successful", user });
-            }
-            else
-            {
+            var user = await _repo.ValidateLoginAsync(request.OperatorId, request.Password);
+            if (user == null)
                 return Unauthorized(new { message = "Invalid username or password" });
-            }
+
+            var token = _jwtService.GenerateToken(request.OperatorId);
+            return Ok(new { message = "Login successful", token, user });
         }
 
         [HttpPost("logout")]
         public async Task<IActionResult> Logout([FromBody] SetupIdentifierRequest request)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
             var result = await _repo.TryLogoutAsync(request.SetUpID);
             return result == "OK"
                 ? Ok(new { message = "Logout successful" })
                 : BadRequest(new { message = result });
         }
-
-
     }
-
 }

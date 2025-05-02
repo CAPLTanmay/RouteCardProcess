@@ -1,112 +1,164 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using RouteCardProcess.Model;
-using RouteCardProcess.Repositories;
 
 namespace RouteCardProcess.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class MachiningController : ControllerBase
     {
         private readonly MachiningRepository _repo;
+        private readonly ILogger<MachiningController> _logger;
 
-        public MachiningController(MachiningRepository repo)
+        public MachiningController(MachiningRepository repo, ILogger<MachiningController> logger)
         {
             _repo = repo;
+            _logger = logger;
         }
 
         [HttpPost("check-or-create")]
         public async Task<IActionResult> CheckOrCreateMachining([FromBody] MachiningDto request)
         {
-            // You could add logic here to check for an existing Machining if needed
+            if (string.IsNullOrWhiteSpace(request.WorkCenterNo) ||
+                string.IsNullOrWhiteSpace(request.WorkOrderNo) ||
+                string.IsNullOrWhiteSpace(request.OperationNo))
+            {
+                return BadRequest(new { message = "WorkCenterNo, WorkOrderNo, and OperationNo are required." });
+            }
+
             var existing = await _repo.GetByCompositeKeyAsync(request.WorkCenterNo, request.WorkOrderNo, request.OperationNo);
 
             if (existing != null)
             {
-                return Ok(new { message = "Machining already exists", machiningID = existing.MachiningId, machining = existing });
+                return Ok(new
+                {
+                    message = "Machining already exists",
+                    machiningID = existing.MachiningId,
+                    machining = existing
+                });
             }
 
             try
             {
-                var created = await _repo.CreateMachiningAsync(request);
-                return Ok(new { message = "New machining created", machiningID = created.MachiningId, machining = created });
+                var created = await _repo.CreateAsync(request);
+                return CreatedAtAction(nameof(GetById), new { machiningId = created.MachiningId }, new
+                {
+                    message = "New machining created",
+                    machiningID = created.MachiningId,
+                    machining = created
+                });
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error occurred while creating machining record.");
                 if (ex.Message == "Invalid Operator ID")
-                {
                     return BadRequest(new { message = ex.Message });
-                }
 
-                // Optional: Log the full exception
                 return StatusCode(500, new { message = "An unexpected error occurred.", error = ex.Message });
             }
-
         }
 
         [HttpPost("start-machining")]
         public async Task<IActionResult> StartMachining([FromBody] MachiningIdentifierRequest request)
         {
-            var result = await _repo.StartMachiningAsync(request.MachiningId);
+            if (string.IsNullOrWhiteSpace(request.MachiningId))
+                return BadRequest(new { message = "MachiningId is required." });
 
-            if (result == "Machining started")
-                return Ok(new { message = result });
-
-            return BadRequest(new { message = result });
+            try
+            {
+                await _repo.StartMachiningAsync(request.MachiningId);
+                return Ok(new { message = "Machining started successfully." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while starting machining process.");
+                return StatusCode(500, new { message = "An unexpected error occurred.", error = ex.Message });
+            }
         }
 
         [HttpPost("toggle-pause")]
         public async Task<IActionResult> TogglePause([FromBody] MachiningPauseRequest request)
         {
-            var result = await _repo.TogglePauseAsync(request);
+            if (string.IsNullOrWhiteSpace(request.MachiningId) || string.IsNullOrWhiteSpace(request.PauseCode))
+                return BadRequest(new { message = "MachiningId and PauseCode are required." });
 
-            if (result == "Machining paused" || result == "Machining resumed")
-                return Ok(new { message = result });
-
-            return BadRequest(new { message = result });
+            try
+            {
+                await _repo.TogglePauseAsync(request.MachiningId, request.PauseCode);
+                return Ok(new { message = "Machining pause toggled successfully." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while toggling machining pause.");
+                return StatusCode(500, new { message = "An unexpected error occurred.", error = ex.Message });
+            }
         }
 
         [HttpPost("end-machining")]
         public async Task<IActionResult> EndOperatorTime([FromBody] MachiningIdentifierRequest request)
         {
-            var success = await _repo.EndMachiningTimeAsync(request.MachiningId);
+            if (string.IsNullOrWhiteSpace(request.MachiningId))
+                return BadRequest(new { message = "MachiningId is required." });
 
-            if (success)
+            try
+            {
+                await _repo.EndMachiningAsync(request.MachiningId);
                 return Ok(new { message = "Operator end time updated successfully." });
-
-            return NotFound(new { message = "Machining record not found." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while ending machining process.");
+                return StatusCode(500, new { message = "An unexpected error occurred.", error = ex.Message });
+            }
         }
 
         [HttpPost("add-quantity")]
         public async Task<IActionResult> AddQuantity([FromBody] AddQuantity request)
         {
-            if (request == null || request.QuantityList == null || !request.QuantityList.Any())
-                return BadRequest(new { success = false, message = "Invalid input" });
+            if (request?.QuantityList == null || !request.QuantityList.Any())
+                return BadRequest(new { success = false, message = "Invalid input: QuantityList cannot be empty." });
 
-            var result = await _repo.AddQuantitiesAsync(request);
-            if (result)
+            try
             {
+                if (string.IsNullOrWhiteSpace(request.MachiningId) || string.IsNullOrWhiteSpace(request.TotalQty))
+                    return BadRequest(new { success = false, message = "MachiningId and TotalQty are required." });
+
+                var totalProcessed = request.QuantityList.Sum(q => int.Parse(q.ProcessedQty));
+                await _repo.AddQuantitiesAsync(request.MachiningId, int.Parse(request.TotalQty), totalProcessed, "Processed");
+
                 return Ok(new
                 {
                     success = true,
-                    message = "Quantity Inserted successfully",
+                    message = "Quantity inserted successfully",
                     data = new { request.MachiningId, request.TotalQty, request.QuantityList }
                 });
             }
-
-            return StatusCode(500, new { success = false, message = "Insertion failed" });
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while adding quantities.");
+                return StatusCode(500, new { success = false, message = "Insertion failed", error = ex.Message });
+            }
         }
-
 
         [HttpPost("add-delays")]
         public async Task<IActionResult> AddDelays([FromBody] MachiningDelayRequest request)
         {
-            if (request == null || request.Delays == null || !request.Delays.Any())
-                return BadRequest(new { success = false, message = "Invalid input" });
+            if (request?.Delays == null || !request.Delays.Any())
+                return BadRequest(new { success = false, message = "Invalid input: Delays cannot be empty." });
 
-            var result = await _repo.AddMachiningDelaysAsync(request);
-            if (result)
+            if (string.IsNullOrWhiteSpace(request.MachiningId))
+                return BadRequest(new { success = false, message = "MachiningId is required." });
+
+            try
             {
+                var totalProcessed = request.Delays.Sum(d => int.Parse(d.ProcessedQty));
+                var delayCode = request.Delays.First().DelayReasonCode;
+                var delayTime = request.TotalDelayedTime ?? TimeSpan.Zero;
+
+                await _repo.AddDelaysAsync(request.MachiningId, totalProcessed, delayTime, delayCode, delayTime);
+
                 return Ok(new
                 {
                     success = true,
@@ -114,9 +166,20 @@ namespace RouteCardProcess.Controllers
                     data = new { request.MachiningId, request.TotalDelayedTime, request.Delays }
                 });
             }
-
-            return StatusCode(500, new { success = false, message = "Insertion failed" });
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while adding delays.");
+                return StatusCode(500, new { success = false, message = "Insertion failed", error = ex.Message });
+            }
         }
 
+        [HttpGet("{machiningId}")]
+        public async Task<IActionResult> GetById(string machiningId)
+        {
+            var machining = await _repo.GetByCompositeKeyAsync(machiningId, string.Empty, string.Empty);
+            return machining == null
+                ? NotFound(new { message = "Machining record not found." })
+                : Ok(machining);
+        }
     }
 }

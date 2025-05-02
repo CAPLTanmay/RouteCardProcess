@@ -1,6 +1,8 @@
 ﻿using Dapper;
 using Microsoft.Data.SqlClient;
 using RouteCardProcess.Model;
+using System.Data;
+
 namespace RouteCardProcess.Repositories
 {
     public class LogInRepository
@@ -12,66 +14,95 @@ namespace RouteCardProcess.Repositories
             _config = config;
         }
 
+        private SqlConnection CreateConnection()
+        {
+            return new SqlConnection(_config.GetConnectionString("DefaultConnection"));
+        }
+
         public async Task<IEnumerable<LogInMaster>> GetAllAsync()
         {
-            using var connection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
-            var sql = @"
-        SELECT TOP (1000) 
-              lm.[SrNo],
-              lm.[OperatorId],
-              lm.[OperatorName],
-              lm.[Password],
-              lm.[Role],
-              lm.[Extra1],
-              lm.[Extra2],
-              lm.[DepartmentId],
-              dm.[DepartmentName]
-        FROM [RouteCardProcess].[dbo].[LogInMaster] lm
-        LEFT JOIN [RouteCardProcess].[dbo].[DepartmentMaster] dm
-            ON lm.DepartmentId = dm.DepartmentId";
-
-            return await connection.QueryAsync<LogInMaster>(sql);
+            try
+            {
+                using var connection = CreateConnection();
+                await connection.OpenAsync();
+                var result = await connection.QueryAsync<LogInMaster>(
+                    "sp_GetAllLogins",
+                    commandType: CommandType.StoredProcedure
+                );
+                return result;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error fetching login records.", ex);
+            }
         }
 
         public async Task<int> AddAsync(LogInMaster login)
         {
-            using var connection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
-            var sql = @"
-            INSERT INTO LogInMaster (OperatorId, OperatorName, Password, Role, DepartmentId)
-            VALUES (@OperatorId, @OperatorName, @Password, @Role, @DepartmentId)";
-            return await connection.ExecuteAsync(sql, login);
+            try
+            {
+                using var connection = CreateConnection();
+                await connection.OpenAsync();
+                var result = await connection.ExecuteAsync(
+                    "sp_AddLogin",
+                    new
+                    {
+                        login.OperatorId,
+                        login.OperatorName,
+                        login.Password,
+                        login.Role,
+                        login.DepartmentId
+                    },
+                    commandType: CommandType.StoredProcedure
+                );
+                return result;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error inserting login record.", ex);
+            }
         }
 
         public async Task<LogInMaster?> ValidateLoginAsync(string operatorId, string password)
         {
-            using var connection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
-            var sql = @"
-        SELECT 
-            lm.*, 
-            dm.DepartmentName
-        FROM LogInMaster lm
-        LEFT JOIN DepartmentMaster dm ON lm.DepartmentId = dm.DepartmentId
-        WHERE lm.OperatorId = @OperatorId AND lm.Password = @Password";
-            return await connection.QueryFirstOrDefaultAsync<LogInMaster>(sql, new { OperatorId = operatorId, Password = password });
+            try
+            {
+                using var connection = CreateConnection();
+                await connection.OpenAsync();
+                var user = await connection.QueryFirstOrDefaultAsync<LogInMaster>(
+                    "sp_ValidateLogin",
+                    new { OperatorId = operatorId, Password = password },
+                    commandType: CommandType.StoredProcedure
+                );
+                return user;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error validating login credentials.", ex);
+            }
         }
 
         public async Task<string> TryLogoutAsync(string setUpId)
         {
-            using var connection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
-            await connection.OpenAsync();
-
-            var setup = await connection.QueryFirstOrDefaultAsync<dynamic>(
-                @"SELECT SetupStatus FROM SetUp_Trans_Master WHERE SetUpID = @SetUpID",
-                new { SetUpID = setUpId });
-
-            if (setup == null)
-                return "Invalid Setup ID";
-
-            if (setup.SetupStatus == "Setup Started")
-                return "Cannot logout. Setup is still in progress.";
-
-            return "OK"; // Proceed with logout
+            try
+            {
+                using var connection = CreateConnection();
+                await connection.OpenAsync();
+                var setup = await connection.QueryFirstOrDefaultAsync<dynamic>(
+                    "sp_TryLogout",
+                    new { SetUpID = setUpId },
+                    commandType: CommandType.StoredProcedure
+                );
+                if (setup == null)
+                    return "Invalid Setup ID";
+                if (setup.SetupStatus == "Setup Started")
+                    return "Cannot logout. Setup is still in progress.";
+                return "OK";
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error during logout process.", ex);
+            }
         }
-
     }
 }
