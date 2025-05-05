@@ -51,6 +51,8 @@ builder.Services.AddScoped<LogInRepository>();
 builder.Services.AddScoped<SetUpTransRepository>();
 builder.Services.AddScoped<MachiningRepository>();
 builder.Services.AddScoped<JwtTokenService>();
+builder.Services.AddScoped<HelperRepository>();
+builder.Services.AddScoped<RouteCardReportRepository>();
 
 // JWT Authentication configuration
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
