@@ -13,12 +13,10 @@ namespace RouteCardProcess.Repositories
         {
             _config = config;
         }
-
         private SqlConnection CreateConnection()
         {
             return new SqlConnection(_config.GetConnectionString("DefaultConnection"));
         }
-
         public async Task<IEnumerable<RouteCardReportModel>> GetRouteCardReportAsync(string workOrderNo)
         {
             var sql = @"
