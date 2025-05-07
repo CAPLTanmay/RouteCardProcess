@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using Azure.Core;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using RouteCardProcess.Model;
@@ -111,6 +112,12 @@ namespace RouteCardProcess.Repositories
         {
             using var connection = CreateConnection();
             var parameters = new { SetUpID = setUpId };
+            var setupInfo = await connection.QueryFirstOrDefaultAsync<dynamic>("sp_GetSetupStatusAndOperator", new { SetUpID = setUpId }, commandType: CommandType.StoredProcedure);
+            string status = setupInfo.SetupStatus;
+            if (status == "Setup Pause")
+            {
+                await connection.ExecuteAsync("sp_TogglePause_Resume", new { SetUpID = setUpId }, commandType: CommandType.StoredProcedure);
+            }
             var rowsAffected = await connection.ExecuteAsync("sp_EndSetupTime", parameters, commandType: CommandType.StoredProcedure);
             return rowsAffected > 0;
         }
