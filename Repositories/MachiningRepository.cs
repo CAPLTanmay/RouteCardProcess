@@ -19,6 +19,7 @@ public class MachiningRepository
     public async Task<MachiningMaster> CreateAsync(MachiningDto obj)
     {
         using var connection = Connection;
+        var MachiningId = Guid.NewGuid().ToString().Substring(0, 8);
         var result = await connection.QueryFirstOrDefaultAsync<MachiningMaster>(
             "sp_CreateMachining",
             new
@@ -27,6 +28,7 @@ public class MachiningRepository
                 obj.WorkCenterNo,
                 obj.WorkOrderNo,
                 obj.OperationNo,
+                MachiningID=MachiningId,
                 IdealTime = TimeSpan.TryParse(obj.IdealTime, out var idealTime) ? idealTime : TimeSpan.Zero,
                 obj.TotalQty,
                 obj.ProcessedQty
@@ -103,7 +105,7 @@ public class MachiningRepository
     {
         using var connection = Connection;
         var result = await connection.QueryFirstOrDefaultAsync<MachiningMaster>(
-            "sp_GetMachiningByCompositeKey",
+            "dbo.sp_GetMachiningByCompositeKey",
             new { WorkCenterNo = workCenterNo, WorkOrderNo = workOrderNo, OperationNo = operationNo },
             commandType: CommandType.StoredProcedure
         );

@@ -17,6 +17,28 @@ namespace RouteCardProcess.Controllers
             _repo = repo;
         }
 
+        [HttpPost("check-status")]
+        public async Task<IActionResult> CheckStatus([FromBody] SetupMasterDto request)
+        {
+            var result = await _repo.CheckSetupNotificationStatusAsync(
+                request.WorkCenterNo,
+                request.WorkOrderNo,
+                request.OperationNo
+            );
+
+            return Ok(new
+            {
+                flag = result.Flag,
+                setupStatus = result.SetupStatus,
+                machiningStatus = result.MachiningStatus,
+                setupId = result.SetUpID,
+                machiningId = result.MachiningID,
+                message = result.Message
+            });
+        }
+
+
+
         [HttpPost("check-or-create")]
         public async Task<IActionResult> CheckOrCreateSetup([FromBody] SetupMasterDto request)
         {

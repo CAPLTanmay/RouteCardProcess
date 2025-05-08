@@ -47,5 +47,13 @@ namespace RouteCardProcess.Controllers
             return Ok(new { message = result });
         }
 
+        [HttpGet("helpers/{mainOperatorId}")]
+        public async Task<IActionResult> GetHelpersByMainOperatorId(string mainOperatorId)
+        {
+            var helpers = await _helperRepository.GetHelpersByMainOperatorIdAsync(mainOperatorId);
+            return Ok(helpers);
+        }
+
+
     }
 }

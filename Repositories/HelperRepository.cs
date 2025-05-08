@@ -44,6 +44,7 @@ namespace RouteCardProcess.Repositories
             parameters.Add("SetupID", request.SetupId);
             parameters.Add("MachiningID", request.MachiningId);
             parameters.Add("OperatorStartTime", DateTime.Now);
+            parameters.Add("MainOperatorId", request.MainOperatorId);
 
             // Set optional times depending on SetupID or MachiningID
             if (!string.IsNullOrEmpty(request.SetupId))
@@ -161,5 +162,23 @@ namespace RouteCardProcess.Repositories
                 return "Helper resumed.";
             }
         }
+
+        public async Task<IEnumerable<OperatorHelperLog>> GetHelpersByMainOperatorIdAsync(string mainOperatorId)
+        {
+            using var connection = CreateConnection();
+            await connection.OpenAsync();
+
+            var parameters = new DynamicParameters();
+            parameters.Add("MainOperatorId", mainOperatorId);
+
+            var result = await connection.QueryAsync<OperatorHelperLog>(
+                "sp_GetHelpersByMainOperator",
+                parameters,
+                commandType: CommandType.StoredProcedure
+            );
+
+            return result;
+        }
+
     }
 }

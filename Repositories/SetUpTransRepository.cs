@@ -27,6 +27,70 @@ namespace RouteCardProcess.Repositories
             return await connection.QueryFirstOrDefaultAsync<SetupMaster>("sp_GetSetUpByCompositeKey", parameters, commandType: CommandType.StoredProcedure);
         }
 
+    
+
+        public async Task<(int Flag, string SetupStatus, string MachiningStatus, string Message, string SetUpID, string MachiningID)>
+    CheckSetupNotificationStatusAsync(string workCenterNo, string workOrderNo, string operationNo)
+        {
+            using var connection = CreateConnection();
+            var parameters = new { WorkCenterNo = workCenterNo, WorkOrderNo = workOrderNo, OperationNo = operationNo };
+
+            var setup = await connection.QueryFirstOrDefaultAsync<SetupMaster>(
+                "sp_GetSetUpByCompositeKey", parameters, commandType: CommandType.StoredProcedure);
+
+            var machining = await connection.QueryFirstOrDefaultAsync<MachiningMaster>(
+                "sp_GetMachiningByCompositeKey", parameters, commandType: CommandType.StoredProcedure);
+
+            if (setup == null && machining == null)
+                return (0, null, null, "Setup or Machining not found", null, null);
+
+            string setupMessage = null, machiningMessage = null;
+
+            if (setup != null)
+            {
+                setupMessage = setup.SetupStatus switch
+                {
+                    "Setup Not Start" => "Previous operator login but Not Start Setup",
+                    "Setup Started" => "Previous operator Started Setup but not stopped",
+                    "Setup Pause" => "Previous operator paused Setup but not stopped",
+                    "Complete" => "Previous operator Completed Setup",
+                    "Rework" => "Previous setup is Rework",
+                    "Rejected" => "Previous setup is Rejected",
+                    "Handover" => "Previous operator has handed over the setup",
+                    "Setup Stopped" => "Previous operator stopped the setup but did not submit the report.",
+                    _ => "Unknown setup status"
+                };
+            }
+
+            if (machining != null)
+            {
+                machiningMessage = machining.MachiningStatus switch
+                {
+                    "Machining Not Started" => "Previous operator login but Machining Not Start",
+                    "Machining Started" => "Previous operator Machining Started but not stopped",
+                    "Machining Pause" => "Previous operator Machining paused but not stopped",
+                    "Complete" => "Previous operator Machining Completed",
+                    "Rework" => "Previous Machining is Rework",
+                    "Rejected" => "Previous Machining is Rejected",
+                    "Handover" => "Previous Machining is Handovered",
+                    "Machining Stopped" => "Previous operator stopped the Machining but did not submit the report.",
+                    _ => "Unknown Machining status"
+                };
+            }
+
+            string combinedMessage = string.Join(" | ", new[] { setupMessage, machiningMessage }.Where(msg => !string.IsNullOrWhiteSpace(msg)));
+
+            return (
+                Flag: 1,
+                SetupStatus: setup?.SetupStatus,
+                MachiningStatus: machining?.MachiningStatus,
+                Message: combinedMessage,
+                SetUpID: setup?.SetUpID,
+                MachiningID: machining?.MachiningId
+            );
+        }
+
+
         public async Task<SetupMaster> CreateSetupAsync(SetupMasterDto request)
         {
             TimeSpan idealTime = ConvertMinutesToTimeSpan(request.IdealTime);
