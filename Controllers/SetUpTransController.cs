@@ -46,6 +46,14 @@ namespace RouteCardProcess.Controllers
 
             if (existing != null)
             {
+                var startTime = existing.SetupStartTime;
+                var endTime = existing.SetupEndTime ?? DateTime.Now;
+
+                TimeSpan? adjustedTotalSetupTime = null;
+
+                if (startTime.HasValue)
+                    adjustedTotalSetupTime = endTime - startTime;
+
                 return Ok(new
                 {
                     message = "Setup already exists",

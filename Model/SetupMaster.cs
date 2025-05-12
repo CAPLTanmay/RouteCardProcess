@@ -4,6 +4,7 @@ namespace RouteCardProcess.Model
 {
     public class SetupMasterDto
     {
+        public string? SetUpID { get; set; }
         public string? WorkCenterNo { get; set; }
         public string? WorkOrderNo { get; set; }
         public string? OperationNo { get; set; }
@@ -22,6 +23,12 @@ namespace RouteCardProcess.Model
         public string? SetupStatus { get; set; }
         public DateTime OperatorStartTime { get; set; }
         public DateTime OperatorEndTime { get; set; }
+
+        public DateTime? SetupStartTime { get; set; }
+        public DateTime? SetupEndTime { get; set; }
+        public TimeSpan? ActualSetupTime { get; set; }
+        public TimeSpan? TotalSetupTime { get; set; } // This is adjusted setup time (Actual - Pauses)
+
     }
 
     public class SetupIdentifierRequest

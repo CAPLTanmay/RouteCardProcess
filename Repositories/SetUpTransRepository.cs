@@ -27,7 +27,7 @@ namespace RouteCardProcess.Repositories
             return await connection.QueryFirstOrDefaultAsync<SetupMaster>("sp_GetSetUpByCompositeKey", parameters, commandType: CommandType.StoredProcedure);
         }
 
-    
+
 
         public async Task<(int Flag, string SetupStatus, string MachiningStatus, string Message, string SetUpID, string MachiningID)>
     CheckSetupNotificationStatusAsync(string workCenterNo, string workOrderNo, string operationNo)
@@ -131,14 +131,42 @@ namespace RouteCardProcess.Repositories
 
             try
             {
-                await connection.ExecuteAsync("sp_StartSetup", parameters, commandType: CommandType.StoredProcedure);
-                return "Setup started";
+                // Check if the Setup ID exists in the database
+                var existingSetup = await connection.QueryFirstOrDefaultAsync(
+                    "SELECT 1 FROM SetUp_Trans_Master WHERE SetUpID = @SetUpID",
+                    new { SetUpID = setUpId }
+                );
+
+                if (existingSetup == null)
+                {
+                    // If the setup does not exist, create a new setup
+                    var setupMasterDto = new SetupMasterDto
+                    {
+                        SetUpID = setUpId,
+                        // Add other properties like OperatorId, WorkCenterNo, etc.
+                    };
+
+                    // Call the stored procedure to create the new setup
+                    await connection.ExecuteAsync("sp_CreateSetup", setupMasterDto, commandType: CommandType.StoredProcedure);
+
+                    // After creating, proceed with starting the setup
+                    await connection.ExecuteAsync("sp_StartSetup", parameters, commandType: CommandType.StoredProcedure);
+                    return "Setup created and started";
+                }
+                else
+                {
+                    // If the setup exists, proceed with starting the setup
+                    await connection.ExecuteAsync("sp_StartSetup", parameters, commandType: CommandType.StoredProcedure);
+                    return "Setup started";
+                }
             }
             catch (Exception ex)
             {
-                throw new Exception("Error starting setup", ex);
+
+                throw new Exception($"Error starting setup: {ex.Message}", ex);
             }
         }
+
 
         public async Task<string> TogglePauseAsync(SetupPauseRequest request)
         {
@@ -218,6 +246,10 @@ namespace RouteCardProcess.Repositories
 
                 await connection.ExecuteAsync("sp_UpdateSetupStatus", new { request.SetUpStatus, SetUpID = request.SetUpID }, transaction, commandType: CommandType.StoredProcedure);
                 if (request.SetUpStatus == "Complete")
+                {
+                    await connection.ExecuteAsync("sp_UpdateSetupEndTime", new { EndTime = DateTime.Now, SetUpID = request.SetUpID }, transaction, commandType: CommandType.StoredProcedure);
+                }
+                else
                 {
                     await connection.ExecuteAsync("sp_UpdateSetupEndTime", new { EndTime = DateTime.Now, SetUpID = request.SetUpID }, transaction, commandType: CommandType.StoredProcedure);
                 }
