@@ -1,5 +1,4 @@
 ﻿using System.Data;
-using Azure.Core;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using RouteCardProcess.Model;

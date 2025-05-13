@@ -52,16 +52,15 @@ namespace RouteCardProcess.Controllers
             return Ok(new { message = "Login successful", token, user });
         }
 
-        [HttpPost("logout")]
-        public async Task<IActionResult> Logout([FromBody] SetupIdentifierRequest request)
+        [HttpPost("TryLogout")]
+        public async Task<IActionResult> TryLogout([FromBody] LogoutRequest request)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            var (flag, message) = await _repo.TryLogoutAsync(request.WorkCenterNo, request.WorkOrderNo, request.OperationNo);
 
-            var result = await _repo.TryLogoutAsync(request.SetUpID);
-            return result == "OK"
-                ? Ok(new { message = "Logout successful" })
-                : BadRequest(new { message = result });
+            if (flag == 1)
+                return Ok(new { Success = true, Message = message });
+
+            return BadRequest(new { Success = false, Message = message });
         }
     }
 }

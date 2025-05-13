@@ -3,15 +3,19 @@ using Microsoft.Data.SqlClient;
 using RouteCardProcess.Model;
 using System.Data;
 
+
 namespace RouteCardProcess.Repositories
 {
     public class LogInRepository
     {
         private readonly IConfiguration _config;
+        private readonly SetUpTransRepository _setUpTransRepository;
 
-        public LogInRepository(IConfiguration config)
+
+        public LogInRepository(IConfiguration config, SetUpTransRepository setUpTransRepository)
         {
             _config = config;
+            _setUpTransRepository = setUpTransRepository;
         }
 
         private SqlConnection CreateConnection()
@@ -82,27 +86,30 @@ namespace RouteCardProcess.Repositories
             }
         }
 
-        public async Task<string> TryLogoutAsync(string setUpId)
+        public async Task<(int Flag, string Message)> TryLogoutAsync(string workCenterNo, string workOrderNo, string operationNo)
         {
             try
             {
-                using var connection = CreateConnection();
-                await connection.OpenAsync();
-                var setup = await connection.QueryFirstOrDefaultAsync<dynamic>(
-                    "sp_TryLogout",
-                    new { SetUpID = setUpId },
-                    commandType: CommandType.StoredProcedure
-                );
-                if (setup == null)
-                    return "Invalid Setup ID";
-                if (setup.SetupStatus == "Setup Started")
-                    return "Cannot logout. Setup is still in progress.";
-                return "OK";
+                // Check setup and machining status
+                var (flag, setupStatus, machiningStatus, message, setupIdFromDb, machiningId) = await _setUpTransRepository.CheckSetupNotificationStatusAsync(workCenterNo, workOrderNo, operationNo);
+
+                // If setup or machining is not found, return an error flag and message
+                if (flag == 0)
+                    return (0, message);
+
+                // Check if setup or machining are still in progress (or other relevant statuses)
+                if (setupStatus == "Setup Started"|| setupStatus == "Setup Paused" || machiningStatus == "Machining Started" || machiningStatus == "Machining Pause")
+                    return (0, "Cannot logout. Setup or Machining is still in progress.");
+
+                // If all checks pass, return a flag indicating successful logout and a success message
+                return (1, "Logout successful");
             }
             catch (Exception ex)
             {
-                throw new Exception("Error during logout process.", ex);
+                // Handle any unexpected errors and return an error flag and message
+                return (0, "Error during logout process: " + ex.Message);
             }
         }
+
     }
 }

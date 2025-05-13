@@ -45,8 +45,8 @@ SELECT
     QBD.ProcessedQty AS Bifurcated_ProcessedQty,
     QBD.ProcessedQtyTime,
     QBD.QtyStatus,
-   CONVERT(DATE, SDM.SetupEndTime) AS SetupEndDate,
-CONVERT(DATE, MDM.MachiningEndTime) AS MachiningEndDate
+   CONVERT(VARCHAR(10), SDM.SetupEndTime, 23) AS SetupEndDate,
+CONVERT(VARCHAR(10), MDM.MachiningEndTime, 23) AS MachiningEndDate
 
 FROM [RouteCardProcess].[dbo].[SetUp_Trans_Master] STM
 LEFT JOIN [RouteCardProcess].[dbo].[SetUp_Trans_Details_Master] SDM ON STM.SetUpID = SDM.SetUpID
@@ -90,7 +90,7 @@ SELECT
     NULL AS Bifurcated_ProcessedQty,
     NULL AS ProcessedQtyTime,
     NULL AS QtyStatus,
-   CONVERT(VARCHAR(10), SDM.SetupEndTime, 23) AS SetupEndDate,  
+    CONVERT(VARCHAR(10), SDM.SetupEndTime, 23) AS SetupEndDate,  
     NULL AS MachiningEndDate
 FROM [RouteCardProcess].[dbo].[SetUp_Trans_Master] STM
 LEFT JOIN [RouteCardProcess].[dbo].[SetUp_Trans_Details_Master] SDM ON STM.SetUpID = SDM.SetUpID
@@ -134,7 +134,7 @@ SELECT
     QBD.ProcessedQtyTime,
     QBD.QtyStatus,
     NULL AS SetupEndDate,
-   CONVERT(DATE, MDM.MachiningEndTime) AS MachiningEndDate
+  CONVERT(VARCHAR(10), MDM.MachiningEndTime, 23) AS MachiningEndDate
 FROM [RouteCardProcess].[dbo].[Machining_Trans_Master] MTM
 LEFT JOIN [RouteCardProcess].[dbo].[Machining_Details_Master] MDM ON MTM.MachiningId = MDM.MachiningId
 LEFT JOIN [RouteCardProcess].[dbo].[Machining_Pause_Master] MPM ON MTM.MachiningId = MPM.MachiningId
