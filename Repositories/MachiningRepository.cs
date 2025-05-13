@@ -38,15 +38,49 @@ public class MachiningRepository
         return result;
     }
 
-    public async Task StartMachiningAsync(string machiningId)
+  
+
+    public async Task<string> StartMachiningAsync(string machiningId)
     {
-        using var connection = Connection;
-        await connection.ExecuteAsync(
-            "sp_StartMachining",
-            new { MachiningID = machiningId },
-            commandType: CommandType.StoredProcedure
-        );
+        using var connection = Connection; // Assuming same factory method
+        var parameters = new { MachiningID = machiningId };
+
+        try
+        {
+            // Check if the Machining ID exists in the database
+            var existingMachining = await connection.QueryFirstOrDefaultAsync(
+                "SELECT 1 FROM Machining_Trans_Master WHERE MachiningID = @MachiningID",
+                parameters
+            );
+
+            if (existingMachining == null)
+            {
+                // If not found, create a new machining entry
+                var machiningMasterDto = new MachiningDto
+                {
+                    MachiningId = machiningId,
+                    // Populate other necessary properties: OperatorID, WorkOrderNo, etc.
+                };
+
+                await connection.ExecuteAsync("sp_CreateMachining", machiningMasterDto, commandType: CommandType.StoredProcedure);
+
+                // Start machining after creating it
+                await connection.ExecuteAsync("sp_StartMachining", parameters, commandType: CommandType.StoredProcedure);
+                return "Machining created and started";
+            }
+            else
+            {
+                // Start machining if it already exists
+                await connection.ExecuteAsync("sp_StartMachining", parameters, commandType: CommandType.StoredProcedure);
+                return "Machining started";
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Error starting machining: {ex.Message}", ex);
+        }
     }
+
 
     public async Task TogglePauseAsync(string machiningId, string pauseCode)
     {
@@ -58,15 +92,41 @@ public class MachiningRepository
         );
     }
 
-    public async Task EndMachiningAsync(string machiningId)
+    public async Task<bool> EndMachiningAsync(string machiningId)
     {
-        using var connection = Connection;
-        await connection.ExecuteAsync(
-            "sp_EndMachining",
-            new { MachiningID = machiningId },
+        using var connection = Connection; // Use the same connection factory
+        var parameters = new { MachiningID = machiningId };
+
+        // 1. Get current status
+        var machiningInfo = await connection.QueryFirstOrDefaultAsync<dynamic>(
+            "sp_GetMachiningStatusAndOperator",
+            parameters,
             commandType: CommandType.StoredProcedure
         );
+
+        string status = machiningInfo?.MachiningStatus;
+
+        // 2. If paused, toggle resume
+        if (status == "Machining Pause")
+        {
+            await connection.ExecuteAsync("sp_ToggleMachiningPause_Resume", parameters, commandType: CommandType.StoredProcedure);
+        }
+
+        // 3. End machining
+        var rowsAffected = await connection.ExecuteAsync("sp_EndMachining", parameters, commandType: CommandType.StoredProcedure);
+
+        // 4. Update end time
+        if (rowsAffected > 0)
+        {
+            await connection.ExecuteAsync("sp_UpdateMachiningEndTime",
+                new { EndTime = DateTime.Now, MachiningID = machiningId },
+                commandType: CommandType.StoredProcedure);
+            return true;
+        }
+
+        return false;
     }
+
 
     public async Task AddQuantitiesAsync(string machiningId, int totalQty, int processedQty, string qtyStatus)
     {

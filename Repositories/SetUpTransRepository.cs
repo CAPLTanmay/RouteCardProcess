@@ -204,15 +204,32 @@ namespace RouteCardProcess.Repositories
         {
             using var connection = CreateConnection();
             var parameters = new { SetUpID = setUpId };
-            var setupInfo = await connection.QueryFirstOrDefaultAsync<dynamic>("sp_GetSetupStatusAndOperator", new { SetUpID = setUpId }, commandType: CommandType.StoredProcedure);
-            string status = setupInfo.SetupStatus;
+
+            var setupInfo = await connection.QueryFirstOrDefaultAsync<dynamic>(
+                "sp_GetSetupStatusAndOperator",
+                new { SetUpID = setUpId },
+                commandType: CommandType.StoredProcedure);
+
+            string status = setupInfo?.SetupStatus;
+
             if (status == "Setup Pause")
             {
                 await connection.ExecuteAsync("sp_TogglePause_Resume", new { SetUpID = setUpId }, commandType: CommandType.StoredProcedure);
             }
+
             var rowsAffected = await connection.ExecuteAsync("sp_EndSetupTime", parameters, commandType: CommandType.StoredProcedure);
-            return rowsAffected > 0;
+
+            if (rowsAffected > 0)
+            {
+                await connection.ExecuteAsync("sp_UpdateSetupEndTime",
+                    new { EndTime = DateTime.Now, SetUpID = setUpId },
+                    commandType: CommandType.StoredProcedure);
+                return true;
+            }
+
+            return false;
         }
+
 
         public async Task<bool> InsertDelaysAsync(SetupDelayRequest request)
         {
@@ -245,14 +262,14 @@ namespace RouteCardProcess.Repositories
                 }
 
                 await connection.ExecuteAsync("sp_UpdateSetupStatus", new { request.SetUpStatus, SetUpID = request.SetUpID }, transaction, commandType: CommandType.StoredProcedure);
-                if (request.SetUpStatus == "Complete")
+              /*  if (request.SetUpStatus == "Complete")
                 {
                     await connection.ExecuteAsync("sp_UpdateSetupEndTime", new { EndTime = DateTime.Now, SetUpID = request.SetUpID }, transaction, commandType: CommandType.StoredProcedure);
                 }
                 else
                 {
                     await connection.ExecuteAsync("sp_UpdateSetupEndTime", new { EndTime = DateTime.Now, SetUpID = request.SetUpID }, transaction, commandType: CommandType.StoredProcedure);
-                }
+                }*/
 
                 transaction.Commit();
                 return true;

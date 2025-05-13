@@ -16,7 +16,7 @@
     public decimal? Master_ProcessedQty { get; set; }
     public DateTime? MachiningStartTime { get; set; }
     public DateTime? MachiningEndTime { get; set; }
-    public TimeSpan? TotalMachiningTime { get; set; }
+    public string? TotalMachiningTime { get; set; }
     public TimeSpan? Machining_PauseTime { get; set; }
     public TimeSpan? Machining_DelayedTime { get; set; }
     public string Machining_ReasonCode { get; set; }
@@ -24,6 +24,8 @@
     public decimal? Bifurcated_ProcessedQty { get; set; }
     public TimeSpan? ProcessedQtyTime { get; set; }
     public string QtyStatus { get; set; }
+    public string? SetupEndDate { get; set; }  
+    public string? MachiningEndDate { get; set; }
 }
 
 public class WorkOrderRequest

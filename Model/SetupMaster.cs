@@ -26,8 +26,8 @@ namespace RouteCardProcess.Model
 
         public DateTime? SetupStartTime { get; set; }
         public DateTime? SetupEndTime { get; set; }
-        public TimeSpan? ActualSetupTime { get; set; }
-        public TimeSpan? TotalSetupTime { get; set; } // This is adjusted setup time (Actual - Pauses)
+        public string? ActualSetupTime { get; set; }
+        public string? TotalSetupTime { get; set; } // This is adjusted setup time (Actual - Pauses)
 
     }
 

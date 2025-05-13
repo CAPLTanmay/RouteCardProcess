@@ -32,11 +32,20 @@ namespace RouteCardProcess.Controllers
 
             if (existing != null)
             {
+                var startTime = existing.MachiningStartTime;
+                var endTime = existing.MachiningEndTime ?? DateTime.Now;
+
+                TimeSpan? adjustedTotalTime = null;
+
+                if (startTime.HasValue)
+                    adjustedTotalTime = endTime - startTime;
+
                 return Ok(new
                 {
                     message = "Machining already exists",
                     machiningID = existing.MachiningId,
-                    machining = existing
+                    machining = existing,
+              
                 });
             }
 

@@ -20,7 +20,6 @@ namespace RouteCardProcess.Repositories
         public async Task<IEnumerable<RouteCardReportModel>> GetRouteCardReportAsync(string workOrderNo)
         {
             var sql = @"
--- Case 1: Setup and Machining match on WorkOrderNo, WorkCenterNo, and OperationNo
 SELECT 
     STM.WorkOrderNo,
     STM.SetUpID,
@@ -45,7 +44,10 @@ SELECT
     MDel.ProcessQtyDelayTime,
     QBD.ProcessedQty AS Bifurcated_ProcessedQty,
     QBD.ProcessedQtyTime,
-    QBD.QtyStatus
+    QBD.QtyStatus,
+   CONVERT(DATE, SDM.SetupEndTime) AS SetupEndDate,
+CONVERT(DATE, MDM.MachiningEndTime) AS MachiningEndDate
+
 FROM [RouteCardProcess].[dbo].[SetUp_Trans_Master] STM
 LEFT JOIN [RouteCardProcess].[dbo].[SetUp_Trans_Details_Master] SDM ON STM.SetUpID = SDM.SetUpID
 LEFT JOIN [RouteCardProcess].[dbo].[SetUp_Trans_Pause_Master] SPM ON STM.SetUpID = SPM.SetUpID
@@ -87,7 +89,9 @@ SELECT
     NULL AS ProcessQtyDelayTime,
     NULL AS Bifurcated_ProcessedQty,
     NULL AS ProcessedQtyTime,
-    NULL AS QtyStatus
+    NULL AS QtyStatus,
+   CONVERT(VARCHAR(10), SDM.SetupEndTime, 23) AS SetupEndDate,  
+    NULL AS MachiningEndDate
 FROM [RouteCardProcess].[dbo].[SetUp_Trans_Master] STM
 LEFT JOIN [RouteCardProcess].[dbo].[SetUp_Trans_Details_Master] SDM ON STM.SetUpID = SDM.SetUpID
 LEFT JOIN [RouteCardProcess].[dbo].[SetUp_Trans_Pause_Master] SPM ON STM.SetUpID = SPM.SetUpID
@@ -128,7 +132,9 @@ SELECT
     MDel.ProcessQtyDelayTime,
     QBD.ProcessedQty AS Bifurcated_ProcessedQty,
     QBD.ProcessedQtyTime,
-    QBD.QtyStatus
+    QBD.QtyStatus,
+    NULL AS SetupEndDate,
+   CONVERT(DATE, MDM.MachiningEndTime) AS MachiningEndDate
 FROM [RouteCardProcess].[dbo].[Machining_Trans_Master] MTM
 LEFT JOIN [RouteCardProcess].[dbo].[Machining_Details_Master] MDM ON MTM.MachiningId = MDM.MachiningId
 LEFT JOIN [RouteCardProcess].[dbo].[Machining_Pause_Master] MPM ON MTM.MachiningId = MPM.MachiningId
