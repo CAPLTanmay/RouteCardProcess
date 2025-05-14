@@ -78,6 +78,10 @@ namespace RouteCardProcess.Repositories
                     new { OperatorId = operatorId, Password = password },
                     commandType: CommandType.StoredProcedure
                 );
+                if (user != null)
+                {
+                    user.Shift = GetCurrentShift(); 
+                }
                 return user;
             }
             catch (Exception ex)
@@ -110,6 +114,27 @@ namespace RouteCardProcess.Repositories
                 return (0, "Error during logout process: " + ex.Message);
             }
         }
+        private string GetCurrentShift()
+        {
+            TimeSpan now = DateTime.Now.TimeOfDay;
+
+            var s1Start = new TimeSpan(7, 0, 0);
+            var s1End = new TimeSpan(15, 30, 0);
+
+            var s2Start = new TimeSpan(15, 30, 0);
+            var s2End = new TimeSpan(23, 59, 59);
+
+            var s3Start = new TimeSpan(0, 0, 0);
+            var s3End = new TimeSpan(7, 0, 0);
+
+            if (now >= s1Start && now < s1End)
+                return "S1";
+            else if (now >= s2Start && now <= s2End)
+                return "S2";
+            else
+                return "S3";
+        }
+
 
     }
 }

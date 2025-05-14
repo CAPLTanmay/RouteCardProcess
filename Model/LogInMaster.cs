@@ -27,5 +27,7 @@ namespace RouteCardProcess.Model
         public string DepartmentName { get; set; }
 
         public int DepartmentId { get; set; }
+        public string Shift { get; set; }
+
     }
 }

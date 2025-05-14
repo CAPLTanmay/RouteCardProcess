@@ -1,7 +1,5 @@
-﻿using System.Data;
-using Dapper;
+﻿using Dapper;
 using Microsoft.Data.SqlClient;
-using RouteCardProcess.Model;
 
 namespace RouteCardProcess.Repositories
 {
@@ -26,18 +24,22 @@ SELECT
     STM.OperatorId AS Master_OperatorId,
     STM.WorkCenterNo,
     STM.OperationNo,
-    SDM.SetupStartTime,
-    SDM.SetupEndTime,
+    CONVERT(VARCHAR(8), SDM.SetupStartTime, 108) AS SetupStartTime,
+CONVERT(VARCHAR(8), SDM.SetupEndTime, 108) AS SetupEndTime,
+
     SDM.TotalSetupTime,
+STM.IdealTime AS SetupIdIdealTime,
     SPM.TotalPauseTime,
     SDLY.TotalDelayedTime,
     MTM.MachiningId,
     MTM.OperatorId AS Machining_OperatorId,
     MTM.TotalQty AS Master_TotalQty,
     MTM.ProcessedQty AS Master_ProcessedQty,
-    MDM.MachiningStartTime,
-    MDM.MachiningEndTime,
+    CONVERT(VARCHAR(8), MDM.MachiningStartTime, 108) AS MachiningStartTime,
+CONVERT(VARCHAR(8), MDM.MachiningEndTime, 108) AS MachiningEndTime,
     MDM.TotalMachiningTime,
+MTM.IdealTime AS MachiningIdealTime,
+
     MPM.TotalPauseTime AS Machining_PauseTime,
     MDel.TotalDelayedTime AS Machining_DelayedTime,
     MDel.ReasonCode AS Machining_ReasonCode,
@@ -71,9 +73,11 @@ SELECT
     STM.OperatorId AS Master_OperatorId,
     STM.WorkCenterNo,
     STM.OperationNo,
-    SDM.SetupStartTime,
-    SDM.SetupEndTime,
+   CONVERT(VARCHAR(8), SDM.SetupStartTime, 108) AS SetupStartTime,
+CONVERT(VARCHAR(8), SDM.SetupEndTime, 108) AS SetupEndTime,
+
     SDM.TotalSetupTime,
+STM.IdealTime AS SetupIdIdealTime,
     SPM.TotalPauseTime,
     SDLY.TotalDelayedTime,
     NULL AS MachiningId,
@@ -83,6 +87,7 @@ SELECT
     NULL AS MachiningStartTime,
     NULL AS MachiningEndTime,
     NULL AS TotalMachiningTime,
+NULL AS MachiningIdealTime,
     NULL AS Machining_PauseTime,
     NULL AS Machining_DelayedTime,
     NULL AS Machining_ReasonCode,
@@ -117,15 +122,17 @@ SELECT
     NULL AS SetupStartTime,
     NULL AS SetupEndTime,
     NULL AS TotalSetupTime,
+NULL AS SetupIdIdealTime,
     NULL AS TotalPauseTime,
     NULL AS TotalDelayedTime,
     MTM.MachiningId,
     MTM.OperatorId AS Machining_OperatorId,
     MTM.TotalQty AS Master_TotalQty,
     MTM.ProcessedQty AS Master_ProcessedQty,
-    MDM.MachiningStartTime,
-    MDM.MachiningEndTime,
+    CONVERT(VARCHAR(8), MDM.MachiningStartTime, 108) AS MachiningStartTime,
+CONVERT(VARCHAR(8), MDM.MachiningEndTime, 108) AS MachiningEndTime,
     MDM.TotalMachiningTime,
+MTM.IdealTime AS MachiningIdealTime,
     MPM.TotalPauseTime AS Machining_PauseTime,
     MDel.TotalDelayedTime AS Machining_DelayedTime,
     MDel.ReasonCode AS Machining_ReasonCode,
