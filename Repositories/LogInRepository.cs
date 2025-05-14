@@ -98,7 +98,7 @@ namespace RouteCardProcess.Repositories
                     return (0, message);
 
                 // Check if setup or machining are still in progress (or other relevant statuses)
-                if (setupStatus == "Setup Started"|| setupStatus == "Setup Paused" || machiningStatus == "Machining Started" || machiningStatus == "Machining Pause")
+                if (setupStatus == "Setup Started"|| machiningStatus == "Machining Started" )
                     return (0, "Cannot logout. Setup or Machining is still in progress.");
 
                 // If all checks pass, return a flag indicating successful logout and a success message
