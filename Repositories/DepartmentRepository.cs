@@ -6,18 +6,17 @@ namespace RouteCardProcess.Repositories
 {
     public class DepartmentRepository
     {
-        private readonly IConfiguration _config;
+        private readonly SqlConnectionFactory _connectionFactory;
 
-        public DepartmentRepository(IConfiguration config)
+        public DepartmentRepository(SqlConnectionFactory connectionFactory)
         {
-            _config = config;
+            _connectionFactory = connectionFactory;
         }
 
         private SqlConnection CreateConnection()
         {
-            return new SqlConnection(_config.GetConnectionString("DefaultConnection"));
+            return _connectionFactory.CreateConnection();
         }
-
         public async Task<IEnumerable<DepartmentMaster>> GetAllAsync()
         {
             try

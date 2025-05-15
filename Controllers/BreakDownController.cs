@@ -8,7 +8,7 @@ namespace RouteCardProcess.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class BreakDownController : Controller
+    public class BreakDownController : ControllerBase
     {
         private readonly BreakDownRepository _repo;
 

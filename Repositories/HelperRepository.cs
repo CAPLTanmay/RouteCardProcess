@@ -7,16 +7,16 @@ namespace RouteCardProcess.Repositories
 {
     public class HelperRepository
     {
-        private readonly IConfiguration _config;
+        private readonly SqlConnectionFactory _connectionFactory;
 
-        public HelperRepository(IConfiguration config)
+        public HelperRepository(SqlConnectionFactory connectionFactory)
         {
-            _config = config;
+            _connectionFactory = connectionFactory;
         }
 
         private SqlConnection CreateConnection()
         {
-            return new SqlConnection(_config.GetConnectionString("DefaultConnection"));
+            return _connectionFactory.CreateConnection();
         }
 
         public async Task<string> AddHelperAsync(HelperRequest request)

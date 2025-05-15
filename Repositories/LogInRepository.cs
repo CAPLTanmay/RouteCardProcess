@@ -1,32 +1,25 @@
-﻿using Dapper;
-using Microsoft.Data.SqlClient;
+﻿using System.Data;
+using Dapper;
 using RouteCardProcess.Model;
-using System.Data;
 
 namespace RouteCardProcess.Repositories
 {
     public class LogInRepository
     {
-        private readonly IConfiguration _config;
+        private readonly SqlConnectionFactory _connectionFactory;
         private readonly SetUpTransRepository _setUpTransRepository;
 
-
-        public LogInRepository(IConfiguration config, SetUpTransRepository setUpTransRepository)
+        public LogInRepository(SqlConnectionFactory connectionFactory, SetUpTransRepository setUpTransRepository)
         {
-            _config = config;
+            _connectionFactory = connectionFactory;
             _setUpTransRepository = setUpTransRepository;
-        }
-
-        private SqlConnection CreateConnection()
-        {
-            return new SqlConnection(_config.GetConnectionString("DefaultConnection"));
         }
 
         public async Task<IEnumerable<LogInMaster>> GetAllAsync()
         {
             try
             {
-                using var connection = CreateConnection();
+                using var connection = _connectionFactory.CreateConnection();
                 await connection.OpenAsync();
                 var result = await connection.QueryAsync<LogInMaster>(
                     "sp_GetAllLogins",
@@ -44,7 +37,7 @@ namespace RouteCardProcess.Repositories
         {
             try
             {
-                using var connection = CreateConnection();
+                using var connection = _connectionFactory.CreateConnection();
                 await connection.OpenAsync();
                 var result = await connection.ExecuteAsync(
                     "sp_AddLogin",
@@ -70,7 +63,7 @@ namespace RouteCardProcess.Repositories
         {
             try
             {
-                using var connection = CreateConnection();
+                using var connection = _connectionFactory.CreateConnection();
                 await connection.OpenAsync();
                 var user = await connection.QueryFirstOrDefaultAsync<LogInMaster>(
                     "sp_ValidateLogin",
@@ -79,7 +72,7 @@ namespace RouteCardProcess.Repositories
                 );
                 if (user != null)
                 {
-                    user.Shift = GetCurrentShift(); 
+                    user.Shift = GetCurrentShift();
                 }
                 return user;
             }
@@ -93,26 +86,23 @@ namespace RouteCardProcess.Repositories
         {
             try
             {
-                // Check setup and machining status
-                var (flag, setupStatus, machiningStatus, message, setupIdFromDb, machiningId) = await _setUpTransRepository.CheckSetupNotificationStatusAsync(workCenterNo, workOrderNo, operationNo);
+                var (flag, setupStatus, machiningStatus, message, _, _) = await _setUpTransRepository
+                    .CheckSetupNotificationStatusAsync(workCenterNo, workOrderNo, operationNo);
 
-                // If setup or machining is not found, return an error flag and message
                 if (flag == 0)
                     return (0, message);
 
-                // Check if setup or machining are still in progress (or other relevant statuses)
-                if (setupStatus == "Setup Started"|| machiningStatus == "Machining Started" )
+                if (setupStatus == "Setup Started" || machiningStatus == "Machining Started")
                     return (0, "Cannot logout. Setup or Machining is still in progress.");
 
-                // If all checks pass, return a flag indicating successful logout and a success message
                 return (1, "Logout successful");
             }
             catch (Exception ex)
             {
-                // Handle any unexpected errors and return an error flag and message
                 return (0, "Error during logout process: " + ex.Message);
             }
         }
+
         public string GetCurrentShift(DateTime? dateTime = null)
         {
             TimeSpan time = (dateTime ?? DateTime.Now).TimeOfDay;
@@ -124,6 +114,5 @@ namespace RouteCardProcess.Repositories
             else
                 return "S3";
         }
-
     }
 }

@@ -1,24 +1,22 @@
 ﻿using System.Data;
 using Dapper;
-using Microsoft.Data.SqlClient;
 using RouteCardProcess.Model;
+using RouteCardProcess.Repositories;
 
 public class MachiningRepository
 {
-    private readonly IConfiguration _configuration;
-    private readonly string _connectionString;
+    private readonly SqlConnectionFactory _connectionFactory;
 
-    public MachiningRepository(IConfiguration configuration)
+    public MachiningRepository(SqlConnectionFactory connectionFactory)
     {
-        _configuration = configuration;
-        _connectionString = _configuration.GetConnectionString("DefaultConnection");
+        _connectionFactory = connectionFactory;
     }
 
-    private IDbConnection Connection => new SqlConnection(_connectionString);
+    private IDbConnection CreateConnection() => _connectionFactory.CreateConnection();
 
     public async Task<MachiningMaster> CreateAsync(MachiningDto obj)
     {
-        using var connection = Connection;
+        using var connection = CreateConnection();
         var MachiningId = Guid.NewGuid().ToString().Substring(0, 8);
         var result = await connection.QueryFirstOrDefaultAsync<MachiningMaster>(
             "sp_CreateMachining",
@@ -42,7 +40,7 @@ public class MachiningRepository
 
     public async Task<string> StartMachiningAsync(string machiningId)
     {
-        using var connection = Connection; // Assuming same factory method
+        using var connection = CreateConnection(); // Assuming same factory method
         var parameters = new { MachiningID = machiningId };
 
         try
@@ -84,7 +82,7 @@ public class MachiningRepository
 
     public async Task TogglePauseAsync(string machiningId, string pauseCode)
     {
-        using var connection = Connection;
+        using var connection = CreateConnection();
         await connection.ExecuteAsync(
             "sp_ToggleMachiningPause",
             new { MachiningID = machiningId, PauseCode = pauseCode },
@@ -94,7 +92,7 @@ public class MachiningRepository
 
     public async Task<bool> EndMachiningAsync(string machiningId)
     {
-        using var connection = Connection; // Use the same connection factory
+        using var connection = CreateConnection(); // Use the same connection factory
         var parameters = new { MachiningID = machiningId };
 
         // 1. Get current status
@@ -130,7 +128,7 @@ public class MachiningRepository
 
     public async Task AddQuantitiesAsync(string machiningId, int totalQty, int processedQty, string qtyStatus)
     {
-        using var connection = Connection;
+        using var connection = CreateConnection();
         await connection.ExecuteAsync(
             "sp_AddQuantities",
             new
@@ -146,7 +144,7 @@ public class MachiningRepository
 
     public async Task AddDelaysAsync(string machiningId, int processedQty, TimeSpan delayTime, string reasonCode, TimeSpan totalDelayedTime)
     {
-        using var connection = Connection;
+        using var connection = CreateConnection();
         await connection.ExecuteAsync(
             "sp_AddMachiningDelays",
             new
@@ -163,7 +161,7 @@ public class MachiningRepository
 
     public async Task<MachiningMaster> GetByCompositeKeyAsync(string workCenterNo, string workOrderNo, string operationNo)
     {
-        using var connection = Connection;
+        using var connection = CreateConnection();
         var result = await connection.QueryFirstOrDefaultAsync<MachiningMaster>(
             "dbo.sp_GetMachiningByCompositeKey",
             new { WorkCenterNo = workCenterNo, WorkOrderNo = workOrderNo, OperationNo = operationNo },

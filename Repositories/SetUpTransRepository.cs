@@ -7,17 +7,14 @@ namespace RouteCardProcess.Repositories
 {
     public class SetUpTransRepository
     {
-        private readonly IConfiguration _config;
+        private readonly SqlConnectionFactory _connectionFactory;
 
-        public SetUpTransRepository(IConfiguration config)
+        public SetUpTransRepository(SqlConnectionFactory connectionFactory)
         {
-            _config = config;
+            _connectionFactory = connectionFactory;
         }
 
-        private SqlConnection CreateConnection()
-        {
-            return new SqlConnection(_config.GetConnectionString("DefaultConnection"));
-        }
+        private IDbConnection CreateConnection() => _connectionFactory.CreateConnection();
 
         public async Task<SetupMaster> GetByCompositeKeyAsync(string workCenterNo, string workOrderNo, string operationNo)
         {
@@ -25,8 +22,6 @@ namespace RouteCardProcess.Repositories
             var parameters = new { WorkCenterNo = workCenterNo, WorkOrderNo = workOrderNo, OperationNo = operationNo };
             return await connection.QueryFirstOrDefaultAsync<SetupMaster>("sp_GetSetUpByCompositeKey", parameters, commandType: CommandType.StoredProcedure);
         }
-
-
 
         public async Task<(int Flag, string SetupStatus, string MachiningStatus, string Message, string SetUpID, string MachiningID)>
     CheckSetupNotificationStatusAsync(string workCenterNo, string workOrderNo, string operationNo)
@@ -78,7 +73,6 @@ namespace RouteCardProcess.Repositories
             }
 
             string combinedMessage = string.Join(" | ", new[] { setupMessage, machiningMessage }.Where(msg => !string.IsNullOrWhiteSpace(msg)));
-
             return (
                 Flag: 1,
                 SetupStatus: setup?.SetupStatus,
@@ -88,7 +82,6 @@ namespace RouteCardProcess.Repositories
                 MachiningID: machining?.MachiningId
             );
         }
-
 
         public async Task<SetupMaster> CreateSetupAsync(SetupMasterDto request)
         {
@@ -166,7 +159,6 @@ namespace RouteCardProcess.Repositories
             }
         }
 
-
         public async Task<string> TogglePauseAsync(SetupPauseRequest request)
         {
             using var connection = CreateConnection();
@@ -229,10 +221,9 @@ namespace RouteCardProcess.Repositories
             return false;
         }
 
-
         public async Task<bool> InsertDelaysAsync(SetupDelayRequest request)
         {
-            using var connection = CreateConnection();
+            using var connection = (SqlConnection)CreateConnection();
             await connection.OpenAsync();
             using var transaction = connection.BeginTransaction();
             try
@@ -261,15 +252,6 @@ namespace RouteCardProcess.Repositories
                 }
 
                 await connection.ExecuteAsync("sp_UpdateSetupStatus", new { request.SetUpStatus, SetUpID = request.SetUpID }, transaction, commandType: CommandType.StoredProcedure);
-              /*  if (request.SetUpStatus == "Complete")
-                {
-                    await connection.ExecuteAsync("sp_UpdateSetupEndTime", new { EndTime = DateTime.Now, SetUpID = request.SetUpID }, transaction, commandType: CommandType.StoredProcedure);
-                }
-                else
-                {
-                    await connection.ExecuteAsync("sp_UpdateSetupEndTime", new { EndTime = DateTime.Now, SetUpID = request.SetUpID }, transaction, commandType: CommandType.StoredProcedure);
-                }*/
-
                 transaction.Commit();
                 return true;
             }

@@ -11,6 +11,10 @@ var builder = WebApplication.CreateBuilder(args);
 // Add controllers
 builder.Services.AddControllers();
 
+// Connection string setup
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddSingleton(new SqlConnectionFactory(connectionString));
+
 // Add Swagger with JWT Auth support
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -53,6 +57,7 @@ builder.Services.AddScoped<MachiningRepository>();
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<HelperRepository>();
 builder.Services.AddScoped<RouteCardReportRepository>();
+builder.Services.AddScoped<BreakDownRepository>();
 
 // JWT Authentication configuration
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");

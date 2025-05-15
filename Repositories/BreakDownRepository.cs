@@ -6,16 +6,16 @@ namespace RouteCardProcess.Repositories
 {
     public class BreakDownRepository
     {
-        private readonly IConfiguration _config;
+        private readonly SqlConnectionFactory _connectionFactory;
 
-        public BreakDownRepository(IConfiguration config)
+        public BreakDownRepository(SqlConnectionFactory connectionFactory)
         {
-            _config = config;
+            _connectionFactory = connectionFactory;
         }
 
         private SqlConnection CreateConnection()
         {
-            return new SqlConnection(_config.GetConnectionString("DefaultConnection"));
+            return _connectionFactory.CreateConnection();
         }
 
         public async Task<bool> StartBreakDownAsync(string workCenterNo, string operatorId, string? breakDownReasonCode = null)
@@ -27,9 +27,19 @@ namespace RouteCardProcess.Repositories
                 OperatorId = operatorId,
                 BreakDownReasonCode = breakDownReasonCode
             };
-            var rows = await connection.ExecuteAsync("sp_StartBreakDown", parameters, commandType: CommandType.StoredProcedure);
-            return rows > 0;
+            try
+            {
+                var rows = await connection.ExecuteAsync("sp_StartBreakDown", parameters, commandType: CommandType.StoredProcedure);
+                Console.WriteLine($"Rows affected: {rows}");
+                return rows > 0;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("SQL Error: " + ex.Message);
+                throw;
+            }
         }
+
         public async Task<bool> EndBreakDownAsync(string workCenterNo, string? operatorId = null, string? breakDownReasonCode = null)
         {
             using var connection = CreateConnection();

@@ -1,7 +1,7 @@
-﻿using Microsoft.Data.SqlClient;
-using System.Data;
+﻿// SqlConnectionFactory.cs
+using Microsoft.Data.SqlClient;
 
-namespace RouteCardProcess.Services
+namespace RouteCardProcess.Repositories
 {
     public class SqlConnectionFactory
     {
@@ -12,7 +12,7 @@ namespace RouteCardProcess.Services
             _connectionString = connectionString;
         }
 
-        public IDbConnection CreateConnection()
+        public SqlConnection CreateConnection()
         {
             return new SqlConnection(_connectionString);
         }
