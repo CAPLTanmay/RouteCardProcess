@@ -3,7 +3,6 @@ using Microsoft.Data.SqlClient;
 using RouteCardProcess.Model;
 using System.Data;
 
-
 namespace RouteCardProcess.Repositories
 {
     public class LogInRepository
@@ -114,27 +113,17 @@ namespace RouteCardProcess.Repositories
                 return (0, "Error during logout process: " + ex.Message);
             }
         }
-        private string GetCurrentShift()
+        public string GetCurrentShift(DateTime? dateTime = null)
         {
-            TimeSpan now = DateTime.Now.TimeOfDay;
+            TimeSpan time = (dateTime ?? DateTime.Now).TimeOfDay;
 
-            var s1Start = new TimeSpan(7, 0, 0);
-            var s1End = new TimeSpan(15, 30, 0);
-
-            var s2Start = new TimeSpan(15, 30, 0);
-            var s2End = new TimeSpan(23, 59, 59);
-
-            var s3Start = new TimeSpan(0, 0, 0);
-            var s3End = new TimeSpan(7, 0, 0);
-
-            if (now >= s1Start && now < s1End)
+            if (time >= new TimeSpan(7, 0, 0) && time < new TimeSpan(15, 30, 0))
                 return "S1";
-            else if (now >= s2Start && now <= s2End)
+            else if (time >= new TimeSpan(15, 30, 0) && time <= new TimeSpan(23, 59, 59))
                 return "S2";
             else
                 return "S3";
         }
-
 
     }
 }

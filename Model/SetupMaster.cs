@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-
-namespace RouteCardProcess.Model
+﻿namespace RouteCardProcess.Model
 {
     public class SetupMasterDto
     {

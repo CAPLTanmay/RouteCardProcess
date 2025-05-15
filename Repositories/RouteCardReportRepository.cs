@@ -6,10 +6,12 @@ namespace RouteCardProcess.Repositories
     public class RouteCardReportRepository
     {
         private readonly IConfiguration _config;
+        private readonly LogInRepository _logInRepository;
 
-        public RouteCardReportRepository(IConfiguration config)
+        public RouteCardReportRepository(IConfiguration config, LogInRepository logInRepository)
         {
             _config = config;
+            _logInRepository = logInRepository;
         }
         private SqlConnection CreateConnection()
         {
@@ -158,9 +160,22 @@ WHERE MTM.WorkOrderNo = @WorkOrderNo
 ";
 
             using var connection = CreateConnection();
-            return await connection.QueryAsync<RouteCardReportModel>(sql, new { WorkOrderNo = workOrderNo });
+            var result = (await connection.QueryAsync<RouteCardReportModel>(sql, new { WorkOrderNo = workOrderNo })).ToList();
+            foreach (var item in result)
+            {
+                DateTime shiftTime;
+
+                if (!string.IsNullOrWhiteSpace(item.MachiningEndTime) &&
+                    DateTime.TryParse(item.MachiningEndTime, out shiftTime))
+                {
+                    item.Shift = _logInRepository.GetCurrentShift(shiftTime);
+                }
+                else
+                {
+                    item.Shift = _logInRepository.GetCurrentShift(DateTime.Now);
+                }
+            }
+            return result;
         }
-
-
     }
 }

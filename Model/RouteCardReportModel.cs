@@ -28,6 +28,8 @@
     public string QtyStatus { get; set; }
     public string? SetupEndDate { get; set; }
     public string? MachiningEndDate { get; set; }
+    public string Shift { get; set; }
+
 }
 
 public class WorkOrderRequest
