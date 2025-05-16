@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using RouteCardProcess.Middleware;
+using RouteCardProcess.Model;
 using RouteCardProcess.Repositories;
 using RouteCardProcess.Services;
 
@@ -14,6 +15,7 @@ builder.Services.AddControllers();
 // Connection string setup
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddSingleton(new SqlConnectionFactory(connectionString));
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 
 // Add Swagger with JWT Auth support
 builder.Services.AddEndpointsApiExplorer();
@@ -58,6 +60,7 @@ builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<HelperRepository>();
 builder.Services.AddScoped<RouteCardReportRepository>();
 builder.Services.AddScoped<BreakDownRepository>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 // JWT Authentication configuration
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
