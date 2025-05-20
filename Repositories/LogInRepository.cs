@@ -1,6 +1,7 @@
 ﻿using System.Data;
 using Dapper;
 using RouteCardProcess.Model;
+using RouteCardProcess.Services;
 
 namespace RouteCardProcess.Repositories
 {
@@ -8,11 +9,13 @@ namespace RouteCardProcess.Repositories
     {
         private readonly SqlConnectionFactory _connectionFactory;
         private readonly SetUpTransRepository _setUpTransRepository;
+        private readonly KblAuthService _kblService;
 
-        public LogInRepository(SqlConnectionFactory connectionFactory, SetUpTransRepository setUpTransRepository)
+        public LogInRepository(SqlConnectionFactory connectionFactory, SetUpTransRepository setUpTransRepository, KblAuthService kblService)
         {
             _connectionFactory = connectionFactory;
             _setUpTransRepository = setUpTransRepository;
+            _kblService = kblService;
         }
 
         public async Task<IEnumerable<LogInMaster>> GetAllAsync()
@@ -63,24 +66,59 @@ namespace RouteCardProcess.Repositories
         {
             try
             {
-                using var connection = _connectionFactory.CreateConnection();
-                await connection.OpenAsync();
-                var user = await connection.QueryFirstOrDefaultAsync<LogInMaster>(
-                    "sp_ValidateLogin",
-                    new { OperatorId = operatorId, Password = password },
-                    commandType: CommandType.StoredProcedure
-                );
-                if (user != null)
+                // Try KBL login first
+                var kblLogin = new KblLoginRequest
                 {
-                    user.Shift = GetCurrentShift();
+                    StrLoginId = operatorId,
+                    StrPassword = password
+                };
+
+                var kblAuthResponse = await _kblService.AuthenticateLoginAsync(kblLogin);
+
+                if (kblAuthResponse == "Success")
+                {
+                    var token = await _kblService.GetTokenAsync();
+                    var empInfoResponse = await _kblService.GetEmployeeInfoAsync(token, operatorId);
+                    var emp = empInfoResponse?.EmpInfo?.FirstOrDefault();
+
+                    if (emp != null)
+                    {
+                        return new LogInMaster
+                        {
+                            OperatorId = emp.Tktno,
+                            OperatorName = emp.Name,
+                            Role = emp.Designation,
+                            DepartmentId = 3,
+                            DepartmentName = emp.Deptnm,
+                            Shift = GetCurrentShift(),
+                            IsFromKBL = true // Optional: custom property to tag source
+                        };
+                    }
                 }
-                return user;
             }
-            catch (Exception ex)
+            catch
             {
-                throw new Exception("Error validating login credentials.", ex);
+                // Optional: log or handle KBL failure silently
             }
+
+            // Fall back to local DB validation
+            using var connection = _connectionFactory.CreateConnection();
+            await connection.OpenAsync();
+            var user = await connection.QueryFirstOrDefaultAsync<LogInMaster>(
+                "sp_ValidateLogin",
+                new { OperatorId = operatorId, Password = password },
+                commandType: CommandType.StoredProcedure
+            );
+
+            if (user != null)
+            {
+                user.Shift = GetCurrentShift();
+                user.IsFromKBL = false; // Optional flag
+            }
+
+            return user;
         }
+
 
         public async Task<(int Flag, string Message)> TryLogoutAsync(string workCenterNo, string workOrderNo, string operationNo)
         {

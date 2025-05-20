@@ -28,6 +28,7 @@ namespace RouteCardProcess.Model
 
         public int DepartmentId { get; set; }
         public string Shift { get; set; }
+        public bool IsFromKBL { get; set; }
 
     }
 }

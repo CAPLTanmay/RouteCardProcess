@@ -27,7 +27,10 @@ public class MachiningRepository
                 obj.WorkOrderNo,
                 obj.OperationNo,
                 MachiningID=MachiningId,
-                IdealTime = TimeSpan.TryParse(obj.IdealTime, out var idealTime) ? idealTime : TimeSpan.Zero,
+                IdealTime = double.TryParse(obj.IdealTime, out var minutes)
+    ? TimeSpan.FromMinutes(minutes)
+    : TimeSpan.Zero,
+                
                 obj.TotalQty,
                 obj.ProcessedQty
             },

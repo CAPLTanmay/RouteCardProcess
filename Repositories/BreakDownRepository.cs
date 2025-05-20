@@ -38,8 +38,16 @@ namespace RouteCardProcess.Repositories
                 if (rows > 0)
                 {
                     var reasonText = string.IsNullOrEmpty(breakDownReasonCode) ? "Unknown Reason" : breakDownReasonCode;
-                    var subject = $"[Breakdown Started] at {workCenterNo}";
-                    var body = $"WorkCenter No: {workCenterNo} is in Breakdown due to <b>{reasonText}</b> at <b>{DateTime.Now:dd-MM-yyyy HH:mm:ss}</b>";
+
+                    var subject = $"Breakdown Alert: Work Center {workCenterNo} is Down";
+
+                    var body = $@"
+<p><strong>Attention:</strong></p>
+<p>The work center <strong>{workCenterNo}</strong> has encountered a <strong>breakdown</strong>.</p>
+<p><strong>Reason Code:</strong> {reasonText}</p>
+<p><strong>Time:</strong> {DateTime.Now:dd-MM-yyyy HH:mm:ss}</p>
+<p>Please take immediate action to investigate and resolve the issue.</p>
+";
 
                     await _emailService.SendEmailAsync(subject, body, "tanmaysankpal119@gmail.com");
                     return true;
@@ -69,8 +77,16 @@ namespace RouteCardProcess.Repositories
             if (rows > 0)
             {
                 var reasonText = string.IsNullOrEmpty(breakDownReasonCode) ? "Unknown Reason" : breakDownReasonCode;
-                var subject = $"[Breakdown Ended] at {workCenterNo}";
-                var body = $"WorkCenter No: {workCenterNo} Breakdown ended. Reason: <b>{reasonText}</b> at <b>{DateTime.Now:dd-MM-yyyy HH:mm:ss}</b>";
+
+                var subject = $"Breakdown Resolved: Work Center {workCenterNo} is Back Online";
+
+                var body = $@"
+<p><strong>Update:</strong></p>
+<p>The breakdown at <strong>Work Center {workCenterNo}</strong> has been resolved.</p>
+<p><strong>Reason Code:</strong> {reasonText}</p>
+<p><strong>Resolved At:</strong> {DateTime.Now:dd-MM-yyyy HH:mm:ss}</p>
+<p>The work center is now operational.</p>
+";
 
                 await _emailService.SendEmailAsync(subject, body, "tanmaysankpal119@gmail.com");
                 return true;
@@ -78,7 +94,5 @@ namespace RouteCardProcess.Repositories
 
             return false;
         }
-
-
     }
 }

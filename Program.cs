@@ -16,6 +16,8 @@ builder.Services.AddControllers();
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddSingleton(new SqlConnectionFactory(connectionString));
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+builder.Services.AddHttpClient();
+
 
 // Add Swagger with JWT Auth support
 builder.Services.AddEndpointsApiExplorer();
@@ -61,6 +63,7 @@ builder.Services.AddScoped<HelperRepository>();
 builder.Services.AddScoped<RouteCardReportRepository>();
 builder.Services.AddScoped<BreakDownRepository>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<KblAuthService>();
 
 // JWT Authentication configuration
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
