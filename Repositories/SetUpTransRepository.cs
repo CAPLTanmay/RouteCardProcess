@@ -228,9 +228,33 @@ namespace RouteCardProcess.Repositories
             using var transaction = connection.BeginTransaction();
             try
             {
-                var setup = await connection.QueryFirstOrDefaultAsync<dynamic>("sp_GetSetupOperatorAndStatus", new { SetUpID = request.SetUpID }, transaction, commandType: CommandType.StoredProcedure);
+                // If no delays, just update status and return
+                if (request.Delays == null || request.Delays.Count == 0)
+                {
+                    await connection.ExecuteAsync(
+                        "sp_UpdateSetupStatus",
+                        new { request.SetUpStatus, SetUpID = request.SetUpID },
+                        transaction,
+                        commandType: CommandType.StoredProcedure
+                    );
 
-                if (setup == null) return false;
+                    transaction.Commit();
+                    return true;
+                }
+
+                // Otherwise, proceed with normal delay insertion
+                var setup = await connection.QueryFirstOrDefaultAsync<dynamic>(
+                    "sp_GetSetupOperatorAndStatus",
+                    new { SetUpID = request.SetUpID },
+                    transaction,
+                    commandType: CommandType.StoredProcedure
+                );
+
+                if (setup == null)
+                {
+                    transaction.Rollback();
+                    return false;
+                }
 
                 TimeSpan totalDelay = TimeSpan.Zero;
                 foreach (var delay in request.Delays)
@@ -240,27 +264,40 @@ namespace RouteCardProcess.Repositories
 
                 foreach (var delay in request.Delays)
                 {
-                    await connection.ExecuteAsync("sp_InsertDelays", new
-                    {
-                        SetUpID = request.SetUpID,
-                        OperatorId = setup.OperatorId,
-                        SetupStatus = request.SetUpStatus,
-                        DelayReasonCode = delay.DelayReasonCode,
-                        DelayTime = delay.DelayTime,
-                        TotalDelayedTime = totalDelay
-                    }, transaction, commandType: CommandType.StoredProcedure);
+                    await connection.ExecuteAsync(
+                        "sp_InsertDelays",
+                        new
+                        {
+                            SetUpID = request.SetUpID,
+                            OperatorId = setup.OperatorId,
+                            SetupStatus = request.SetUpStatus,
+                            DelayReasonCode = delay.DelayReasonCode,
+                            DelayTime = delay.DelayTime,
+                            TotalDelayedTime = totalDelay
+                        },
+                        transaction,
+                        commandType: CommandType.StoredProcedure
+                    );
                 }
 
-                await connection.ExecuteAsync("sp_UpdateSetupStatus", new { request.SetUpStatus, SetUpID = request.SetUpID }, transaction, commandType: CommandType.StoredProcedure);
+                await connection.ExecuteAsync(
+                    "sp_UpdateSetupStatus",
+                    new { request.SetUpStatus, SetUpID = request.SetUpID },
+                    transaction,
+                    commandType: CommandType.StoredProcedure
+                );
+
                 transaction.Commit();
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
                 transaction.Rollback();
+                // Consider logging the error here if you have a logger
                 throw;
             }
         }
+
 
         private TimeSpan ConvertMinutesToTimeSpan(string minutes)
         {

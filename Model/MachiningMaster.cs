@@ -57,13 +57,13 @@
         public string ProcessedQty { get; set; } = string.Empty;
     }
 
-    public class MachiningDelayRequest
-    {
-        public string MachiningId { get; set; } = string.Empty;
-        public TimeSpan? TotalDelayedTime { get; set; }
-        public string? TotalQty { get; set; }
-        public List<MachiningDelayReasonCode> Delays { get; set; } = new();
-    }
+        public class MachiningDelayRequest
+        {
+            public string MachiningId { get; set; } = string.Empty;
+            public TimeSpan? TotalDelayedTime { get; set; }
+            public string? TotalQty { get; set; }
+            public List<MachiningDelayReasonCode>? Delays { get; set; } = new();
+        }
 
     public class MachiningDelayReasonCode
     {

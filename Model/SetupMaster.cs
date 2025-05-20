@@ -44,7 +44,7 @@
     {
         public string SetUpID { get; set; }
         public string SetUpStatus { get; set; }
-        public List<DelayRequest> Delays { get; set; }
+        public List<DelayRequest>? Delays { get; set; }
     }
 
     public class DelayRequest

@@ -155,7 +155,12 @@ namespace RouteCardProcess.Controllers
         public async Task<IActionResult> AddDelays([FromBody] MachiningDelayRequest request)
         {
             if (request?.Delays == null || !request.Delays.Any())
-                return BadRequest(new { success = false, message = "Invalid input: Delays cannot be empty." });
+                return Ok(new
+                {
+                    success = true,
+                    message = "Delays inserted successfully",
+                    data = new { request.MachiningId, request.TotalDelayedTime, request.Delays }
+                });
 
             if (string.IsNullOrWhiteSpace(request.MachiningId))
                 return BadRequest(new { success = false, message = "MachiningId is required." });
