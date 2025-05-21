@@ -1,19 +1,23 @@
-﻿using RouteCardProcess.Model;
+﻿using System.Net.Http.Headers;
+using Microsoft.Extensions.Options;
+using RouteCardProcess.Model;
 
 namespace RouteCardProcess.Services
 {
     public class KblAuthService
     {
         private readonly HttpClient _httpClient;
+        private readonly KblApiConfig _config;
 
-        public KblAuthService(IHttpClientFactory httpClientFactory)
+        public KblAuthService(IHttpClientFactory httpClientFactory, IOptions<KblApiConfig> config)
         {
             _httpClient = httpClientFactory.CreateClient();
+            _config = config.Value;
         }
 
         public async Task<string> AuthenticateLoginAsync(KblLoginRequest request)
         {
-            var authUrl = "https://testwebapi.kirloskarpumps.com/Microservices/APIGateway/gateway/Auth";
+            var authUrl = $"{_config.BaseUrl}/{_config.AuthEndpoint}";
             var response = await _httpClient.PostAsJsonAsync(authUrl, request);
             response.EnsureSuccessStatusCode();
 
@@ -22,7 +26,7 @@ namespace RouteCardProcess.Services
 
         public async Task<string> GetTokenAsync()
         {
-            var tokenUrl = "https://testwebapi.kirloskarpumps.com/Microservices/APIGateway/gateway/tokenVali";
+            var tokenUrl = $"{_config.BaseUrl}/{_config.TokenEndpoint}";
             var payload = new KblTokenRequest();
 
             var response = await _httpClient.PostAsJsonAsync(tokenUrl, payload);
@@ -33,14 +37,14 @@ namespace RouteCardProcess.Services
 
         public async Task<KblEmpInfoResponse> GetEmployeeInfoAsync(string token, string empId)
         {
-            var empInfoUrl = "https://testwebapi.kirloskarpumps.com/Microservices/APIGateway/gateway/GetEmpInfo";
+            var empInfoUrl = $"{_config.BaseUrl}/{_config.EmployeeInfoEndpoint}";
             var request = new KblEmpInfoRequest { EmpId = empId };
 
             var httpRequest = new HttpRequestMessage(HttpMethod.Post, empInfoUrl)
             {
                 Content = JsonContent.Create(request)
             };
-            httpRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             var response = await _httpClient.SendAsync(httpRequest);
             response.EnsureSuccessStatusCode();
@@ -48,6 +52,17 @@ namespace RouteCardProcess.Services
             var empData = await response.Content.ReadFromJsonAsync<KblEmpInfoResponse>();
             return empData!;
         }
-    }
 
+        public async Task<string?> EncryptPasswordAsync(string plainPassword)
+        {
+            var url = $"{_config.BaseUrl}/{_config.EncryptEndpoint}?mod={Uri.EscapeDataString(plainPassword)}";
+
+            var response = await _httpClient.GetAsync(url);
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            var encrypted = await response.Content.ReadAsStringAsync();
+            return encrypted.Trim('"');
+        }
+    }
 }

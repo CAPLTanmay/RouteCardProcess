@@ -17,6 +17,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddSingleton(new SqlConnectionFactory(connectionString));
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 builder.Services.AddHttpClient();
+builder.Services.Configure<KblApiConfig>(builder.Configuration.GetSection("KblApi"));
 
 
 // Add Swagger with JWT Auth support

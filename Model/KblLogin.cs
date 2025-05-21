@@ -45,6 +45,13 @@
         public string SubDept2 { get; set; }
         public string SubDept3 { get; set; }
     }
-
+    public class KblApiConfig
+    {
+        public string BaseUrl { get; set; } = string.Empty;
+        public string AuthEndpoint { get; set; } = string.Empty;
+        public string EncryptEndpoint { get; set; } = string.Empty;
+        public string TokenEndpoint { get; set; } = string.Empty;
+        public string EmployeeInfoEndpoint { get; set; } = string.Empty;
+    }
 
 }
