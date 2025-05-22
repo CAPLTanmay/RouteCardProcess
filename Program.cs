@@ -19,6 +19,11 @@ builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("Emai
 builder.Services.AddHttpClient();
 builder.Services.Configure<KblApiConfig>(builder.Configuration.GetSection("KblApi"));
 
+//flag override based on environment
+var environment = builder.Environment.EnvironmentName;
+var useKblAuth = environment == "Production";
+
+builder.Configuration["UseKblAuth"] = useKblAuth.ToString();
 
 // Add Swagger with JWT Auth support
 builder.Services.AddEndpointsApiExplorer();

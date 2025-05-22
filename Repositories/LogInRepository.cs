@@ -10,12 +10,14 @@ namespace RouteCardProcess.Repositories
         private readonly SqlConnectionFactory _connectionFactory;
         private readonly SetUpTransRepository _setUpTransRepository;
         private readonly KblAuthService _kblService;
+        private readonly IConfiguration _configuration;
 
-        public LogInRepository(SqlConnectionFactory connectionFactory, SetUpTransRepository setUpTransRepository, KblAuthService kblService)
+        public LogInRepository(SqlConnectionFactory connectionFactory, SetUpTransRepository setUpTransRepository, KblAuthService kblService, IConfiguration configuration)
         {
             _connectionFactory = connectionFactory;
             _setUpTransRepository = setUpTransRepository;
             _kblService = kblService;
+            _configuration = configuration;
         }
 
         public async Task<IEnumerable<LogInMaster>> GetAllAsync()
@@ -64,48 +66,52 @@ namespace RouteCardProcess.Repositories
 
         public async Task<LogInMaster?> ValidateLoginAsync(string operatorId, string password)
         {
+            var useKblAuth = _configuration.GetValue<bool>("UseKblAuthAPI");
 
-            try
+            if (useKblAuth)
             {
-                var encryptedPassword = await _kblService.EncryptPasswordAsync(password);
-                
-                if (!string.IsNullOrEmpty(encryptedPassword))
+                try
                 {
-                    var kblLogin = new KblLoginRequest
-                    {
-                        StrLoginId = operatorId,
-                        StrPassword = encryptedPassword
-                    };
 
-                    var kblAuthResponse = await _kblService.AuthenticateLoginAsync(kblLogin);
-                    
-                    if (kblAuthResponse == "Success")
-                    {
-                        var token = await _kblService.GetTokenAsync();
-                        var empInfoResponse = await _kblService.GetEmployeeInfoAsync(token, operatorId);
-                        var emp = empInfoResponse?.EmpInfo?.FirstOrDefault();
+                    var encryptedPassword = await _kblService.EncryptPasswordAsync(password);
 
-                        if (emp != null)
+                    if (!string.IsNullOrEmpty(encryptedPassword))
+                    {
+                        var kblLogin = new KblLoginRequest
                         {
-                            return new LogInMaster
+                            StrLoginId = operatorId,
+                            StrPassword = encryptedPassword
+                        };
+
+                        var kblAuthResponse = await _kblService.AuthenticateLoginAsync(kblLogin);
+
+                        if (kblAuthResponse == "Success")
+                        {
+                            var token = await _kblService.GetTokenAsync();
+                            var empInfoResponse = await _kblService.GetEmployeeInfoAsync(token, operatorId);
+                            var emp = empInfoResponse?.EmpInfo?.FirstOrDefault();
+
+                            if (emp != null)
                             {
-                                OperatorId = emp.Tktno,
-                                OperatorName = emp.Name,
-                                Role = emp.Designation,
-                                DepartmentId = 3,
-                                DepartmentName = emp.Deptnm,
-                                Shift = GetCurrentShift(),
-                                IsFromKBL = true
-                            };
+                                return new LogInMaster
+                                {
+                                    OperatorId = emp.Tktno,
+                                    OperatorName = emp.Name,
+                                    Role = emp.Designation,
+                                    DepartmentId = 3,
+                                    DepartmentName = emp.Deptnm,
+                                    Shift = GetCurrentShift(),
+                                    IsFromKBL = true
+                                };
+                            }
                         }
                     }
                 }
+                catch
+                {
+                    // Optional: log or handle KBL failure silently
+                }
             }
-            catch 
-            {
-                // Optional: log or handle KBL failure silently
-            }
-
 
 
             // Fall back to local DB validation
