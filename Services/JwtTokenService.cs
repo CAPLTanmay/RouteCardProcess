@@ -2,10 +2,11 @@
 using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
+using RouteCardProcess.Interfaces;
 
 namespace RouteCardProcess.Services
 {
-    public class JwtTokenService
+    public class JwtTokenService:IJwtTokenService
     {
         private readonly IConfiguration _configuration;
 

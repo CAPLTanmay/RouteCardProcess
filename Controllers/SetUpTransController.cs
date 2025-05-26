@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RouteCardProcess.Model;
-using RouteCardProcess.Repositories;
+using RouteCardProcess.Interfaces;
 
 namespace RouteCardProcess.Controllers
 {
@@ -10,12 +10,34 @@ namespace RouteCardProcess.Controllers
     [Authorize]
     public class SetUpTransController : ControllerBase
     {
-        private readonly SetUpTransRepository _repo;
+        private readonly ISetUpTransRepository _repo;
 
-        public SetUpTransController(SetUpTransRepository repo)
+        public SetUpTransController(ISetUpTransRepository repo)
         {
             _repo = repo;
         }
+
+        [HttpPost("check-status")]
+        public async Task<IActionResult> CheckStatus([FromBody] SetupMasterDto request)
+        {
+            var result = await _repo.CheckSetupNotificationStatusAsync(
+                request.WorkCenterNo,
+                request.WorkOrderNo,
+                request.OperationNo
+            );
+
+            return Ok(new
+            {
+                flag = result.Flag,
+                setupStatus = result.SetupStatus,
+                machiningStatus = result.MachiningStatus,
+                setupId = result.SetUpID,
+                machiningId = result.MachiningID,
+                message = result.Message
+            });
+        }
+
+
 
         [HttpPost("check-or-create")]
         public async Task<IActionResult> CheckOrCreateSetup([FromBody] SetupMasterDto request)
@@ -24,6 +46,14 @@ namespace RouteCardProcess.Controllers
 
             if (existing != null)
             {
+                var startTime = existing.SetupStartTime;
+                var endTime = existing.SetupEndTime ?? DateTime.Now;
+
+                TimeSpan? adjustedTotalSetupTime = null;
+
+                if (startTime.HasValue)
+                    adjustedTotalSetupTime = endTime - startTime;
+
                 return Ok(new
                 {
                     message = "Setup already exists",

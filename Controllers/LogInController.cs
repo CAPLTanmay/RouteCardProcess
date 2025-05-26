@@ -1,8 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model;
-using RouteCardProcess.Repositories;
-using RouteCardProcess.Services;
 
 namespace RouteCardProcess.Controllers
 {
@@ -11,10 +10,10 @@ namespace RouteCardProcess.Controllers
     [Authorize]
     public class LogInController : ControllerBase
     {
-        private readonly LogInRepository _repo;
-        private readonly JwtTokenService _jwtService;
+        private readonly ILogInRepository _repo;
+        private readonly IJwtTokenService _jwtService;
 
-        public LogInController(LogInRepository repo, JwtTokenService jwtService)
+        public LogInController(ILogInRepository repo, IJwtTokenService jwtService)
         {
             _repo = repo;
             _jwtService = jwtService;
@@ -52,16 +51,15 @@ namespace RouteCardProcess.Controllers
             return Ok(new { message = "Login successful", token, user });
         }
 
-        [HttpPost("logout")]
-        public async Task<IActionResult> Logout([FromBody] SetupIdentifierRequest request)
+        [HttpPost("TryLogout")]
+        public async Task<IActionResult> TryLogout([FromBody] LogoutRequest request)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            var (flag, message) = await _repo.TryLogoutAsync(request.WorkCenterNo, request.WorkOrderNo, request.OperationNo);
 
-            var result = await _repo.TryLogoutAsync(request.SetUpID);
-            return result == "OK"
-                ? Ok(new { message = "Logout successful" })
-                : BadRequest(new { message = result });
+            if (flag == 1)
+                return Ok(new { Success = true, Message = message });
+
+            return BadRequest(new { Success = false, Message = message });
         }
     }
 }

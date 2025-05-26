@@ -1,29 +1,30 @@
-﻿using Dapper;
-using Microsoft.Data.SqlClient;
+﻿using System.Data;
+using Dapper;
+using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model;
-using System.Data;
 
 namespace RouteCardProcess.Repositories
 {
-    public class LogInRepository
+    public class LogInRepository:ILogInRepository
     {
-        private readonly IConfiguration _config;
+        private readonly SqlConnectionFactory _connectionFactory;
+        private readonly ISetUpTransRepository _setUpTransRepository;
+        private readonly IKblAuthService _kblService;
+        private readonly IConfiguration _configuration;
 
-        public LogInRepository(IConfiguration config)
+        public LogInRepository(SqlConnectionFactory connectionFactory, ISetUpTransRepository setUpTransRepository, IKblAuthService kblService, IConfiguration configuration)
         {
-            _config = config;
-        }
-
-        private SqlConnection CreateConnection()
-        {
-            return new SqlConnection(_config.GetConnectionString("DefaultConnection"));
+            _connectionFactory = connectionFactory;
+            _setUpTransRepository = setUpTransRepository;
+            _kblService = kblService;
+            _configuration = configuration;
         }
 
         public async Task<IEnumerable<LogInMaster>> GetAllAsync()
         {
             try
             {
-                using var connection = CreateConnection();
+                using var connection = _connectionFactory.CreateConnection();
                 await connection.OpenAsync();
                 var result = await connection.QueryAsync<LogInMaster>(
                     "sp_GetAllLogins",
@@ -41,7 +42,7 @@ namespace RouteCardProcess.Repositories
         {
             try
             {
-                using var connection = CreateConnection();
+                using var connection = _connectionFactory.CreateConnection();
                 await connection.OpenAsync();
                 var result = await connection.ExecuteAsync(
                     "sp_AddLogin",
@@ -65,44 +66,104 @@ namespace RouteCardProcess.Repositories
 
         public async Task<LogInMaster?> ValidateLoginAsync(string operatorId, string password)
         {
-            try
+            var useKblAuth = _configuration.GetValue<bool>("UseKblAuthAPI");
+
+            if (useKblAuth)
             {
-                using var connection = CreateConnection();
-                await connection.OpenAsync();
-                var user = await connection.QueryFirstOrDefaultAsync<LogInMaster>(
-                    "sp_ValidateLogin",
-                    new { OperatorId = operatorId, Password = password },
-                    commandType: CommandType.StoredProcedure
-                );
-                return user;
+                try
+                {
+
+                    var encryptedPassword = await _kblService.EncryptPasswordAsync(password);
+
+                    if (!string.IsNullOrEmpty(encryptedPassword))
+                    {
+                        var kblLogin = new KblLoginRequest
+                        {
+                            StrLoginId = operatorId,
+                            StrPassword = encryptedPassword
+                        };
+
+                        var kblAuthResponse = await _kblService.AuthenticateLoginAsync(kblLogin);
+
+                        if (kblAuthResponse == "Success")
+                        {
+                            var token = await _kblService.GetTokenAsync();
+                            var empInfoResponse = await _kblService.GetEmployeeInfoAsync(token, operatorId);
+                            var emp = empInfoResponse?.EmpInfo?.FirstOrDefault();
+
+                            if (emp != null)
+                            {
+                                return new LogInMaster
+                                {
+                                    OperatorId = emp.Tktno,
+                                    OperatorName = emp.Name,
+                                    Role = emp.Designation,
+                                    DepartmentId = 3,
+                                    DepartmentName = emp.Deptnm,
+                                    Shift = GetCurrentShift(),
+                                    IsFromKBL = true
+                                };
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    // Optional: log or handle KBL failure silently
+                }
             }
-            catch (Exception ex)
+
+
+            // Fall back to local DB validation
+            using var connection = _connectionFactory.CreateConnection();
+            await connection.OpenAsync();
+            var user = await connection.QueryFirstOrDefaultAsync<LogInMaster>(
+                "sp_ValidateLogin",
+                new { OperatorId = operatorId, Password = password },
+                commandType: CommandType.StoredProcedure
+            );
+
+            if (user != null)
             {
-                throw new Exception("Error validating login credentials.", ex);
+                user.Shift = GetCurrentShift();
+                user.IsFromKBL = false; 
             }
+
+            return user;
         }
 
-        public async Task<string> TryLogoutAsync(string setUpId)
+
+        public async Task<(int Flag, string Message)> TryLogoutAsync(string workCenterNo, string workOrderNo, string operationNo)
         {
             try
             {
-                using var connection = CreateConnection();
-                await connection.OpenAsync();
-                var setup = await connection.QueryFirstOrDefaultAsync<dynamic>(
-                    "sp_TryLogout",
-                    new { SetUpID = setUpId },
-                    commandType: CommandType.StoredProcedure
-                );
-                if (setup == null)
-                    return "Invalid Setup ID";
-                if (setup.SetupStatus == "Setup Started")
-                    return "Cannot logout. Setup is still in progress.";
-                return "OK";
+                var (flag, setupStatus, machiningStatus, message, _, _) = await _setUpTransRepository
+                    .CheckSetupNotificationStatusAsync(workCenterNo, workOrderNo, operationNo);
+
+                if (flag == 0)
+                    return (0, message);
+
+                if (setupStatus == "Setup Started" || machiningStatus == "Machining Started")
+                    return (0, "Cannot logout. Setup or Machining is still in progress.");
+
+                return (1, "Logout successful");
             }
             catch (Exception ex)
             {
-                throw new Exception("Error during logout process.", ex);
+                return (0, "Error during logout process: " + ex.Message);
             }
+        }
+
+        public string GetCurrentShift(DateTime? dateTime = null)
+        {
+            TimeSpan time = (dateTime ?? DateTime.Now).TimeOfDay;
+
+            if (time >= new TimeSpan(7, 0, 0) && time < new TimeSpan(15, 30, 0))
+                return "S1";
+            else if (time >= new TimeSpan(15, 30, 0) && time <= new TimeSpan(23, 59, 59))
+                return "S2";
+            else
+                return "S3";
         }
     }
 }

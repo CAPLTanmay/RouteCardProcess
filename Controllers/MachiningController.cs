@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RouteCardProcess.Model;
+using RouteCardProcess.Interfaces;
 
 namespace RouteCardProcess.Controllers
 {
@@ -9,10 +10,10 @@ namespace RouteCardProcess.Controllers
     [Authorize]
     public class MachiningController : ControllerBase
     {
-        private readonly MachiningRepository _repo;
+        private readonly IMachiningRepository _repo;
         private readonly ILogger<MachiningController> _logger;
 
-        public MachiningController(MachiningRepository repo, ILogger<MachiningController> logger)
+        public MachiningController(IMachiningRepository repo, ILogger<MachiningController> logger)
         {
             _repo = repo;
             _logger = logger;
@@ -32,11 +33,20 @@ namespace RouteCardProcess.Controllers
 
             if (existing != null)
             {
+                var startTime = existing.MachiningStartTime;
+                var endTime = existing.MachiningEndTime ?? DateTime.Now;
+
+                TimeSpan? adjustedTotalTime = null;
+
+                if (startTime.HasValue)
+                    adjustedTotalTime = endTime - startTime;
+
                 return Ok(new
                 {
                     message = "Machining already exists",
                     machiningID = existing.MachiningId,
-                    machining = existing
+                    machining = existing,
+              
                 });
             }
 
@@ -146,7 +156,12 @@ namespace RouteCardProcess.Controllers
         public async Task<IActionResult> AddDelays([FromBody] MachiningDelayRequest request)
         {
             if (request?.Delays == null || !request.Delays.Any())
-                return BadRequest(new { success = false, message = "Invalid input: Delays cannot be empty." });
+                return Ok(new
+                {
+                    success = true,
+                    message = "Delays inserted successfully",
+                    data = new { request.MachiningId, request.TotalDelayedTime, request.Delays }
+                });
 
             if (string.IsNullOrWhiteSpace(request.MachiningId))
                 return BadRequest(new { success = false, message = "MachiningId is required." });

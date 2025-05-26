@@ -2,6 +2,7 @@
 {
     public class MachiningDto
     {
+        public string? MachiningId { get; set; }
         public string? WorkCenterNo { get; set; }
         public string? WorkOrderNo { get; set; }
         public string? OperationNo { get; set; }
@@ -9,6 +10,8 @@
         public string? TotalQty { get; set; }
         public string? ProcessedQty { get; set; }
         public string IdealTime { get; set; } = string.Empty;
+
+        
     }
 
     public class MachiningMaster
@@ -24,6 +27,10 @@
         public DateTime OperatorEndTime { get; set; }
         public string TotalQty { get; set; } = string.Empty;
         public string ProcessedQty { get; set; } = string.Empty;
+        public DateTime? MachiningStartTime { get; set; }
+        public DateTime? MachiningEndTime { get; set; }
+        public string? TotalMachiningTime { get; set; }
+        public string ActualMachiningTime { get; set; }
     }
 
     public class MachiningIdentifierRequest
@@ -50,13 +57,13 @@
         public string ProcessedQty { get; set; } = string.Empty;
     }
 
-    public class MachiningDelayRequest
-    {
-        public string MachiningId { get; set; } = string.Empty;
-        public TimeSpan? TotalDelayedTime { get; set; }
-        public string? TotalQty { get; set; }
-        public List<MachiningDelayReasonCode> Delays { get; set; } = new();
-    }
+        public class MachiningDelayRequest
+        {
+            public string MachiningId { get; set; } = string.Empty;
+            public TimeSpan? TotalDelayedTime { get; set; }
+            public string? TotalQty { get; set; }
+            public List<MachiningDelayReasonCode>? Delays { get; set; } = new();
+        }
 
     public class MachiningDelayReasonCode
     {

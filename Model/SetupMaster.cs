@@ -1,14 +1,13 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-
-namespace RouteCardProcess.Model
+﻿namespace RouteCardProcess.Model
 {
     public class SetupMasterDto
     {
+        public string? SetUpID { get; set; }
         public string? WorkCenterNo { get; set; }
         public string? WorkOrderNo { get; set; }
         public string? OperationNo { get; set; }
         public string? OperatorId { get; set; }
-        public string IdealTime { get; set; }
+        public string? IdealTime { get; set; }
     }
 
     public class SetupMaster
@@ -22,6 +21,12 @@ namespace RouteCardProcess.Model
         public string? SetupStatus { get; set; }
         public DateTime OperatorStartTime { get; set; }
         public DateTime OperatorEndTime { get; set; }
+
+        public DateTime? SetupStartTime { get; set; }
+        public DateTime? SetupEndTime { get; set; }
+        public string? ActualSetupTime { get; set; }
+        public string? TotalSetupTime { get; set; } // This is adjusted setup time (Actual - Pauses)
+
     }
 
     public class SetupIdentifierRequest
@@ -39,7 +44,7 @@ namespace RouteCardProcess.Model
     {
         public string SetUpID { get; set; }
         public string SetUpStatus { get; set; }
-        public List<DelayRequest> Delays { get; set; }
+        public List<DelayRequest>? Delays { get; set; }
     }
 
     public class DelayRequest

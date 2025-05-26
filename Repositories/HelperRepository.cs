@@ -1,22 +1,23 @@
 ﻿using System.Data;
 using Dapper;
 using Microsoft.Data.SqlClient;
+using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model;
 
 namespace RouteCardProcess.Repositories
 {
-    public class HelperRepository
+    public class HelperRepository:IHelperRepository
     {
-        private readonly IConfiguration _config;
+        private readonly SqlConnectionFactory _connectionFactory;
 
-        public HelperRepository(IConfiguration config)
+        public HelperRepository(SqlConnectionFactory connectionFactory)
         {
-            _config = config;
+            _connectionFactory = connectionFactory;
         }
 
         private SqlConnection CreateConnection()
         {
-            return new SqlConnection(_config.GetConnectionString("DefaultConnection"));
+            return _connectionFactory.CreateConnection();
         }
 
         public async Task<string> AddHelperAsync(HelperRequest request)
@@ -44,6 +45,7 @@ namespace RouteCardProcess.Repositories
             parameters.Add("SetupID", request.SetupId);
             parameters.Add("MachiningID", request.MachiningId);
             parameters.Add("OperatorStartTime", DateTime.Now);
+            parameters.Add("MainOperatorId", request.MainOperatorId);
 
             // Set optional times depending on SetupID or MachiningID
             if (!string.IsNullOrEmpty(request.SetupId))
@@ -161,5 +163,23 @@ namespace RouteCardProcess.Repositories
                 return "Helper resumed.";
             }
         }
+
+        public async Task<IEnumerable<OperatorHelperLog>> GetHelpersByMainOperatorIdAsync(string mainOperatorId)
+        {
+            using var connection = CreateConnection();
+            await connection.OpenAsync();
+
+            var parameters = new DynamicParameters();
+            parameters.Add("MainOperatorId", mainOperatorId);
+
+            var result = await connection.QueryAsync<OperatorHelperLog>(
+                "sp_GetHelpersByMainOperator",
+                parameters,
+                commandType: CommandType.StoredProcedure
+            );
+
+            return result;
+        }
+
     }
 }
