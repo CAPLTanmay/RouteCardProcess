@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RouteCardProcess.Model;
-using RouteCardProcess.Repositories;
+using RouteCardProcess.Interfaces;
 
 namespace RouteCardProcess.Controllers
 {
@@ -10,9 +10,9 @@ namespace RouteCardProcess.Controllers
     [Authorize]
     public class SetUpTransController : ControllerBase
     {
-        private readonly SetUpTransRepository _repo;
+        private readonly ISetUpTransRepository _repo;
 
-        public SetUpTransController(SetUpTransRepository repo)
+        public SetUpTransController(ISetUpTransRepository repo)
         {
             _repo = repo;
         }

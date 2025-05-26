@@ -1,10 +1,11 @@
 ﻿using Dapper;
 using Microsoft.Data.SqlClient;
+using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model;
 
 namespace RouteCardProcess.Repositories
 {
-    public class DepartmentRepository
+    public class DepartmentRepository : IDepartmentRepository
     {
         private readonly SqlConnectionFactory _connectionFactory;
 
@@ -22,7 +23,6 @@ namespace RouteCardProcess.Repositories
             try
             {
                 using var connection = CreateConnection();
-                await connection.OpenAsync();
                 var departments = await connection.QueryAsync<DepartmentMaster>(
                     "usp_Department_GetAll",
                     commandType: System.Data.CommandType.StoredProcedure
@@ -40,13 +40,12 @@ namespace RouteCardProcess.Repositories
             try
             {
                 using var connection = CreateConnection();
-                await connection.OpenAsync();
-                var result = await connection.ExecuteAsync(
+                var rowsAffected = await connection.ExecuteAsync(
                     "usp_Department_Add",
                     new { department.DepartmentName },
                     commandType: System.Data.CommandType.StoredProcedure
                 );
-                return result;
+                return rowsAffected;
             }
             catch (Exception ex)
             {

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RouteCardProcess.Model;
-using RouteCardProcess.Repositories;
+using RouteCardProcess.Interfaces;
 
 namespace RouteCardProcess.Controllers
 {
@@ -10,9 +10,9 @@ namespace RouteCardProcess.Controllers
     [Authorize]
     public class AddHelperController : ControllerBase
     {
-        private readonly HelperRepository _helperRepository;
+        private readonly IHelperRepository _helperRepository;
 
-        public AddHelperController(HelperRepository helperRepository)
+        public AddHelperController(IHelperRepository helperRepository)
         {
             _helperRepository = helperRepository;
         }
@@ -53,7 +53,5 @@ namespace RouteCardProcess.Controllers
             var helpers = await _helperRepository.GetHelpersByMainOperatorIdAsync(mainOperatorId);
             return Ok(helpers);
         }
-
-
     }
 }

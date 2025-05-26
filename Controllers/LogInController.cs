@@ -1,8 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model;
-using RouteCardProcess.Repositories;
-using RouteCardProcess.Services;
 
 namespace RouteCardProcess.Controllers
 {
@@ -11,10 +10,10 @@ namespace RouteCardProcess.Controllers
     [Authorize]
     public class LogInController : ControllerBase
     {
-        private readonly LogInRepository _repo;
-        private readonly JwtTokenService _jwtService;
+        private readonly ILogInRepository _repo;
+        private readonly IJwtTokenService _jwtService;
 
-        public LogInController(LogInRepository repo, JwtTokenService jwtService)
+        public LogInController(ILogInRepository repo, IJwtTokenService jwtService)
         {
             _repo = repo;
             _jwtService = jwtService;

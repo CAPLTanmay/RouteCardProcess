@@ -1,10 +1,11 @@
 ﻿using System.Net.Http.Headers;
 using Microsoft.Extensions.Options;
+using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model;
 
 namespace RouteCardProcess.Services
 {
-    public class KblAuthService
+    public class KblAuthService:IKblAuthService
     {
         private readonly HttpClient _httpClient;
         private readonly KblApiConfig _config;

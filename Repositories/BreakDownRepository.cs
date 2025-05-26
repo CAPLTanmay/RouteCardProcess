@@ -1,10 +1,11 @@
 ﻿using System.Data;
 using Dapper;
 using Microsoft.Data.SqlClient;
+using RouteCardProcess.Interfaces;
 
 namespace RouteCardProcess.Repositories
 {
-    public class BreakDownRepository
+    public class BreakDownRepository:IBreakDownRepository
     {
         private readonly SqlConnectionFactory _connectionFactory;
         private readonly IEmailService _emailService;

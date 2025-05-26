@@ -1,9 +1,10 @@
 ﻿using System.Data;
 using Dapper;
+using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model;
 using RouteCardProcess.Repositories;
 
-public class MachiningRepository
+public class MachiningRepository:IMachiningRepository
 {
     private readonly SqlConnectionFactory _connectionFactory;
 

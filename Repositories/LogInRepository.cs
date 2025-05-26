@@ -1,18 +1,18 @@
 ﻿using System.Data;
 using Dapper;
+using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model;
-using RouteCardProcess.Services;
 
 namespace RouteCardProcess.Repositories
 {
-    public class LogInRepository
+    public class LogInRepository:ILogInRepository
     {
         private readonly SqlConnectionFactory _connectionFactory;
-        private readonly SetUpTransRepository _setUpTransRepository;
-        private readonly KblAuthService _kblService;
+        private readonly ISetUpTransRepository _setUpTransRepository;
+        private readonly IKblAuthService _kblService;
         private readonly IConfiguration _configuration;
 
-        public LogInRepository(SqlConnectionFactory connectionFactory, SetUpTransRepository setUpTransRepository, KblAuthService kblService, IConfiguration configuration)
+        public LogInRepository(SqlConnectionFactory connectionFactory, ISetUpTransRepository setUpTransRepository, IKblAuthService kblService, IConfiguration configuration)
         {
             _connectionFactory = connectionFactory;
             _setUpTransRepository = setUpTransRepository;

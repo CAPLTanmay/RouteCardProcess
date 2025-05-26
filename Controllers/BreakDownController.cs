@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model;
-using RouteCardProcess.Repositories;
 
 namespace RouteCardProcess.Controllers
 {
@@ -10,9 +10,9 @@ namespace RouteCardProcess.Controllers
     [Authorize]
     public class BreakDownController : ControllerBase
     {
-        private readonly BreakDownRepository _repo;
+        private readonly IBreakDownRepository _repo;
 
-        public BreakDownController(BreakDownRepository repo)
+        public BreakDownController(IBreakDownRepository repo)
         {
             _repo = repo;
         }

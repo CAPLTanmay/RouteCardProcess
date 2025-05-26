@@ -1,11 +1,12 @@
 ﻿using System.Data;
 using Dapper;
 using Microsoft.Data.SqlClient;
+using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model;
 
 namespace RouteCardProcess.Repositories
 {
-    public class HelperRepository
+    public class HelperRepository:IHelperRepository
     {
         private readonly SqlConnectionFactory _connectionFactory;
 

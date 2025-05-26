@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using RouteCardProcess.Repositories;
+using RouteCardProcess.Interfaces;
 
 namespace RouteCardProcess.Controllers
 {
@@ -9,11 +9,11 @@ namespace RouteCardProcess.Controllers
     [Authorize]
     public class RouteCardReportController : ControllerBase
     {
-        private readonly RouteCardReportRepository _repository;
+        private readonly IRouteCardReportRepository _repo;
 
-        public RouteCardReportController(RouteCardReportRepository repository)
+        public RouteCardReportController(IRouteCardReportRepository repo)
         {
-            _repository = repository;
+            _repo = repo;
         }
 
         [HttpPost("get-by-workorder")]
@@ -22,7 +22,7 @@ namespace RouteCardProcess.Controllers
             if (string.IsNullOrWhiteSpace(request.WorkOrderNo))
                 return BadRequest(new { message = "WorkOrderNo is required." });
 
-            var result = await _repository.GetRouteCardReportAsync(request.WorkOrderNo);
+            var result = await _repo.GetRouteCardReportAsync(request.WorkOrderNo);
             if (result == null || !result.Any())
                 return NotFound(new { message = "No data found for the provided WorkOrderNo." });
 

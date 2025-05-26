@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RouteCardProcess.Model;
+using RouteCardProcess.Interfaces;
 
 namespace RouteCardProcess.Controllers
 {
@@ -9,10 +10,10 @@ namespace RouteCardProcess.Controllers
     [Authorize]
     public class MachiningController : ControllerBase
     {
-        private readonly MachiningRepository _repo;
+        private readonly IMachiningRepository _repo;
         private readonly ILogger<MachiningController> _logger;
 
-        public MachiningController(MachiningRepository repo, ILogger<MachiningController> logger)
+        public MachiningController(IMachiningRepository repo, ILogger<MachiningController> logger)
         {
             _repo = repo;
             _logger = logger;

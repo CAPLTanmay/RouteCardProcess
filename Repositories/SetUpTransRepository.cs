@@ -1,11 +1,12 @@
 ﻿using System.Data;
 using Dapper;
 using Microsoft.Data.SqlClient;
+using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model;
 
 namespace RouteCardProcess.Repositories
 {
-    public class SetUpTransRepository
+    public class SetUpTransRepository:ISetUpTransRepository
     {
         private readonly SqlConnectionFactory _connectionFactory;
 
@@ -297,8 +298,6 @@ namespace RouteCardProcess.Repositories
                 throw;
             }
         }
-
-
         private TimeSpan ConvertMinutesToTimeSpan(string minutes)
         {
             if (double.TryParse(minutes.Trim(), out double parsedMinutes))

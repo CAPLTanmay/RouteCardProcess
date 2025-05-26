@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model;
-using RouteCardProcess.Services;
 
 namespace RouteCardProcess.Controllers
 {
@@ -8,9 +8,9 @@ namespace RouteCardProcess.Controllers
     [Route("api/[controller]")]
     public class KblAuthController : ControllerBase
     {
-        private readonly KblAuthService _kblService;
+        private readonly IKblAuthService _kblService;
 
-        public KblAuthController(KblAuthService kblService)
+        public KblAuthController(IKblAuthService kblService)
         {
             _kblService = kblService;
         }

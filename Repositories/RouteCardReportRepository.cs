@@ -1,14 +1,15 @@
 ﻿using System.Data;
 using Dapper;
+using RouteCardProcess.Interfaces;
 
 namespace RouteCardProcess.Repositories
 {
-    public class RouteCardReportRepository
+    public class RouteCardReportRepository:IRouteCardReportRepository
     {
         private readonly SqlConnectionFactory _connectionFactory;
-        private readonly LogInRepository _logInRepository;
+        private readonly ILogInRepository _logInRepository;
 
-        public RouteCardReportRepository(SqlConnectionFactory connectionFactory, LogInRepository logInRepository)
+        public RouteCardReportRepository(SqlConnectionFactory connectionFactory, ILogInRepository logInRepository)
         {
             _connectionFactory = connectionFactory;
             _logInRepository = logInRepository;
