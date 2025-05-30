@@ -1,7 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using RouteCardProcess.Model;
-using RouteCardProcess.Repositories;
+using RouteCardProcess.Interfaces;
+using RouteCardProcess.Model.DTOs.Helper;
+using Microsoft.Extensions.Logging;
 
 namespace RouteCardProcess.Controllers
 {
@@ -10,42 +11,81 @@ namespace RouteCardProcess.Controllers
     [Authorize]
     public class AddHelperController : ControllerBase
     {
-        private readonly HelperRepository _helperRepository;
+        private readonly IHelperRepository _helperRepository;
+        private readonly ILogger<AddHelperController> _logger;
 
-        public AddHelperController(HelperRepository helperRepository)
+        public AddHelperController(IHelperRepository helperRepository, ILogger<AddHelperController> logger)
         {
             _helperRepository = helperRepository;
+            _logger = logger;
         }
 
         [HttpPost("add-helper")]
         public async Task<IActionResult> AddHelper([FromBody] HelperRequest request)
         {
-            var result = await _helperRepository.AddHelperAsync(request);
+            try
+            {
+                var result = await _helperRepository.AddHelperAsync(request);
 
-            if (result == "Helper added successfully.")
-                return Ok(new { message = result });
+                if (result == "Helper added successfully.")
+                    return Ok(new { message = result });
 
-            return BadRequest(new { message = result });
+                return BadRequest(new { message = result });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in AddHelper");
+                return StatusCode(500, "Internal server error.");
+            }
         }
 
-        // Endpoint for ending a helper
         [HttpPost("end-helper")]
         public async Task<IActionResult> EndHelper([FromBody] EndHelperRequest request)
         {
-            var result = await _helperRepository.EndHelperAsync(request);
+            try
+            {
+                var result = await _helperRepository.EndHelperAsync(request);
 
-            if (result == "Helper end time updated successfully.")
-                return Ok(new { message = result });
+                if (result == "Helper end time updated successfully.")
+                    return Ok(new { message = result });
 
-            return BadRequest(new { message = result });
+                return BadRequest(new { message = result });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in EndHelper");
+                return StatusCode(500, "Internal server error.");
+            }
         }
 
         [HttpPost("toggle-helper-pause")]
         public async Task<IActionResult> ToggleHelperPause([FromBody] EndHelperRequest request)
         {
-            var result = await _helperRepository.ToggleHelperPauseAsync(request);
-            return Ok(new { message = result });
+            try
+            {
+                var result = await _helperRepository.ToggleHelperPauseAsync(request);
+                return Ok(new { message = result });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in ToggleHelperPause");
+                return StatusCode(500, "Internal server error.");
+            }
         }
 
+        [HttpGet("helpers/{mainOperatorId}")]
+        public async Task<IActionResult> GetHelpersByMainOperatorId(string mainOperatorId)
+        {
+            try
+            {
+                var helpers = await _helperRepository.GetHelpersByMainOperatorIdAsync(mainOperatorId);
+                return Ok(helpers);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in GetHelpersByMainOperatorId");
+                return StatusCode(500, "Internal server error.");
+            }
+        }
     }
 }

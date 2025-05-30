@@ -2,7 +2,10 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using RouteCardProcess.Interfaces;
 using RouteCardProcess.Middleware;
+using RouteCardProcess.Model.Configurations;
+using RouteCardProcess.Model.DTOs.Login;
 using RouteCardProcess.Repositories;
 using RouteCardProcess.Services;
 
@@ -10,6 +13,20 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add controllers
 builder.Services.AddControllers();
+
+// Connection string setup
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddSingleton(new SqlConnectionFactory(connectionString));
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+builder.Services.AddHttpClient();
+builder.Services.Configure<KblApiConfig>(builder.Configuration.GetSection("KblApi"));
+
+//flag override based on environment
+var environment = builder.Environment.EnvironmentName;
+var useKblAuth = environment == "Production";
+var allowedOrigin = builder.Configuration["Cors:AllowedOrigin"];
+
+builder.Configuration["UseKblAuth"] = useKblAuth.ToString();
 
 // Add Swagger with JWT Auth support
 builder.Services.AddEndpointsApiExplorer();
@@ -44,15 +61,30 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("DefaultCorsPolicy", policy =>
+    {
+        policy.WithOrigins(allowedOrigin)
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
 
-// Register services and repositories
-builder.Services.AddScoped<DepartmentRepository>();
-builder.Services.AddScoped<LogInRepository>();
-builder.Services.AddScoped<SetUpTransRepository>();
-builder.Services.AddScoped<MachiningRepository>();
-builder.Services.AddScoped<JwtTokenService>();
-builder.Services.AddScoped<HelperRepository>();
-builder.Services.AddScoped<RouteCardReportRepository>();
+// Register  repositories
+builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
+builder.Services.AddScoped<ILogInRepository, LogInRepository>();
+builder.Services.AddScoped<ISetUpTransRepository, SetUpTransRepository>();
+builder.Services.AddScoped<IMachiningRepository, MachiningRepository>();
+builder.Services.AddScoped<IHelperRepository, HelperRepository>();
+builder.Services.AddScoped<IRouteCardReportRepository, RouteCardReportRepository>();
+builder.Services.AddScoped<IBreakDownRepository, BreakDownRepository>();
+builder.Services.AddHttpClient<IValidationRepository, ValidationRepository>();
+
+// Services
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IJwtTokenService, JwtTokenService>(); 
+builder.Services.AddScoped<IKblAuthService, KblAuthService>();  
 
 // JWT Authentication configuration
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -89,6 +121,7 @@ app.UseSwaggerUI(c =>
 });
 
 app.UseHttpsRedirection();
+app.UseCors("DefaultCorsPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

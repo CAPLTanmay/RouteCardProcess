@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using RouteCardProcess.Repositories;
+using RouteCardProcess.Interfaces;
+using RouteCardProcess.Model.DTOs.RouteCardReport;
+using Microsoft.Extensions.Logging;
 
 namespace RouteCardProcess.Controllers
 {
@@ -9,24 +11,34 @@ namespace RouteCardProcess.Controllers
     [Authorize]
     public class RouteCardReportController : ControllerBase
     {
-        private readonly RouteCardReportRepository _repository;
+        private readonly IRouteCardReportRepository _repo;
+        private readonly ILogger<RouteCardReportController> _logger;
 
-        public RouteCardReportController(RouteCardReportRepository repository)
+        public RouteCardReportController(IRouteCardReportRepository repo, ILogger<RouteCardReportController> logger)
         {
-            _repository = repository;
+            _repo = repo;
+            _logger = logger;
         }
 
         [HttpPost("get-by-workorder")]
         public async Task<IActionResult> GetRouteCardReport([FromBody] WorkOrderRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request.WorkOrderNo))
-                return BadRequest(new { message = "WorkOrderNo is required." });
+            try
+            {
+                if (string.IsNullOrWhiteSpace(request.WorkOrderNo))
+                    return BadRequest(new { message = "WorkOrderNo is required." });
 
-            var result = await _repository.GetRouteCardReportAsync(request.WorkOrderNo);
-            if (result == null || !result.Any())
-                return NotFound(new { message = "No data found for the provided WorkOrderNo." });
+                var result = await _repo.GetRouteCardReportAsync(request.WorkOrderNo);
+                if (result == null || !result.Any())
+                    return NotFound(new { message = "No data found for the provided WorkOrderNo." });
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching route card report.");
+                return StatusCode(500, new { message = "An unexpected error occurred.", error = ex.Message });
+            }
         }
     }
 }

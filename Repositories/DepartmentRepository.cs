@@ -1,29 +1,29 @@
 ﻿using Dapper;
 using Microsoft.Data.SqlClient;
-using RouteCardProcess.Model;
+using RouteCardProcess.Interfaces;
+using RouteCardProcess.Model.DTOs.Department;
+using RouteCardProcess.Model.Entities;
 
 namespace RouteCardProcess.Repositories
 {
-    public class DepartmentRepository
+    public class DepartmentRepository : IDepartmentRepository
     {
-        private readonly IConfiguration _config;
+        private readonly SqlConnectionFactory _connectionFactory;
 
-        public DepartmentRepository(IConfiguration config)
+        public DepartmentRepository(SqlConnectionFactory connectionFactory)
         {
-            _config = config;
+            _connectionFactory = connectionFactory;
         }
 
         private SqlConnection CreateConnection()
         {
-            return new SqlConnection(_config.GetConnectionString("DefaultConnection"));
+            return _connectionFactory.CreateConnection();
         }
-
         public async Task<IEnumerable<DepartmentMaster>> GetAllAsync()
         {
             try
             {
                 using var connection = CreateConnection();
-                await connection.OpenAsync();
                 var departments = await connection.QueryAsync<DepartmentMaster>(
                     "usp_Department_GetAll",
                     commandType: System.Data.CommandType.StoredProcedure
@@ -36,18 +36,17 @@ namespace RouteCardProcess.Repositories
             }
         }
 
-        public async Task<int> AddAsync(DepartmentMaster department)
+        public async Task<int> AddAsync(DepartmentMasterDto department)
         {
             try
             {
                 using var connection = CreateConnection();
-                await connection.OpenAsync();
-                var result = await connection.ExecuteAsync(
+                var rowsAffected = await connection.ExecuteAsync(
                     "usp_Department_Add",
                     new { department.DepartmentName },
                     commandType: System.Data.CommandType.StoredProcedure
                 );
-                return result;
+                return rowsAffected;
             }
             catch (Exception ex)
             {

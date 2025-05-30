@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace RouteCardProcess.Model
+namespace RouteCardProcess.Model.DTOs.Department
 {
-    public class DepartmentMaster
+    public class DepartmentMasterDto
     {
         public int DepartmentId { get; set; }
 

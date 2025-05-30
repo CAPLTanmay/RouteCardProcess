@@ -1,8 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using RouteCardProcess.Model;
-using RouteCardProcess.Repositories;
-using RouteCardProcess.Services;
+using RouteCardProcess.Interfaces;
+using RouteCardProcess.Model.DTOs.Login;
+using RouteCardProcess.Model.Entities;
+using Microsoft.Extensions.Logging;
 
 namespace RouteCardProcess.Controllers
 {
@@ -11,57 +12,90 @@ namespace RouteCardProcess.Controllers
     [Authorize]
     public class LogInController : ControllerBase
     {
-        private readonly LogInRepository _repo;
-        private readonly JwtTokenService _jwtService;
+        private readonly ILogInRepository _repo;
+        private readonly IJwtTokenService _jwtService;
+        private readonly ILogger<LogInController> _logger;
 
-        public LogInController(LogInRepository repo, JwtTokenService jwtService)
+        public LogInController(ILogInRepository repo, IJwtTokenService jwtService, ILogger<LogInController> logger)
         {
             _repo = repo;
             _jwtService = jwtService;
+            _logger = logger;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var logins = await _repo.GetAllAsync();
-            return Ok(logins);
+            try
+            {
+                var logins = await _repo.GetAllAsync();
+                return Ok(logins);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in GetAll");
+                return StatusCode(500, "Internal server error.");
+            }
         }
 
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] LogInMaster login)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
 
-            var result = await _repo.AddAsync(login);
-            return result > 0 ? Ok("User created") : StatusCode(500, "Insert failed");
+                var result = await _repo.AddAsync(login);
+                return result > 0 ? Ok("User created") : StatusCode(500, "Insert failed");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in Create");
+                return StatusCode(500, "Internal server error.");
+            }
         }
 
         [AllowAnonymous]
         [HttpPost("validate")]
         public async Task<IActionResult> ValidateLogin([FromBody] LoginRequest request)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
 
-            var user = await _repo.ValidateLoginAsync(request.OperatorId, request.Password);
-            if (user == null)
-                return Unauthorized(new { message = "Invalid username or password" });
+                var user = await _repo.ValidateLoginAsync(request.OperatorId, request.Password);
+                if (user == null)
+                    return Unauthorized(new { message = "Invalid username or password" });
 
-            var token = _jwtService.GenerateToken(request.OperatorId);
-            return Ok(new { message = "Login successful", token, user });
+                var token = _jwtService.GenerateToken(request.OperatorId);
+                return Ok(new { message = "Login successful", token, user });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in ValidateLogin");
+                return StatusCode(500, new { message = "Internal server error." });
+            }
         }
 
-        [HttpPost("logout")]
-        public async Task<IActionResult> Logout([FromBody] SetupIdentifierRequest request)
+        [HttpPost("TryLogout")]
+        public async Task<IActionResult> TryLogout([FromBody] LogoutRequest request)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            try
+            {
+                var (flag, message) = await _repo.TryLogoutAsync(request.WorkCenterNo, request.WorkOrderNo, request.OperationNo);
 
-            var result = await _repo.TryLogoutAsync(request.SetUpID);
-            return result == "OK"
-                ? Ok(new { message = "Logout successful" })
-                : BadRequest(new { message = result });
+                if (flag == 1)
+                    return Ok(new { Success = true, Message = message });
+
+                return BadRequest(new { Success = false, Message = message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in TryLogout");
+                return StatusCode(500, new { Success = false, Message = "Internal server error." });
+            }
         }
     }
 }
