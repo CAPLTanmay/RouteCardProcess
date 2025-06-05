@@ -7,8 +7,8 @@ namespace RouteCardProcess.Model.Entities
         public int SrNo { get; set; }
         public string OperatorId { get; set; }
         public string OperatorName { get; set; }
-        public string Password { get; set; }
-        public string Role { get; set; }
+        public string OperatorPassword { get; set; }
+        public string OperatorRole { get; set; }
         public string DepartmentName { get; set; }
         public int DepartmentId { get; set; }
         public string Shift { get; set; }

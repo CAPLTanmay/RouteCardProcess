@@ -10,20 +10,22 @@ using RouteCardProcess.Model.Entities;
 
 namespace RouteCardProcess.Repositories
 {
-    public class LogInRepository:ILogInRepository
+    public class LogInRepository : ILogInRepository
     {
         private readonly SqlConnectionFactory _connectionFactory;
         private readonly ISetUpTransRepository _setUpTransRepository;
         private readonly IKblAuthService _kblService;
         private readonly IConfiguration _configuration;
         private readonly HttpClient _httpClient;
+        private readonly ILogger<LogInRepository> _logger;
 
-        public LogInRepository(SqlConnectionFactory connectionFactory, ISetUpTransRepository setUpTransRepository, IKblAuthService kblService, IConfiguration configuration)
+        public LogInRepository(SqlConnectionFactory connectionFactory, ISetUpTransRepository setUpTransRepository, IKblAuthService kblService, IConfiguration configuration, ILogger<LogInRepository> logger)
         {
             _connectionFactory = connectionFactory;
             _setUpTransRepository = setUpTransRepository;
             _kblService = kblService;
             _configuration = configuration;
+            _logger = logger;
         }
 
         public async Task<IEnumerable<LogInMaster>> GetAllAsync()
@@ -56,8 +58,8 @@ namespace RouteCardProcess.Repositories
                     {
                         login.OperatorId,
                         login.OperatorName,
-                        login.Password,
-                        login.Role,
+                        login.OperatorPassword,
+                        login.OperatorRole,
                         login.DepartmentId
                     },
                     commandType: CommandType.StoredProcedure
@@ -72,13 +74,12 @@ namespace RouteCardProcess.Repositories
 
         public async Task<LogInMaster?> ValidateLoginAsync(string operatorId, string password)
         {
-            var useKblAuth = _configuration.GetValue<bool>("UseKblAuthAPI");
-
-            if (useKblAuth)
+            try
             {
-                try
-                {
+                var useKblAuth = _configuration.GetValue<bool>("UseKblAuthAPI");
 
+                if (useKblAuth)
+                {
                     var encryptedPassword = await _kblService.EncryptPasswordAsync(password);
 
                     if (!string.IsNullOrEmpty(encryptedPassword))
@@ -91,7 +92,7 @@ namespace RouteCardProcess.Repositories
 
                         var kblAuthResponse = await _kblService.AuthenticateLoginAsync(kblLogin);
 
-                        if (kblAuthResponse == "Success")
+                        if (kblAuthResponse == "success")
                         {
                             var token = await _kblService.GetTokenAsync();
                             var empInfoResponse = await _kblService.GetEmployeeInfoAsync(token, operatorId);
@@ -103,7 +104,7 @@ namespace RouteCardProcess.Repositories
                                 {
                                     OperatorId = emp.Tktno,
                                     OperatorName = emp.Name,
-                                    Role = emp.Designation,
+                                    OperatorRole = emp.Designation,
                                     DepartmentId = 3,
                                     DepartmentName = emp.Deptnm,
                                     Shift = GetCurrentShift(),
@@ -113,26 +114,49 @@ namespace RouteCardProcess.Repositories
                         }
                     }
                 }
-                catch
+                else
                 {
-                    // Optional: log or handle KBL failure silently
+                    // Not using KBL auth but still fetch KBL employee info
+                    var token = await _kblService.GetTokenAsync();
+                    var empInfoResponse = await _kblService.GetEmployeeInfoAsync(token, operatorId);
+                    var emp = empInfoResponse?.EmpInfo?.FirstOrDefault();
+
+                    if (emp != null)
+                    {
+                        return new LogInMaster
+                        {
+                            OperatorId = emp.Tktno,
+                            OperatorName = emp.Name,
+                            OperatorRole = emp.Designation,
+                            DepartmentId = 3,
+                            DepartmentName = emp.Deptnm,
+                            Shift = GetCurrentShift(),
+                            IsFromKBL = true
+                        };
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "KBL login failed for operator ID: {OperatorId}", operatorId);
             }
 
 
-            // Fall back to local DB validation
+            // Fallback: Validate from local database
             using var connection = _connectionFactory.CreateConnection();
             await connection.OpenAsync();
-            var user = await connection.QueryFirstOrDefaultAsync<LogInMaster>(
-                "sp_ValidateLogin",
-                new { OperatorId = operatorId, Password = password },
-                commandType: CommandType.StoredProcedure
+
+            var user = await connection.QueryFirstOrDefaultAsync<LogInMaster>
+            ("sp_ValidateLogin",
+                 new { OperatorId = operatorId, OperatorPassword = password },
+                 commandType: CommandType.StoredProcedure
             );
+
 
             if (user != null)
             {
                 user.Shift = GetCurrentShift();
-                user.IsFromKBL = false; 
+                user.IsFromKBL = false;
             }
 
             return user;

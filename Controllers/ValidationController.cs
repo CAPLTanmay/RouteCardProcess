@@ -21,15 +21,14 @@ namespace RouteCardProcess.Controllers
             _logger = logger;
         }
 
-        [HttpGet("validate-workcenter/{workCenter}")]
+        [HttpPost("validate-workcenter")]
         [AllowAnonymous]
-        public async Task<IActionResult> ValidateWorkCenter(string workCenter)
+        public async Task<IActionResult> ValidateWorkCenter([FromBody] WorkCenterRequest request)
         {
             try
             {
-                var resultJson = await _repo.ValidateWorkCenterAsync(workCenter);
+                var resultJson = await _repo.ValidateWorkCenterAsync(request.WorkCenter);
 
-                // Deserialize the JSON string to object so we can wrap it
                 var data = JsonSerializer.Deserialize<object>(resultJson);
 
                 return Ok(new
@@ -61,15 +60,13 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-        [HttpGet("validate-order/{order}/{workCenter}")]
+        [HttpPost("validate-order")]
         [AllowAnonymous]
-        public async Task<IActionResult> ValidateOrder(string order, string workCenter)
+        public async Task<IActionResult> ValidateOrder([FromBody] ValidateOrderRequest request)
         {
             try
             {
-                var resultJson = await _repo.ValidateOrderAsync(order, workCenter);
-
-                // Deserialize raw JSON from SAP to object so it can be wrapped
+                var resultJson = await _repo.ValidateOrderAsync(request.Order, request.WorkCenter);
                 var data = JsonSerializer.Deserialize<object>(resultJson);
 
                 return Ok(new
@@ -101,13 +98,13 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-        [HttpGet("routing-data/{orderNumber}")]
+        [HttpPost("routing-data")]
         [AllowAnonymous]
-        public async Task<IActionResult> GetRoutingData(string orderNumber)
+        public async Task<IActionResult> GetRoutingData([FromBody] RoutingDataRequest request)
         {
             try
             {
-                var resultJson = await _repo.GetRoutingDataAsync(orderNumber);
+                var resultJson = await _repo.GetRoutingDataAsync(request.OrderNumber);
 
                 var data = JsonSerializer.Deserialize<object>(resultJson);
 

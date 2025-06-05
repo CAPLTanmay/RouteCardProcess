@@ -46,7 +46,7 @@ namespace RouteCardProcess.Controllers
             {
                 var result = await _helperRepository.EndHelperAsync(request);
 
-                if (result == "Helper end time updated successfully.")
+                if (result == "Helper end time updated and released successfully.")
                     return Ok(new { message = result });
 
                 return BadRequest(new { message = result });
@@ -73,12 +73,12 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-        [HttpGet("helpers/{mainOperatorId}")]
-        public async Task<IActionResult> GetHelpersByMainOperatorId(string mainOperatorId)
+        [HttpPost("helpers")]
+        public async Task<IActionResult> GetHelpersByMainOperatorId([FromBody] MainOperatorRequestDto request)
         {
             try
             {
-                var helpers = await _helperRepository.GetHelpersByMainOperatorIdAsync(mainOperatorId);
+                var helpers = await _helperRepository.GetHelpersByMainOperatorIdAsync(request.MainOperatorId);
                 return Ok(helpers);
             }
             catch (Exception ex)
@@ -87,5 +87,6 @@ namespace RouteCardProcess.Controllers
                 return StatusCode(500, "Internal server error.");
             }
         }
+
     }
 }

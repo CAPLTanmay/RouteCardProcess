@@ -8,5 +8,6 @@
         public string? MachiningId { get; set; }
         public DateTime OperatorStartTime { get; set; }
         public string MainOperatorId { get; set; }
+        public bool IsRelease { get; set; }
     }
 }

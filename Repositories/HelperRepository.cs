@@ -20,7 +20,6 @@ namespace RouteCardProcess.Repositories
         {
             return _connectionFactory.CreateConnection();
         }
-
         public async Task<string> AddHelperAsync(HelperRequest request)
         {
             using var connection = CreateConnection();
@@ -32,9 +31,8 @@ namespace RouteCardProcess.Repositories
                 commandType: CommandType.StoredProcedure
             );
 
-            // Check if operator credentials are valid
             var validUser = allUsers.FirstOrDefault(u =>
-                u.OperatorId == request.OperatorId && u.Password == request.Password
+                u.OperatorId == request.OperatorId && u.OperatorPassword == request.Password
             );
 
             if (validUser == null)
@@ -71,53 +69,31 @@ namespace RouteCardProcess.Repositories
             return "Helper added successfully.";
         }
 
+
         public async Task<string> EndHelperAsync(EndHelperRequest request)
         {
             using var connection = CreateConnection();
             await connection.OpenAsync();
 
-            // Check if the helper record exists
-            var helper = await connection.QueryFirstOrDefaultAsync<dynamic>(
-                "sp_GetHelperBySetupAndMachiningId",
-                new { request.OperatorId, request.SetupId, request.MachiningId },
-                commandType: CommandType.StoredProcedure
-            );
+            try
+            {
+                var parameters = new DynamicParameters();
+                parameters.Add("OperatorId", request.OperatorId);
+                parameters.Add("SetupId", string.IsNullOrEmpty(request.SetupId) ? null : request.SetupId);
+                parameters.Add("MachiningId", string.IsNullOrEmpty(request.MachiningId) ? null : request.MachiningId);
 
-            if (helper == null)
+                await connection.ExecuteAsync(
+                    "sp_EndHelperSession",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+
+                return "Helper end time updated and released successfully.";
+            }
+            catch (SqlException ex) when (ex.Message.Contains("Helper record not found"))
+            {
                 return "Helper record not found.";
-
-            // Set current time as the end time
-            var operatorStartTime = helper.OperatorStartTime;
-            var operatorEndTime = DateTime.Now;  // Current time when the end helper request is made
-            var totalTimeSpent = operatorEndTime - operatorStartTime;
-
-            // Determine if SetupID or MachiningID exists and update the corresponding column
-            string updateQuery;
-            if (!string.IsNullOrEmpty(request.SetupId))
-            {
-                updateQuery = "UPDATE Operator_Helper_Log SET OperatorEndTime = @OperatorEndTime, OperatorTotalSetupTime = @TotalTimeSpent WHERE OperatorId = @OperatorId AND SetupId = @SetupID";
             }
-            else if (!string.IsNullOrEmpty(request.MachiningId))
-            {
-                updateQuery = "UPDATE Operator_Helper_Log SET OperatorEndTime = @OperatorEndTime, OperatorTotalMachiningTime = @TotalTimeSpent WHERE OperatorId = @OperatorId AND MachiningId = @MachiningID";
-            }
-            else
-            {
-                return "Neither SetupID nor MachiningID provided.";
-            }
-
-            // Prepare the parameters to update the helper record
-            var parameters = new DynamicParameters();
-            parameters.Add("OperatorId", request.OperatorId);
-            parameters.Add("OperatorEndTime", operatorEndTime);
-            parameters.Add("TotalTimeSpent", totalTimeSpent);
-            parameters.Add("SetupID", request.SetupId);
-            parameters.Add("MachiningID", request.MachiningId);
-
-            // Execute the update query
-            await connection.ExecuteAsync(updateQuery, parameters);
-
-            return "Helper end time updated successfully.";
         }
 
         public async Task<string> ToggleHelperPauseAsync(EndHelperRequest request)
@@ -178,8 +154,7 @@ namespace RouteCardProcess.Repositories
                 parameters,
                 commandType: CommandType.StoredProcedure
             );
-
-            return result;
+            return result.Where(x => !x.IsRelease);
         }
 
     }

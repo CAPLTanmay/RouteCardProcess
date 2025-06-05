@@ -181,7 +181,14 @@ namespace RouteCardProcess.Repositories
                 }
                 else if (status == "Setup Pause")
                 {
-                    await connection.ExecuteAsync("sp_TogglePause_Resume", new { SetUpID = request.SetUpID }, commandType: CommandType.StoredProcedure);
+                    var parameters = new
+                    {
+                        SetUpID = request.SetUpID,
+                        ResumeReasonCode = request.PauseCode 
+                    };
+
+                    await connection.ExecuteAsync("sp_TogglePause_Resume", parameters, commandType: CommandType.StoredProcedure);
+
                     return "Setup resumed";
                 }
 

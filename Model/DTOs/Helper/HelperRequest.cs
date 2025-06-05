@@ -27,4 +27,10 @@ namespace RouteCardProcess.Model.DTOs.Helper
 
         public string? MachiningId { get; set; }
     }
+
+    public class MainOperatorRequestDto
+    {
+        public string MainOperatorId { get; set; }
+    }
+
 }

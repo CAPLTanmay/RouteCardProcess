@@ -94,10 +94,10 @@ namespace RouteCardProcess.Controllers
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(request.MachiningId) || string.IsNullOrWhiteSpace(request.PauseCode))
-                    return BadRequest(new { message = "MachiningId and PauseCode are required." });
+                if (string.IsNullOrWhiteSpace(request.MachiningId))
+                    return BadRequest(new { message = "MachiningId is required." });
 
-                await _repo.TogglePauseAsync(request.MachiningId, request.PauseCode);
+                await _repo.TogglePauseAsync(request.MachiningId, request.PauseCode); // PauseCode can be null or empty
                 return Ok(new { message = "Machining pause toggled successfully." });
             }
             catch (Exception ex)
@@ -106,6 +106,7 @@ namespace RouteCardProcess.Controllers
                 return StatusCode(500, new { message = "An unexpected error occurred.", error = ex.Message });
             }
         }
+
 
         [HttpPost("end-machining")]
         public async Task<IActionResult> EndOperatorTime([FromBody] MachiningIdentifierRequest request)

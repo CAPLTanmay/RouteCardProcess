@@ -7,7 +7,6 @@ namespace RouteCardProcess.Model.DTOs.Setup
         [Required]
         public string SetUpID { get; set; }
 
-        [Required]
-        public string PauseCode { get; set; }
+        public string? PauseCode { get; set; }
     }
 }
