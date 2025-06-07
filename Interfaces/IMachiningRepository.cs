@@ -12,6 +12,7 @@ namespace RouteCardProcess.Interfaces
         Task AddQuantitiesAsync(string machiningId, int totalQty, int processedQty, string qtyStatus);
         Task AddDelaysAsync(string machiningId, int processedQty, TimeSpan delayTime, string reasonCode, TimeSpan totalDelayedTime);
         Task<MachiningMaster> GetByCompositeKeyAsync(string workCenterNo, string workOrderNo, string operationNo);
+        Task UpdateMachiningStatusAsync(string machiningId);
 
     }
 }

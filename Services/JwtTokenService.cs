@@ -23,6 +23,7 @@ namespace RouteCardProcess.Services
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             var claims = new[]
+
             {
                 new Claim(ClaimTypes.Name, operatorId)
             };

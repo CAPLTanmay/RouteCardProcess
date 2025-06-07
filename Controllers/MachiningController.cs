@@ -138,12 +138,16 @@ namespace RouteCardProcess.Controllers
                     return BadRequest(new { success = false, message = "MachiningId and TotalQty are required." });
 
                 var totalProcessed = request.QuantityList.Sum(q => int.Parse(q.ProcessedQty));
+                // Step 1: Insert Quantities
                 await _repo.AddQuantitiesAsync(request.MachiningId, int.Parse(request.TotalQty), totalProcessed, "Processed");
+
+                // Step 2: Update Machining Status
+                await _repo.UpdateMachiningStatusAsync(request.MachiningId);
 
                 return Ok(new
                 {
                     success = true,
-                    message = "Quantity inserted successfully",
+                    message = "Quantity inserted and machining status updated successfully",
                     data = new { request.MachiningId, request.TotalQty, request.QuantityList }
                 });
             }

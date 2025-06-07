@@ -50,7 +50,7 @@ namespace RouteCardProcess.Repositories
 <p>Please take immediate action to investigate and resolve the issue.</p>
 ";
 
-                    await _emailService.SendEmailAsync(subject, body, "tanmaysankpal119@gmail.com");
+                    await _emailService.SendEmailAsync(subject, body, "cic.fiori@kbl.co.in");
                     return true;
                 }
 
@@ -89,7 +89,7 @@ namespace RouteCardProcess.Repositories
 <p>The work center is now operational.</p>
 ";
 
-                await _emailService.SendEmailAsync(subject, body, "tanmaysankpal119@gmail.com");
+                await _emailService.SendEmailAsync(subject, body, "cic.fiori@kbl.co.in");
                 return true;
             }
 

@@ -15,12 +15,15 @@ namespace RouteCardProcess.Controllers
         private readonly ILogInRepository _repo;
         private readonly IJwtTokenService _jwtService;
         private readonly ILogger<LogInController> _logger;
+        private readonly ISystemLoggerRepository _systemLogger;
+       
 
-        public LogInController(ILogInRepository repo, IJwtTokenService jwtService, ILogger<LogInController> logger)
+        public LogInController(ILogInRepository repo, IJwtTokenService jwtService, ILogger<LogInController> logger, ISystemLoggerRepository systemLogger)
         {
             _repo = repo;
             _jwtService = jwtService;
             _logger = logger;
+            _systemLogger = systemLogger;
         }
 
         [HttpGet]
@@ -75,6 +78,7 @@ namespace RouteCardProcess.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in ValidateLogin");
+                await _systemLogger.LogAsync("LogInController", "ValidateLogin", ex.ToString());
                 return StatusCode(500, new { message = "Internal server error." });
             }
         }

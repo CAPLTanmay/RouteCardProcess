@@ -28,11 +28,11 @@ public class MachiningRepository : IMachiningRepository
                 obj.WorkCenterNo,
                 obj.WorkOrderNo,
                 obj.OperationNo,
-                MachiningID=MachiningId,
+                MachiningID = MachiningId,
                 IdealTime = double.TryParse(obj.IdealTime, out var minutes)
     ? TimeSpan.FromMinutes(minutes)
     : TimeSpan.Zero,
-                
+
                 obj.TotalQty,
                 obj.ProcessedQty
             },
@@ -166,4 +166,18 @@ public class MachiningRepository : IMachiningRepository
         );
         return result;
     }
+
+    public async Task UpdateMachiningStatusAsync(string machiningId)
+    {
+        using var connection = CreateConnection();
+
+        await connection.ExecuteAsync(
+            "sp_UpdateMachiningStatus",
+            new { MachiningId = machiningId },
+            commandType: CommandType.StoredProcedure
+        );
+    }
+
+
 }
+

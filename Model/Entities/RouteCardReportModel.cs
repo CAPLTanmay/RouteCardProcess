@@ -19,7 +19,7 @@
     public string? MachiningEndTime { get; set; }
     public string? TotalMachiningTime { get; set; }
     public TimeSpan? MachiningIdealTime { get; set; }
-    public TimeSpan? Machining_PauseTime { get; set; }
+    public string? Machining_PauseTime { get; set; }
     public TimeSpan? Machining_DelayedTime { get; set; }
     public string Machining_ReasonCode { get; set; }
     public TimeSpan? ProcessQtyDelayTime { get; set; }

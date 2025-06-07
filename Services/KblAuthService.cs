@@ -1,4 +1,5 @@
 ﻿using System.Net.Http.Headers;
+using Azure;
 using Microsoft.Extensions.Options;
 using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model.DTOs.Login;
@@ -9,11 +10,13 @@ namespace RouteCardProcess.Services
     {
         private readonly HttpClient _httpClient;
         private readonly KblApiConfig _config;
+        private readonly ISystemLoggerRepository _systemLogger;
 
-        public KblAuthService(IHttpClientFactory httpClientFactory, IOptions<KblApiConfig> config)
+        public KblAuthService(HttpClient httpClient, IOptions<KblApiConfig> config, ISystemLoggerRepository systemLogger)
         {
-            _httpClient = httpClientFactory.CreateClient();
+            _httpClient = httpClient;
             _config = config.Value;
+            _systemLogger = systemLogger;
         }
 
         public async Task<string> AuthenticateLoginAsync(KblLoginRequest request)
@@ -35,11 +38,22 @@ namespace RouteCardProcess.Services
                 ClientSecret = _config.ClientSecret
             };
 
-            var response = await _httpClient.PostAsJsonAsync(tokenUrl, payload);
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync(tokenUrl, payload);
 
-            response.EnsureSuccessStatusCode();
 
-            return await response.Content.ReadAsStringAsync(); // The JWT token string
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadAsStringAsync(); // The JWT token string
+            }
+
+            catch (Exception ex)
+            {
+                await _systemLogger.LogAsync("KBLAuthService", "GetTokenAsync", ex.ToString());
+                return null;
+            }
+
+           
         }
 
 

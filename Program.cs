@@ -18,15 +18,24 @@ builder.Services.AddControllers();
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddSingleton(new SqlConnectionFactory(connectionString));
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
-builder.Services.AddHttpClient();
 builder.Services.Configure<KblApiConfig>(builder.Configuration.GetSection("KblApi"));
+builder.Services.AddHttpClient();
 
-//flag override based on environment
+// Load config from environment-specific files (already handled by default in WebApplication.CreateBuilder)
+// Load config based on environment
 var environment = builder.Environment.EnvironmentName;
-var useKblAuth = environment == "Production";
-var allowedOrigin = builder.Configuration["Cors:AllowedOrigin"];
+
+builder.Configuration
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{environment}.json", optional: true, reloadOnChange: true)
+    .AddEnvironmentVariables();
+
+var useKblAuth = builder.Configuration.GetValue<bool>("UseKblAuthAPI");
+builder.Services.AddSingleton(new KblAuthConfig { UseKblAuthAPI = useKblAuth });
 
 builder.Configuration["UseKblAuth"] = useKblAuth.ToString();
+var allowedOrigin = builder.Configuration["Cors:AllowedOrigin"];
 
 // Add Swagger with JWT Auth support
 builder.Services.AddEndpointsApiExplorer();
@@ -80,11 +89,13 @@ builder.Services.AddScoped<IHelperRepository, HelperRepository>();
 builder.Services.AddScoped<IRouteCardReportRepository, RouteCardReportRepository>();
 builder.Services.AddScoped<IBreakDownRepository, BreakDownRepository>();
 builder.Services.AddHttpClient<IValidationRepository, ValidationRepository>();
+builder.Services.AddScoped<ISystemLoggerRepository, SystemLoggerRepository>();
 
 // Services
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>(); 
-builder.Services.AddScoped<IKblAuthService, KblAuthService>();  
+builder.Services.AddScoped<IKblAuthService, KblAuthService>();
+builder.Services.AddHttpClient<IKblAuthService, KblAuthService>();
 
 // JWT Authentication configuration
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");

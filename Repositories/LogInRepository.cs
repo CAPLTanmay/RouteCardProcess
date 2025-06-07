@@ -7,6 +7,8 @@ using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model;
 using RouteCardProcess.Model.DTOs.Login;
 using RouteCardProcess.Model.Entities;
+using RouteCardProcess.Model.Configurations;
+using Microsoft.Extensions.Configuration;
 
 namespace RouteCardProcess.Repositories
 {
@@ -16,16 +18,20 @@ namespace RouteCardProcess.Repositories
         private readonly ISetUpTransRepository _setUpTransRepository;
         private readonly IKblAuthService _kblService;
         private readonly IConfiguration _configuration;
+        private readonly KblAuthConfig _authConfig;
         private readonly HttpClient _httpClient;
         private readonly ILogger<LogInRepository> _logger;
+        private readonly ISystemLoggerRepository _systemLogger;
 
-        public LogInRepository(SqlConnectionFactory connectionFactory, ISetUpTransRepository setUpTransRepository, IKblAuthService kblService, IConfiguration configuration, ILogger<LogInRepository> logger)
+        public LogInRepository(SqlConnectionFactory connectionFactory, ISetUpTransRepository setUpTransRepository, IKblAuthService kblService, KblAuthConfig authConfig,IConfiguration configuration, ILogger<LogInRepository> logger, ISystemLoggerRepository systemLogger)
         {
             _connectionFactory = connectionFactory;
             _setUpTransRepository = setUpTransRepository;
             _kblService = kblService;
+            _authConfig = authConfig;
             _configuration = configuration;
             _logger = logger;
+            _systemLogger = systemLogger;
         }
 
         public async Task<IEnumerable<LogInMaster>> GetAllAsync()
@@ -76,7 +82,7 @@ namespace RouteCardProcess.Repositories
         {
             try
             {
-                var useKblAuth = _configuration.GetValue<bool>("UseKblAuthAPI");
+                var useKblAuth = _authConfig.UseKblAuthAPI;
 
                 if (useKblAuth)
                 {
@@ -138,7 +144,8 @@ namespace RouteCardProcess.Repositories
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "KBL login failed for operator ID: {OperatorId}", operatorId);
+                _logger.LogError(ex.ToString(), "KBL login failed for operator ID: {OperatorId}", operatorId);
+                await _systemLogger.LogAsync("LogInRepository", "ValidateLogin", ex.ToString());
             }
 
 

@@ -22,7 +22,7 @@ public class EmailService : IEmailService
         using var client = new SmtpClient(_settings.SmtpServer, _settings.SmtpPort)
         {
             Credentials = new NetworkCredential(_settings.Username, _settings.Password),
-            EnableSsl = true
+            EnableSsl = false
         };
 
         var mail = new MailMessage
