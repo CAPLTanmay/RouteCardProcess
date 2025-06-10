@@ -2,11 +2,7 @@
 using System.Net.Mail;
 using Microsoft.Extensions.Options;
 using RouteCardProcess.Model.Configurations;
-
-public interface IEmailService
-{
-    Task SendEmailAsync(string subject, string body, string toEmail);
-}
+using RouteCardProcess.Interfaces;
 
 public class EmailService : IEmailService
 {
@@ -17,12 +13,21 @@ public class EmailService : IEmailService
         _settings = options.Value;
     }
 
-    public async Task SendEmailAsync(string subject, string body, string toEmail)
+    public async Task SendEmailAsync(string subject, string body)
     {
+        await SendEmailAsync(subject, body, null);
+    }
+
+    public async Task SendEmailAsync(string subject, string body, List<string> toEmails = null)
+    {
+        var finalRecipients = (toEmails == null || toEmails.Count == 0)
+            ? _settings.DefaultToEmails
+            : toEmails;
+
         using var client = new SmtpClient(_settings.SmtpServer, _settings.SmtpPort)
         {
             Credentials = new NetworkCredential(_settings.Username, _settings.Password),
-            EnableSsl = false
+            EnableSsl = true
         };
 
         var mail = new MailMessage
@@ -32,7 +37,11 @@ public class EmailService : IEmailService
             Body = body,
             IsBodyHtml = true
         };
-        mail.To.Add(toEmail);
+
+        foreach (var email in finalRecipients.Distinct())
+        {
+            mail.To.Add(email);
+        }
 
         await client.SendMailAsync(mail);
     }

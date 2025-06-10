@@ -108,7 +108,7 @@ public class MachiningRepository : IMachiningRepository
         // 2. If paused, toggle resume
         if (status == "Machining Pause")
         {
-            await connection.ExecuteAsync("sp_ToggleMachiningPause_Resume", parameters, commandType: CommandType.StoredProcedure);
+            await connection.ExecuteAsync("sp_ToggleMachiningPause", parameters, commandType: CommandType.StoredProcedure);
         }
 
         // 3. End machining
