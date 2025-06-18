@@ -4,7 +4,7 @@ using RouteCardProcess.Interfaces;
 
 namespace RouteCardProcess.Repositories
 {
-    public class RouteCardReportRepository:IRouteCardReportRepository
+    public class RouteCardReportRepository : IRouteCardReportRepository
     {
         private readonly SqlConnectionFactory _connectionFactory;
         private readonly ILogInRepository _logInRepository;
@@ -21,21 +21,21 @@ namespace RouteCardProcess.Repositories
             await connection.OpenAsync();
 
             var result = (await connection.QueryAsync<RouteCardReportModel>(
-                "sp_GetRouteCardReport",
+                "usp_GetRouteCardReport",
                 new { WorkOrderNo = workOrderNo },
                 commandType: CommandType.StoredProcedure)).AsList();
 
-            foreach (var item in result)
+            for (int i = 0; i < result.Count; i++)
             {
                 DateTime shiftTime;
-                if (!string.IsNullOrWhiteSpace(item.MachiningEndTime) &&
-                    DateTime.TryParse(item.MachiningEndTime, out shiftTime))
+                if (!string.IsNullOrWhiteSpace(result[i].MachiningEndTime) &&
+                    DateTime.TryParse(result[i].MachiningEndTime, out shiftTime))
                 {
-                    item.Shift = _logInRepository.GetCurrentShift(shiftTime);
+                    result[i].Shift = await _logInRepository.GetCurrentShiftAsync(shiftTime);
                 }
                 else
                 {
-                    item.Shift = _logInRepository.GetCurrentShift(DateTime.Now);
+                    result[i].Shift = await _logInRepository.GetCurrentShiftAsync(DateTime.Now);
                 }
             }
 

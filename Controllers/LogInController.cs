@@ -3,7 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model.DTOs.Login;
 using RouteCardProcess.Model.Entities;
-using Microsoft.Extensions.Logging;
+using RouteCardProcess.Repositories;
+
 
 namespace RouteCardProcess.Controllers
 {
@@ -14,16 +15,15 @@ namespace RouteCardProcess.Controllers
     {
         private readonly ILogInRepository _repo;
         private readonly IJwtTokenService _jwtService;
-        private readonly ILogger<LogInController> _logger;
         private readonly ISystemLoggerRepository _systemLogger;
-       
+        private readonly IUserMessageService _userMessageService;
 
-        public LogInController(ILogInRepository repo, IJwtTokenService jwtService, ILogger<LogInController> logger, ISystemLoggerRepository systemLogger)
+        public LogInController(ILogInRepository repo, IJwtTokenService jwtService, ISystemLoggerRepository systemLogger, IUserMessageService userMessageService)
         {
             _repo = repo;
             _jwtService = jwtService;
-            _logger = logger;
             _systemLogger = systemLogger;
+            _userMessageService = userMessageService;
         }
 
         [HttpGet]
@@ -36,8 +36,9 @@ namespace RouteCardProcess.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in GetAll");
-                return StatusCode(500, "Internal server error.");
+                await _systemLogger.LogAsync("LogInController", "GetAllLogin", ex.ToString());
+                var message = _userMessageService.GetMessage(5001);
+                return StatusCode(500, message);
             }
         }
 
@@ -50,12 +51,19 @@ namespace RouteCardProcess.Controllers
                     return BadRequest(ModelState);
 
                 var result = await _repo.AddAsync(login);
-                return result > 0 ? Ok("User created") : StatusCode(500, "Insert failed");
+                var message = result > 0
+           ? _userMessageService.GetMessage(1002)
+           : _userMessageService.GetMessage(1003);
+
+                return result > 0
+                    ? Ok(message)
+                    : StatusCode(500, message);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in Create");
-                return StatusCode(500, "Internal server error.");
+                await _systemLogger.LogAsync("LogInController", "CreateLogin", ex.ToString());
+                var message = _userMessageService.GetMessage(5001);
+                return StatusCode(500, message);
             }
         }
 
@@ -70,16 +78,21 @@ namespace RouteCardProcess.Controllers
 
                 var user = await _repo.ValidateLoginAsync(request.OperatorId, request.Password);
                 if (user == null)
-                    return Unauthorized(new { message = "Invalid username or password" });
+                {
+                    var message = _userMessageService.GetMessage(1001); // Invalid login
+                    return Unauthorized(new { message });
+                }
 
-                var token = _jwtService.GenerateToken(request.OperatorId);
-                return Ok(new { message = "Login successful", token, user });
+                var token = await _jwtService.GenerateTokenAsync(request.OperatorId); 
+                var successMessage = _userMessageService.GetMessage(2001); // Login successful
+
+                return Ok(new { message = successMessage, token, user });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in ValidateLogin");
                 await _systemLogger.LogAsync("LogInController", "ValidateLogin", ex.ToString());
-                return StatusCode(500, new { message = "Internal server error." });
+                var errMsg = _userMessageService.GetMessage(5001); // Internal error
+                return StatusCode(500, new { message = errMsg });
             }
         }
 
@@ -97,8 +110,9 @@ namespace RouteCardProcess.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in TryLogout");
-                return StatusCode(500, new { Success = false, Message = "Internal server error." });
+                await _systemLogger.LogAsync("LogInController", "TryLogout", ex.ToString());
+                var errorMessage = _userMessageService.GetMessage(5001);
+                return StatusCode(500, new { Success = false, Message = errorMessage });
             }
         }
     }

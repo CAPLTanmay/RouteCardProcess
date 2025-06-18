@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model.DTOs.BreakDownDto;
 using Microsoft.Extensions.Logging;
+using RouteCardProcess.Repositories;
 
 namespace RouteCardProcess.Controllers
 {
@@ -12,12 +13,13 @@ namespace RouteCardProcess.Controllers
     public class BreakDownController : ControllerBase
     {
         private readonly IBreakDownRepository _repo;
-        private readonly ILogger<BreakDownController> _logger;
-
-        public BreakDownController(IBreakDownRepository repo, ILogger<BreakDownController> logger)
+        private readonly ISystemLoggerRepository _systemLogger;
+        private readonly IUserMessageService _userMessageService;
+        public BreakDownController(IBreakDownRepository repo, ISystemLoggerRepository systemLogger, IUserMessageService userMessageService)
         {
             _repo = repo;
-            _logger = logger;
+            _systemLogger = systemLogger;
+            _userMessageService = userMessageService;
         }
 
         [HttpPost("start")]
@@ -27,14 +29,14 @@ namespace RouteCardProcess.Controllers
             {
                 var success = await _repo.StartBreakDownAsync(request.WorkCenterNo, request.OperatorId, request.BreakDownReasonCode);
                 if (success)
-                    return Ok(new { message = "Breakdown started successfully" });
+                    return Ok(new { message = _userMessageService.GetMessage(1012) });
                 else
-                    return BadRequest(new { message = "Failed to start breakdown" });
+                    return BadRequest(new { message = _userMessageService.GetMessage(1015) });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in Start breakdown");
-                return StatusCode(500, new { message = "Internal server error." });
+                await _systemLogger.LogAsync("BreakDownController", "Start", ex.ToString());
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5001) });
             }
         }
 
@@ -45,14 +47,14 @@ namespace RouteCardProcess.Controllers
             {
                 var success = await _repo.EndBreakDownAsync(request.WorkCenterNo, request.OperatorId, request.BreakDownReasonCode);
                 if (success)
-                    return Ok(new { message = "Breakdown ended successfully" });
+                    return Ok(new { message = _userMessageService.GetMessage(1013) });
                 else
-                    return NotFound(new { message = "No open breakdown found for this work center" });
+                    return NotFound(new { message = _userMessageService.GetMessage(1014) });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in End breakdown");
-                return StatusCode(500, new { message = "Internal server error." });
+                await _systemLogger.LogAsync("BreakDownController", "end", ex.ToString());
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5001) });
             }
         }
     }

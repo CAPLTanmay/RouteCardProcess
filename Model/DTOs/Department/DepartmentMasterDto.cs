@@ -6,8 +6,7 @@ namespace RouteCardProcess.Model.DTOs.Department
     {
         public int DepartmentId { get; set; }
 
-        [Required(ErrorMessage = "DepartmentName is required")]
-        [StringLength(100, ErrorMessage = "DepartmentName cannot exceed 100 characters")]
+        [Required]
         public string DepartmentName { get; set; }
     }
 }

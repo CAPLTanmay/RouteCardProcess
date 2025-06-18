@@ -2,8 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model.DTOs.Machining;
-using RouteCardProcess.Model.Entities;
-using Microsoft.Extensions.Logging;
+using RouteCardProcess.Repositories;
 
 namespace RouteCardProcess.Controllers
 {
@@ -13,12 +12,14 @@ namespace RouteCardProcess.Controllers
     public class MachiningController : ControllerBase
     {
         private readonly IMachiningRepository _repo;
-        private readonly ILogger<MachiningController> _logger;
+        private readonly ISystemLoggerRepository _systemLogger;
+        private readonly IUserMessageService _userMessageService;
 
-        public MachiningController(IMachiningRepository repo, ILogger<MachiningController> logger)
+        public MachiningController(IMachiningRepository repo, ISystemLoggerRepository systemLogger, IUserMessageService userMessageService)
         {
             _repo = repo;
-            _logger = logger;
+            _systemLogger = systemLogger;
+            _userMessageService = userMessageService;
         }
 
         [HttpPost("check-or-create")]
@@ -30,7 +31,7 @@ namespace RouteCardProcess.Controllers
                     string.IsNullOrWhiteSpace(request.WorkOrderNo) ||
                     string.IsNullOrWhiteSpace(request.OperationNo))
                 {
-                    return BadRequest(new { message = "WorkCenterNo, WorkOrderNo, and OperationNo are required." });
+                    return BadRequest(new { message = _userMessageService.GetMessage(1020)});
                 }
 
                 var existing = await _repo.GetByCompositeKeyAsync(request.WorkCenterNo, request.WorkOrderNo, request.OperationNo);
@@ -47,7 +48,7 @@ namespace RouteCardProcess.Controllers
 
                     return Ok(new
                     {
-                        message = "Machining already exists",
+                        message = _userMessageService.GetMessage(1021),
                         machiningID = existing.MachiningId,
                         machining = existing,
                     });
@@ -56,18 +57,18 @@ namespace RouteCardProcess.Controllers
                 var created = await _repo.CreateAsync(request);
                 return CreatedAtAction(nameof(GetById), new { machiningId = created.MachiningId }, new
                 {
-                    message = "New machining created",
+                    message = _userMessageService.GetMessage(1022),
                     machiningID = created.MachiningId,
                     machining = created
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while creating machining record.");
+                await _systemLogger.LogAsync("MachiningController", "CheckOrCreateMachining", ex.ToString());
                 if (ex.Message == "Invalid Operator ID")
                     return BadRequest(new { message = ex.Message });
 
-                return StatusCode(500, new { message = "An unexpected error occurred.", error = ex.Message });
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
             }
         }
 
@@ -77,15 +78,15 @@ namespace RouteCardProcess.Controllers
             try
             {
                 if (string.IsNullOrWhiteSpace(request.MachiningId))
-                    return BadRequest(new { message = "MachiningId is required." });
+                    return BadRequest(new { message = _userMessageService.GetMessage(1024) });
 
                 await _repo.StartMachiningAsync(request.MachiningId);
-                return Ok(new { message = "Machining started successfully." });
+                return Ok(new { message = _userMessageService.GetMessage(1025) });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while starting machining process.");
-                return StatusCode(500, new { message = "An unexpected error occurred.", error = ex.Message });
+                await _systemLogger.LogAsync("MachiningController", "start-machining", ex.ToString());
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
             }
         }
 
@@ -95,15 +96,15 @@ namespace RouteCardProcess.Controllers
             try
             {
                 if (string.IsNullOrWhiteSpace(request.MachiningId))
-                    return BadRequest(new { message = "MachiningId is required." });
+                    return BadRequest(new { message = _userMessageService.GetMessage(1024) });
 
                 await _repo.TogglePauseAsync(request.MachiningId, request.PauseCode); // PauseCode can be null or empty
-                return Ok(new { message = "Machining pause toggled successfully." });
+                return Ok(new { message = _userMessageService.GetMessage(1026) });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while toggling machining pause.");
-                return StatusCode(500, new { message = "An unexpected error occurred.", error = ex.Message });
+                await _systemLogger.LogAsync("MachiningController", "toggle-pause", ex.ToString());
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
             }
         }
 
@@ -114,15 +115,15 @@ namespace RouteCardProcess.Controllers
             try
             {
                 if (string.IsNullOrWhiteSpace(request.MachiningId))
-                    return BadRequest(new { message = "MachiningId is required." });
+                    return BadRequest(new { message = _userMessageService.GetMessage(1024) });
 
                 await _repo.EndMachiningAsync(request.MachiningId);
-                return Ok(new { message = "Operator end time updated successfully." });
+                return Ok(new { message =  _userMessageService.GetMessage(1027) });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while ending machining process.");
-                return StatusCode(500, new { message = "An unexpected error occurred.", error = ex.Message });
+                await _systemLogger.LogAsync("MachiningController", "end-machining", ex.ToString());
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
             }
         }
 
@@ -132,10 +133,10 @@ namespace RouteCardProcess.Controllers
             try
             {
                 if (request?.QuantityList == null || !request.QuantityList.Any())
-                    return BadRequest(new { success = false, message = "Invalid input: QuantityList cannot be empty." });
+                    return BadRequest(new { success = false, message = _userMessageService.GetMessage(1028) });
 
                 if (string.IsNullOrWhiteSpace(request.MachiningId) || string.IsNullOrWhiteSpace(request.TotalQty))
-                    return BadRequest(new { success = false, message = "MachiningId and TotalQty are required." });
+                    return BadRequest(new { success = false, message = _userMessageService.GetMessage(1029) });
 
                 var totalProcessed = request.QuantityList.Sum(q => int.Parse(q.ProcessedQty));
                 // Step 1: Insert Quantities
@@ -147,14 +148,14 @@ namespace RouteCardProcess.Controllers
                 return Ok(new
                 {
                     success = true,
-                    message = "Quantity inserted and machining status updated successfully",
+                    message =  _userMessageService.GetMessage(1030),
                     data = new { request.MachiningId, request.TotalQty, request.QuantityList }
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while adding quantities.");
-                return StatusCode(500, new { success = false, message = "Insertion failed", error = ex.Message });
+                await _systemLogger.LogAsync("MachiningController", "add-quantity", ex.ToString());
+                return StatusCode(500, new { success = false, message = _userMessageService.GetMessage(1003), error = ex.Message });
             }
         }
 
@@ -167,12 +168,12 @@ namespace RouteCardProcess.Controllers
                     return Ok(new
                     {
                         success = true,
-                        message = "Delays inserted successfully",
+                        message = _userMessageService.GetMessage(1034),
                         data = new { request.MachiningId, request.TotalDelayedTime, request.Delays }
                     });
 
                 if (string.IsNullOrWhiteSpace(request.MachiningId))
-                    return BadRequest(new { success = false, message = "MachiningId is required." });
+                    return BadRequest(new { success = false, message = _userMessageService.GetMessage(1024) });
 
                 var totalProcessed = request.Delays.Sum(d => int.Parse(d.ProcessedQty));
                 var delayCode = request.Delays.First().DelayReasonCode;
@@ -183,14 +184,14 @@ namespace RouteCardProcess.Controllers
                 return Ok(new
                 {
                     success = true,
-                    message = "Delays inserted successfully",
+                    message = _userMessageService.GetMessage(1034),
                     data = new { request.MachiningId, request.TotalDelayedTime, request.Delays }
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while adding delays.");
-                return StatusCode(500, new { success = false, message = "Insertion failed", error = ex.Message });
+                await _systemLogger.LogAsync("MachiningController", "add-delays", ex.ToString());
+                return StatusCode(500, new { success = false, message = _userMessageService.GetMessage(1003), error = ex.Message });
             }
         }
 
@@ -201,13 +202,13 @@ namespace RouteCardProcess.Controllers
             {
                 var machining = await _repo.GetByCompositeKeyAsync(machiningId, string.Empty, string.Empty);
                 return machining == null
-                    ? NotFound(new { message = "Machining record not found." })
+                    ? NotFound(new { message = _userMessageService.GetMessage(1033) })
                     : Ok(machining);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while fetching machining record.");
-                return StatusCode(500, new { message = "Internal server error." });
+                await _systemLogger.LogAsync("MachiningController", "GetById", ex.ToString());
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5001) });
             }
         }
     }

@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model.DTOs.Setup;
-using Microsoft.Extensions.Logging;
+using RouteCardProcess.Repositories;
 
 namespace RouteCardProcess.Controllers
 {
@@ -12,12 +12,13 @@ namespace RouteCardProcess.Controllers
     public class SetUpTransController : ControllerBase
     {
         private readonly ISetUpTransRepository _repo;
-        private readonly ILogger<SetUpTransController> _logger;
-
-        public SetUpTransController(ISetUpTransRepository repo, ILogger<SetUpTransController> logger)
+        private readonly ISystemLoggerRepository _systemLogger;
+        private readonly IUserMessageService _userMessageService;
+        public SetUpTransController(ISetUpTransRepository repo, ISystemLoggerRepository systemLogger, IUserMessageService userMessageService)
         {
             _repo = repo;
-            _logger = logger;
+            _systemLogger = systemLogger;
+            _userMessageService = userMessageService;
         }
 
         [HttpPost("check-status")]
@@ -43,8 +44,8 @@ namespace RouteCardProcess.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while checking setup status.");
-                return StatusCode(500, new { message = "An unexpected error occurred.", error = ex.Message });
+                await _systemLogger.LogAsync("SetUpTransController", "check-status", ex.ToString());
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
             }
         }
 
@@ -67,7 +68,7 @@ namespace RouteCardProcess.Controllers
 
                     return Ok(new
                     {
-                        message = "Setup already exists",
+                        message = _userMessageService.GetMessage(1086),
                         SetUpID = existing.SetUpID,
                         setup = existing
                     });
@@ -76,18 +77,18 @@ namespace RouteCardProcess.Controllers
                 var created = await _repo.CreateSetupAsync(request);
                 return Ok(new
                 {
-                    message = "New setupId created",
+                    message = _userMessageService.GetMessage(1085),
                     SetUpId = created.SetUpID,
                     setup = created
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while checking or creating setup.");
-                if (ex.Message == "Invalid Operator ID")
+                await _systemLogger.LogAsync("SetUpTransController", "check-or-create", ex.ToString());
+                if (ex.Message == _userMessageService.GetMessage(1061))
                     return BadRequest(new { message = ex.Message });
 
-                return StatusCode(500, new { message = "An unexpected error occurred.", error = ex.Message });
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
             }
         }
 
@@ -98,14 +99,14 @@ namespace RouteCardProcess.Controllers
             {
                 var result = await _repo.StartSetupAsync(request.SetUpID);
 
-                return result == "Setup started"
+                return result == _userMessageService.GetMessage(1056)
                     ? Ok(new { message = result })
                     : BadRequest(new { message = result });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while starting setup.");
-                return StatusCode(500, new { message = "An unexpected error occurred.", error = ex.Message });
+                await _systemLogger.LogAsync("SetUpTransController", "start-setup", ex.ToString());
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
             }
         }
 
@@ -116,14 +117,14 @@ namespace RouteCardProcess.Controllers
             {
                 var result = await _repo.TogglePauseAsync(request);
 
-                return (result == "Setup paused" || result == "Setup resumed")
+                return (result == _userMessageService.GetMessage(1075) || result == _userMessageService.GetMessage(1059))
                     ? Ok(new { message = result })
                     : BadRequest(new { message = result });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while toggling pause.");
-                return StatusCode(500, new { message = "An unexpected error occurred.", error = ex.Message });
+                await _systemLogger.LogAsync("SetUpTransController", "toggle-pause", ex.ToString());
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
             }
         }
 
@@ -135,13 +136,13 @@ namespace RouteCardProcess.Controllers
                 var success = await _repo.EndSetupTimeAsync(request.SetUpID);
 
                 return success
-                    ? Ok(new { message = "Operator end time updated successfully." })
-                    : NotFound(new { message = "Setup not found." });
+                    ? Ok(new { message = _userMessageService.GetMessage(1027) })
+                    : NotFound(new { message = _userMessageService.GetMessage(1087)});
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while ending setup time.");
-                return StatusCode(500, new { message = "An unexpected error occurred.", error = ex.Message });
+                await _systemLogger.LogAsync("SetUpTransController", "end-setup", ex.ToString());
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
             }
         }
 
@@ -153,13 +154,13 @@ namespace RouteCardProcess.Controllers
                 var result = await _repo.InsertDelaysAsync(request);
 
                 return result
-                    ? Ok(new { message = "Delays added successfully" })
-                    : BadRequest(new { message = "Failed to add delays" });
+                    ? Ok(new { message = _userMessageService.GetMessage(1034) })
+                    : BadRequest(new { message = _userMessageService.GetMessage(1035) });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while adding delays.");
-                return StatusCode(500, new { message = "An unexpected error occurred.", error = ex.Message });
+                await _systemLogger.LogAsync("SetUpTransController", "add-delays", ex.ToString());
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
             }
         }
     }

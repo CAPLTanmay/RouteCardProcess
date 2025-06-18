@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model.DTOs.RouteCardReport;
-using Microsoft.Extensions.Logging;
+using RouteCardProcess.Repositories;
 
 namespace RouteCardProcess.Controllers
 {
@@ -12,12 +12,14 @@ namespace RouteCardProcess.Controllers
     public class RouteCardReportController : ControllerBase
     {
         private readonly IRouteCardReportRepository _repo;
-        private readonly ILogger<RouteCardReportController> _logger;
+        private readonly ISystemLoggerRepository _systemLogger;
+        private readonly IUserMessageService _userMessageService;
 
-        public RouteCardReportController(IRouteCardReportRepository repo, ILogger<RouteCardReportController> logger)
+        public RouteCardReportController(IRouteCardReportRepository repo, ISystemLoggerRepository systemLogger, IUserMessageService userMessageService)
         {
             _repo = repo;
-            _logger = logger;
+            _systemLogger = systemLogger;
+            _userMessageService = userMessageService;
         }
 
         [HttpPost("get-by-workorder")]
@@ -26,18 +28,18 @@ namespace RouteCardProcess.Controllers
             try
             {
                 if (string.IsNullOrWhiteSpace(request.WorkOrderNo))
-                    return BadRequest(new { message = "WorkOrderNo is required." });
+                    return BadRequest(new { message = _userMessageService.GetMessage(1062) });
 
                 var result = await _repo.GetRouteCardReportAsync(request.WorkOrderNo);
                 if (result == null || !result.Any())
-                    return NotFound(new { message = "No data found for the provided WorkOrderNo." });
+                    return NotFound(new { message =_userMessageService.GetMessage(1063) });
 
                 return Ok(result);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while fetching route card report.");
-                return StatusCode(500, new { message = "An unexpected error occurred.", error = ex.Message });
+                await _systemLogger.LogAsync("RouteCardReportController", "get-by-workorder", ex.ToString());
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
             }
         }
     }

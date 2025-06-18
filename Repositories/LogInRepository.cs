@@ -1,14 +1,9 @@
 ﻿using System.Data;
-using System.Net.Http.Headers;
-using System.Net.Http;
-using System.Text;
 using Dapper;
 using RouteCardProcess.Interfaces;
-using RouteCardProcess.Model;
+using RouteCardProcess.Model.Configurations;
 using RouteCardProcess.Model.DTOs.Login;
 using RouteCardProcess.Model.Entities;
-using RouteCardProcess.Model.Configurations;
-using Microsoft.Extensions.Configuration;
 
 namespace RouteCardProcess.Repositories
 {
@@ -17,21 +12,18 @@ namespace RouteCardProcess.Repositories
         private readonly SqlConnectionFactory _connectionFactory;
         private readonly ISetUpTransRepository _setUpTransRepository;
         private readonly IKblAuthService _kblService;
-        private readonly IConfiguration _configuration;
         private readonly KblAuthConfig _authConfig;
-        private readonly HttpClient _httpClient;
-        private readonly ILogger<LogInRepository> _logger;
         private readonly ISystemLoggerRepository _systemLogger;
+        private readonly IUserMessageService _userMessageService;
 
-        public LogInRepository(SqlConnectionFactory connectionFactory, ISetUpTransRepository setUpTransRepository, IKblAuthService kblService, KblAuthConfig authConfig,IConfiguration configuration, ILogger<LogInRepository> logger, ISystemLoggerRepository systemLogger)
+        public LogInRepository(SqlConnectionFactory connectionFactory, ISetUpTransRepository setUpTransRepository, IKblAuthService kblService, KblAuthConfig authConfig, ISystemLoggerRepository systemLogger, IUserMessageService userMessageService)
         {
             _connectionFactory = connectionFactory;
             _setUpTransRepository = setUpTransRepository;
             _kblService = kblService;
             _authConfig = authConfig;
-            _configuration = configuration;
-            _logger = logger;
             _systemLogger = systemLogger;
+            _userMessageService = userMessageService;
         }
 
         public async Task<IEnumerable<LogInMaster>> GetAllAsync()
@@ -41,14 +33,16 @@ namespace RouteCardProcess.Repositories
                 using var connection = _connectionFactory.CreateConnection();
                 await connection.OpenAsync();
                 var result = await connection.QueryAsync<LogInMaster>(
-                    "sp_GetAllLogins",
+                    "usp_GetAllLogins",
                     commandType: CommandType.StoredProcedure
                 );
                 return result;
             }
             catch (Exception ex)
             {
-                throw new Exception("Error fetching login records.", ex);
+                await _systemLogger.LogAsync("LogInRepository", "GetAllAsync", ex.ToString());
+                var msg = _userMessageService.GetMessage(5001); // Internal Server Error
+                throw new Exception(msg, ex);
             }
         }
 
@@ -59,7 +53,7 @@ namespace RouteCardProcess.Repositories
                 using var connection = _connectionFactory.CreateConnection();
                 await connection.OpenAsync();
                 var result = await connection.ExecuteAsync(
-                    "sp_AddLogin",
+                    "usp_AddLogin",
                     new
                     {
                         login.OperatorId,
@@ -74,7 +68,9 @@ namespace RouteCardProcess.Repositories
             }
             catch (Exception ex)
             {
-                throw new Exception("Error inserting login record.", ex);
+                await _systemLogger.LogAsync("LogInRepository", "AddLoginAsync", ex.ToString());
+                var msg = _userMessageService.GetMessage(5001);
+                throw new Exception(msg, ex);
             }
         }
 
@@ -113,7 +109,7 @@ namespace RouteCardProcess.Repositories
                                     OperatorRole = emp.Designation,
                                     DepartmentId = 3,
                                     DepartmentName = emp.Deptnm,
-                                    Shift = GetCurrentShift(),
+                                    Shift = await GetCurrentShiftAsync(),
                                     IsFromKBL = true
                                 };
                             }
@@ -136,7 +132,7 @@ namespace RouteCardProcess.Repositories
                             OperatorRole = emp.Designation,
                             DepartmentId = 3,
                             DepartmentName = emp.Deptnm,
-                            Shift = GetCurrentShift(),
+                            Shift = await GetCurrentShiftAsync(),
                             IsFromKBL = true
                         };
                     }
@@ -144,7 +140,6 @@ namespace RouteCardProcess.Repositories
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex.ToString(), "KBL login failed for operator ID: {OperatorId}", operatorId);
                 await _systemLogger.LogAsync("LogInRepository", "ValidateLogin", ex.ToString());
             }
 
@@ -154,7 +149,7 @@ namespace RouteCardProcess.Repositories
             await connection.OpenAsync();
 
             var user = await connection.QueryFirstOrDefaultAsync<LogInMaster>
-            ("sp_ValidateLogin",
+            ("usp_ValidateLogin",
                  new { OperatorId = operatorId, OperatorPassword = password },
                  commandType: CommandType.StoredProcedure
             );
@@ -162,7 +157,7 @@ namespace RouteCardProcess.Repositories
 
             if (user != null)
             {
-                user.Shift = GetCurrentShift();
+                user.Shift = await GetCurrentShiftAsync();
                 user.IsFromKBL = false;
             }
 
@@ -179,29 +174,41 @@ namespace RouteCardProcess.Repositories
 
                 if (flag == 0)
                     return (0, message);
+                if(setupStatus == "Setup Started" || machiningStatus == "Machining Started")
+                    return (0, _userMessageService.GetMessage(1004)); 
 
-                if (setupStatus == "Setup Started" || machiningStatus == "Machining Started")
-                    return (0, "Cannot logout. Setup or Machining is still in progress.");
-
-                return (1, "Logout successful");
+                return (1, _userMessageService.GetMessage(1005));
             }
             catch (Exception ex)
             {
-                return (0, "Error during logout process: " + ex.Message);
+                await _systemLogger.LogAsync("LogInRepository", "TryLogoutAsync", ex.ToString());
+                return (0, _userMessageService.GetMessage(5001));
             }
         }
 
-        public string GetCurrentShift(DateTime? dateTime = null)
+        public async Task<string> GetCurrentShiftAsync(DateTime? dateTime = null)
         {
-            TimeSpan time = (dateTime ?? DateTime.Now).TimeOfDay;
+            using var connection = _connectionFactory.CreateConnection();
+            await connection.OpenAsync();
 
-            if (time >= new TimeSpan(7, 0, 0) && time < new TimeSpan(15, 30, 0))
-                return "S1";
-            else if (time >= new TimeSpan(15, 30, 0) && time <= new TimeSpan(23, 59, 59))
-                return "S2";
-            else
-                return "S3";
+
+            // Determine the time to be evaluated
+            var timeNow = (dateTime ?? DateTime.Now).TimeOfDay;
+
+            // Define parameters for stored procedure execution
+            var parameters = new { TimeNow = timeNow };
+
+            // Execute the stored procedure to retrieve the current shift code
+            var shift = await connection.QueryFirstOrDefaultAsync<string>(
+                "usp_GetCurrentShift",
+                parameters,
+                commandType: CommandType.StoredProcedure
+            );
+
+            // Return the result or a fallback value
+            return shift ?? _userMessageService.GetMessage(1072);
         }
+
 
     }
 }

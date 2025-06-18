@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model.DTOs.SapValidation;
+using RouteCardProcess.Repositories;
 using System.Text.Json;
 
 namespace RouteCardProcess.Controllers
@@ -12,13 +13,14 @@ namespace RouteCardProcess.Controllers
     {
         private readonly IValidationRepository _repo;
         private readonly IJwtTokenService _jwtService;
-        private readonly ILogger<ValidationController> _logger;
-
-        public ValidationController(IValidationRepository repo, IJwtTokenService jwtService, ILogger<ValidationController> logger)
+        private readonly ISystemLoggerRepository _systemLogger;
+        private readonly IUserMessageService _userMessageService;
+        public ValidationController(IValidationRepository repo, IJwtTokenService jwtService, ISystemLoggerRepository systemLogger, IUserMessageService userMessageService)
         {
             _repo = repo;
             _jwtService = jwtService;
-            _logger = logger;
+            _systemLogger = systemLogger;
+            _userMessageService = userMessageService;
         }
 
         [HttpPost("validate-workcenter")]
@@ -34,27 +36,27 @@ namespace RouteCardProcess.Controllers
                 return Ok(new
                 {
                     success = true,
-                    message = "Work center validated successfully",
+                    message = _userMessageService.GetMessage(1064),
                     data = data
                 });
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogError(ex, "HTTP error in ValidateWorkCenter");
+                await _systemLogger.LogAsync("ValidationController", "validate-workcenter", ex.ToString());
                 return StatusCode(502, new
                 {
                     success = false,
-                    message = "External service error",
+                    message = _userMessageService.GetMessage(5002),
                     details = ex.Message
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in ValidateWorkCenter");
+                await _systemLogger.LogAsync("ValidationController", "validate-workcenter", ex.ToString());
                 return StatusCode(500, new
                 {
                     success = false,
-                    message = "Internal server error",
+                    message = _userMessageService.GetMessage(5001),
                     details = ex.Message
                 });
             }
@@ -72,27 +74,27 @@ namespace RouteCardProcess.Controllers
                 return Ok(new
                 {
                     success = true,
-                    message = "Work Order validated successfully",
+                    message = _userMessageService.GetMessage(1065),
                     data = data
                 });
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogError(ex, "HTTP error in ValidateOrder");
+                await _systemLogger.LogAsync("ValidationController", "validate-order", ex.ToString());
                 return StatusCode(502, new
                 {
                     success = false,
-                    message = "External service error",
+                    message = _userMessageService.GetMessage(5002),
                     details = ex.Message
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in ValidateOrder");
+                await _systemLogger.LogAsync("ValidationController", "validate-order", ex.ToString());
                 return StatusCode(500, new
                 {
                     success = false,
-                    message = "Internal server error",
+                    message = _userMessageService.GetMessage(5001),
                     details = ex.Message
                 });
             }
@@ -111,27 +113,27 @@ namespace RouteCardProcess.Controllers
                 return Ok(new
                 {
                     success = true,
-                    message = "Routing data fetched successfully",
+                    message = _userMessageService.GetMessage(1066),
                     data = data
                 });
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogError(ex, "HTTP error in GetRoutingData");
+                await _systemLogger.LogAsync("ValidationController", "routing-data", ex.ToString());
                 return StatusCode(502, new
                 {
                     success = false,
-                    message = "External service error",
+                    message = _userMessageService.GetMessage(5002),
                     details = ex.Message
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in GetRoutingData");
+                await _systemLogger.LogAsync("ValidationController", "routing-data", ex.ToString());
                 return StatusCode(500, new
                 {
                     success = false,
-                    message = "Internal server error",
+                    message = _userMessageService.GetMessage(5001),
                     details = ex.Message
                 });
             }
@@ -150,27 +152,27 @@ namespace RouteCardProcess.Controllers
                 return Ok(new
                 {
                     success = true,
-                    message = "Loss data fetched successfully",
+                    message = _userMessageService.GetMessage(1067),
                     data = data
                 });
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogError(ex, "HTTP error in GetLossData");
+                await _systemLogger.LogAsync("ValidationController", "loss-data", ex.ToString());
                 return StatusCode(502, new
                 {
                     success = false,
-                    message = "External service error",
+                    message = _userMessageService.GetMessage(5002),
                     details = ex.Message
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in GetLossData");
+                await _systemLogger.LogAsync("ValidationController", "loss-data", ex.ToString());
                 return StatusCode(500, new
                 {
                     success = false,
-                    message = "Internal server error",
+                    message = _userMessageService.GetMessage(5001),
                     details = ex.Message
                 });
             }
@@ -189,27 +191,27 @@ namespace RouteCardProcess.Controllers
                 return Ok(new
                 {
                     success = true,
-                    message = "Maintenance notifications fetched successfully",
+                    message = _userMessageService.GetMessage(1068),
                     data = data
                 });
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogError(ex, "HTTP error in GetMaintenanceNotifications");
+                await _systemLogger.LogAsync("ValidationController", "maintenance-notifications", ex.ToString());
                 return StatusCode(502, new
                 {
                     success = false,
-                    message = "External service error",
+                    message = _userMessageService.GetMessage(5002),
                     details = ex.Message
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in GetMaintenanceNotifications");
+                await _systemLogger.LogAsync("ValidationController", "maintenance-notifications", ex.ToString());
                 return StatusCode(500, new
                 {
                     success = false,
-                    message = "Internal server error",
+                    message = _userMessageService.GetMessage(5001),
                     details = ex.Message
                 });
             }
@@ -225,19 +227,19 @@ namespace RouteCardProcess.Controllers
                 return Ok(new
                 {
                     success = true,
-                    message = "Work center updated successfully",
+                    message = _userMessageService.GetMessage(1069),
                     data = JsonSerializer.Deserialize<object>(response)
                 });
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogError(ex, "HTTP error in UpdateWorkCenter");
-                return StatusCode(502, new { success = false, message = "External service error", details = ex.Message });
+                await _systemLogger.LogAsync("ValidationController", "updateWorkCenter", ex.ToString());
+                return StatusCode(502, new { success = false, message = _userMessageService.GetMessage(5002), details = ex.Message });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in UpdateWorkCenter");
-                return StatusCode(500, new { success = false, message = "Internal server error", details = ex.Message });
+                await _systemLogger.LogAsync("ValidationController", "updateWorkCenter", ex.ToString());
+                return StatusCode(500, new { success = false, message = _userMessageService.GetMessage(5001), details = ex.Message });
             }
         }
 
@@ -251,19 +253,19 @@ namespace RouteCardProcess.Controllers
                 return Ok(new
                 {
                     success = true,
-                    message = "Production order confirmed successfully",
+                    message = _userMessageService.GetMessage(1070),
                     data = JsonSerializer.Deserialize<object>(response)
                 });
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogError(ex, "HTTP error in ConfirmProductionOrder");
-                return StatusCode(502, new { success = false, message = "External service error", details = ex.Message });
+                await _systemLogger.LogAsync("ValidationController", "confirmProductionOrder", ex.ToString());
+                return StatusCode(502, new { success = false, message = _userMessageService.GetMessage(5002), details = ex.Message });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in ConfirmProductionOrder");
-                return StatusCode(500, new { success = false, message = "Internal server error", details = ex.Message });
+                await _systemLogger.LogAsync("ValidationController", "confirmProductionOrder", ex.ToString());
+                return StatusCode(500, new { success = false, message = _userMessageService.GetMessage(5001), details = ex.Message });
             }
         }
 

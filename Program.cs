@@ -19,6 +19,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddSingleton(new SqlConnectionFactory(connectionString));
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 builder.Services.Configure<KblApiConfig>(builder.Configuration.GetSection("KblApi"));
+builder.Services.AddHttpClient<ISapSyncService, SapSyncService>();
 builder.Services.AddHttpClient();
 
 // Load config from environment-specific files (already handled by default in WebApplication.CreateBuilder)
@@ -88,6 +89,11 @@ builder.Services.AddScoped<IMachiningRepository, MachiningRepository>();
 builder.Services.AddScoped<IHelperRepository, HelperRepository>();
 builder.Services.AddScoped<IRouteCardReportRepository, RouteCardReportRepository>();
 builder.Services.AddScoped<IBreakDownRepository, BreakDownRepository>();
+builder.Services.AddScoped<IIdleCodeRepository, IdleCodeRepository>();
+builder.Services.AddScoped<IMstWorkCenterRepository, MstWorkCenterRepository>();
+builder.Services.AddScoped<IExceptionReasonRepository, ExceptionReasonRepository>();
+builder.Services.AddScoped<IStdExceptionRepository, StdExceptionRepository>();
+builder.Services.AddScoped<IPauseCodeRepository, PauseCodeRepository>();
 builder.Services.AddHttpClient<IValidationRepository, ValidationRepository>();
 builder.Services.AddScoped<ISystemLoggerRepository, SystemLoggerRepository>();
 
@@ -96,6 +102,7 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>(); 
 builder.Services.AddScoped<IKblAuthService, KblAuthService>();
 builder.Services.AddHttpClient<IKblAuthService, KblAuthService>();
+builder.Services.AddSingleton<IUserMessageService, UserMessageService>();
 
 // JWT Authentication configuration
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");

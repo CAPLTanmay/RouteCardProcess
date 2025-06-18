@@ -10,10 +10,11 @@ namespace RouteCardProcess.Repositories
     public class HelperRepository:IHelperRepository
     {
         private readonly SqlConnectionFactory _connectionFactory;
-
-        public HelperRepository(SqlConnectionFactory connectionFactory)
+        private readonly IUserMessageService _userMessageService;
+        public HelperRepository(SqlConnectionFactory connectionFactory, IUserMessageService userMessageService)
         {
             _connectionFactory = connectionFactory;
+            _userMessageService = userMessageService;
         }
 
         private SqlConnection CreateConnection()
@@ -27,7 +28,7 @@ namespace RouteCardProcess.Repositories
 
             // Fetch all users from the login table
             var allUsers = await connection.QueryAsync<LogInMaster>(
-                "sp_GetAllLogins",
+                "usp_GetAllLogins",
                 commandType: CommandType.StoredProcedure
             );
 
@@ -36,7 +37,7 @@ namespace RouteCardProcess.Repositories
             );
 
             if (validUser == null)
-                return "Invalid Operator ID or Password.";
+                return _userMessageService.GetMessage(1001);
 
             // Prepare the parameters for adding a helper record
             var parameters = new DynamicParameters();
@@ -61,12 +62,11 @@ namespace RouteCardProcess.Repositories
 
             // Execute stored procedure to insert the helper record
             await connection.ExecuteAsync(
-                "sp_AddHelper",
+                "usp_AddHelper",
                 parameters,
                 commandType: CommandType.StoredProcedure
             );
-
-            return "Helper added successfully.";
+            return _userMessageService.GetMessage(1007);
         }
 
 
@@ -83,16 +83,15 @@ namespace RouteCardProcess.Repositories
                 parameters.Add("MachiningId", string.IsNullOrEmpty(request.MachiningId) ? null : request.MachiningId);
 
                 await connection.ExecuteAsync(
-                    "sp_EndHelperSession",
+                    "usp_EndHelperSession",
                     parameters,
                     commandType: CommandType.StoredProcedure
                 );
-
-                return "Helper end time updated and released successfully.";
+                return _userMessageService.GetMessage(1008);
             }
-            catch (SqlException ex) when (ex.Message.Contains("Helper record not found"))
+            catch (SqlException ex) when (ex.Message.Contains(_userMessageService.GetMessage(1009)))
             {
-                return "Helper record not found.";
+                return _userMessageService.GetMessage(1009);
             }
         }
 
@@ -103,21 +102,21 @@ namespace RouteCardProcess.Repositories
 
             // Find current log row
             var existing = await connection.QueryFirstOrDefaultAsync<dynamic>(
-                "sp_GetHelperBySetupAndMachiningId",
+                "usp_GetHelperBySetupAndMachiningId",
                 new { request.OperatorId, request.SetupId, request.MachiningId },
                 commandType: CommandType.StoredProcedure);
 
             if (existing == null)
-                return "Helper record not found.";
+                return _userMessageService.GetMessage(1009);
 
             if (existing.PauseStartTime == null)
             {
                 // Start pause
                 await connection.ExecuteAsync(
-                    "sp_StartHelperPause",
+                    "usp_StartHelperPause",
                     new { request.OperatorId, request.SetupId, request.MachiningId, PauseStartTime = DateTime.Now },
                     commandType: CommandType.StoredProcedure);
-                return "Helper paused.";
+                return _userMessageService.GetMessage(1010);
             }
             else
             {
@@ -127,7 +126,7 @@ namespace RouteCardProcess.Repositories
                 var pauseDuration = pauseEnd - pauseStart;
 
                 await connection.ExecuteAsync(
-                    "sp_EndHelperPause",
+                    "usp_EndHelperPause",
                     new
                     {
                         request.OperatorId,
@@ -137,7 +136,7 @@ namespace RouteCardProcess.Repositories
                         PauseDuration = pauseDuration
                     },
                     commandType: CommandType.StoredProcedure);
-                return "Helper resumed.";
+                return _userMessageService.GetMessage(1011);
             }
         }
 
@@ -150,7 +149,7 @@ namespace RouteCardProcess.Repositories
             parameters.Add("MainOperatorId", mainOperatorId);
 
             var result = await connection.QueryAsync<OperatorHelperLog>(
-                "sp_GetHelpersByMainOperator",
+                "usp_GetHelpersByMainOperator",
                 parameters,
                 commandType: CommandType.StoredProcedure
             );

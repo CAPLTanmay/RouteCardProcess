@@ -1,32 +1,44 @@
 ﻿using System.Net;
 using System.Text.Json;
+using RouteCardProcess.Interfaces;
 
 namespace RouteCardProcess.Middleware
 {
     public class ExceptionMiddleware
     {
-            private readonly RequestDelegate _next;
-            private readonly ILogger<ExceptionMiddleware> _logger;
-            private readonly IHostEnvironment _env;
+        private readonly RequestDelegate _next;
+        private readonly IServiceProvider _serviceProvider;
+        private readonly IHostEnvironment _env;
 
-            public ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger, IHostEnvironment env)
+        public ExceptionMiddleware(RequestDelegate next, IServiceProvider serviceProvider, IHostEnvironment env)
+        {
+            _next = next;
+            _serviceProvider = serviceProvider;
+            _env = env;
+        }
+
+        public async Task InvokeAsync(HttpContext context)
+        {
+            try
             {
-                _next = next;
-                _logger = logger;
-                _env = env;
+                await _next(context);
             }
-
-            public async Task InvokeAsync(HttpContext context)
+            catch (Exception ex)
             {
                 try
                 {
-                    await _next(context);
+                    // Create scope and resolve the logger
+                    using var scope = _serviceProvider.CreateScope();
+                    var logger = scope.ServiceProvider.GetRequiredService<ISystemLoggerRepository>();
+                    await logger.LogAsync("ExceptionMiddleware", "Invoke", ex.ToString());
                 }
-                catch (Exception ex)
+                catch
                 {
-                    _logger.LogError(ex, ex.Message);
-                    context.Response.ContentType = "application/json";
-                    context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                    // Log failure in logger silently or to a file, if needed
+                }
+
+                context.Response.ContentType = "application/json";
+                context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 
                 var response = new
                 {
@@ -34,12 +46,11 @@ namespace RouteCardProcess.Middleware
                     stackTrace = _env.IsDevelopment() ? ex.StackTrace : null
                 };
 
-
                 var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-                    var json = JsonSerializer.Serialize(response, options);
+                var json = JsonSerializer.Serialize(response, options);
 
-                    await context.Response.WriteAsync(json);
-                }
+                await context.Response.WriteAsync(json);
             }
         }
     }
+}

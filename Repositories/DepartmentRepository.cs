@@ -9,10 +9,11 @@ namespace RouteCardProcess.Repositories
     public class DepartmentRepository : IDepartmentRepository
     {
         private readonly SqlConnectionFactory _connectionFactory;
-
-        public DepartmentRepository(SqlConnectionFactory connectionFactory)
+        private readonly IUserMessageService _userMessageService;
+        public DepartmentRepository(SqlConnectionFactory connectionFactory, IUserMessageService userMessageService)
         {
             _connectionFactory = connectionFactory;
+            _userMessageService = userMessageService;
         }
 
         private SqlConnection CreateConnection()
@@ -32,7 +33,7 @@ namespace RouteCardProcess.Repositories
             }
             catch (Exception ex)
             {
-                throw new Exception("Error fetching departments.", ex);
+                throw new Exception(_userMessageService.GetMessage(1017), ex);
             }
         }
 
@@ -50,7 +51,7 @@ namespace RouteCardProcess.Repositories
             }
             catch (Exception ex)
             {
-                throw new Exception("Error inserting department.", ex);
+                throw new Exception(_userMessageService.GetMessage(1016), ex);
             }
         }
     }

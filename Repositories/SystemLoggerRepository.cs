@@ -23,7 +23,7 @@ public class SystemLoggerRepository : ISystemLoggerRepository
         parameters.Add("@FunctionName", functionName);
         parameters.Add("@ErrorMsg", errorMessage);
 
-        await connection.ExecuteAsync("sp_InsertLog", parameters, commandType: CommandType.StoredProcedure);
+        await connection.ExecuteAsync("usp_InsertLog", parameters, commandType: CommandType.StoredProcedure);
     }
 
 }

@@ -6,37 +6,49 @@ using RouteCardProcess.Interfaces;
 
 namespace RouteCardProcess.Services
 {
-    public class JwtTokenService:IJwtTokenService
+    public class JwtTokenService : IJwtTokenService
     {
         private readonly IConfiguration _configuration;
+        private readonly ISystemLoggerRepository _systemLogger;
 
-        public JwtTokenService(IConfiguration configuration)
+        public JwtTokenService(IConfiguration configuration, ISystemLoggerRepository systemLogger)
         {
             _configuration = configuration;
+            _systemLogger = systemLogger;
         }
 
-        public string GenerateToken(string operatorId)
+        public async Task<string> GenerateTokenAsync(string operatorId)
         {
-            var jwtSettings = _configuration.GetSection("JwtSettings");
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            var claims = new[]
-
+            try
             {
-                new Claim(ClaimTypes.Name, operatorId)
-            };
+                return await Task.Run(() =>
+                {
+                    var jwtSettings = _configuration.GetSection("JwtSettings");
 
-            var token = new JwtSecurityToken(
-                issuer: jwtSettings["Issuer"],
-                audience: jwtSettings["Audience"],
-                claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(double.Parse(jwtSettings["DurationInMinutes"])),
-                signingCredentials: creds
-            );
+                    var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]));
+                    var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-            return new JwtSecurityTokenHandler().WriteToken(token);
+                    var claims = new[]
+                    {
+                        new Claim(ClaimTypes.Name, operatorId)
+                    };
+
+                    var token = new JwtSecurityToken(
+                        issuer: jwtSettings["Issuer"],
+                        audience: jwtSettings["Audience"],
+                        claims: claims,
+                        expires: DateTime.UtcNow.AddMinutes(double.Parse(jwtSettings["DurationInMinutes"])),
+                        signingCredentials: creds
+                    );
+
+                    return new JwtSecurityTokenHandler().WriteToken(token);
+                });
+            }
+            catch (Exception ex)
+            {
+                await _systemLogger.LogAsync("JwtTokenService", "GenerateTokenAsync", ex.ToString());
+                throw new ApplicationException("Error generating JWT token.", ex);
+            }
         }
     }
 }

@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model.DTOs.Department;
-using Microsoft.Extensions.Logging;
+using RouteCardProcess.Repositories;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -10,12 +10,14 @@ using Microsoft.Extensions.Logging;
 public class DepartmentController : ControllerBase
 {
     private readonly IDepartmentRepository _repo;
-    private readonly ILogger<DepartmentController> _logger;
+    private readonly ISystemLoggerRepository _systemLogger;
+    private readonly IUserMessageService _userMessageService;
 
-    public DepartmentController(IDepartmentRepository repo, ILogger<DepartmentController> logger)
+    public DepartmentController(IDepartmentRepository repo, ISystemLoggerRepository systemLogger, IUserMessageService userMessageService)
     {
         _repo = repo;
-        _logger = logger;
+        _systemLogger = systemLogger;
+        _userMessageService = userMessageService;
     }
 
     [HttpGet("GetAllDepartments")]
@@ -28,8 +30,8 @@ public class DepartmentController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error in GetAllDepartments");
-            return StatusCode(500, new { success = false, message = "Internal server error." });
+            await _systemLogger.LogAsync("DepartmentController", "GetAllDepartments", ex.ToString());
+            return StatusCode(500, new { success = false, message = _userMessageService.GetMessage(5001) });
         }
     }
 
@@ -43,14 +45,14 @@ public class DepartmentController : ControllerBase
 
             var result = await _repo.AddAsync(department);
             if (result > 0)
-                return Ok(new { success = true, message = "Inserted successfully" });
+                return Ok(new { success = true, message = _userMessageService.GetMessage(5003) });
             else
-                return StatusCode(500, new { success = false, message = "Insert failed" });
+                return StatusCode(500, new { success = false, message = _userMessageService.GetMessage(5004) });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error in CreateDepartment");
-            return StatusCode(500, new { success = false, message = "Internal server error." });
+            await _systemLogger.LogAsync("DepartmentController", "CreateDepartment", ex.ToString());
+            return StatusCode(500, new { success = false, message = _userMessageService.GetMessage(5001) });
         }
     }
 }

@@ -5,16 +5,17 @@ using RouteCardProcess.Interfaces;
 
 namespace RouteCardProcess.Repositories
 {
-    public class BreakDownRepository:IBreakDownRepository
+    public class BreakDownRepository : IBreakDownRepository
     {
         private readonly SqlConnectionFactory _connectionFactory;
         private readonly IEmailService _emailService;
+        private readonly ISystemLoggerRepository _systemLogger;
 
-
-        public BreakDownRepository(SqlConnectionFactory connectionFactory, IEmailService emailService)
+        public BreakDownRepository(SqlConnectionFactory connectionFactory, IEmailService emailService,ISystemLoggerRepository systemLogger)
         {
             _connectionFactory = connectionFactory;
             _emailService = emailService;
+            _systemLogger = systemLogger;
         }
 
         private SqlConnection CreateConnection()
@@ -34,34 +35,49 @@ namespace RouteCardProcess.Repositories
 
             try
             {
-                var rows = await connection.ExecuteAsync("sp_StartBreakDown", parameters, commandType: CommandType.StoredProcedure);
+                var rows = await connection.ExecuteAsync("usp_StartBreakDown", parameters, commandType: CommandType.StoredProcedure);
 
                 if (rows > 0)
                 {
-                    var reasonText = string.IsNullOrEmpty(breakDownReasonCode) ? "Unknown Reason" : breakDownReasonCode;
+                    // Fetch mail template from MailMaster
+                    var mailTemplate = await connection.QueryFirstOrDefaultAsync<dynamic>(
+                     "usp_GetOnlineBreakdownMailTemplate",new { Group = "GP_BR" },commandType: CommandType.StoredProcedure);
 
-                    var subject = $"Breakdown Alert: Work Center {workCenterNo} is Down";
+                    if (mailTemplate != null)
+                    {
+                        string reasonText = string.IsNullOrEmpty(breakDownReasonCode) ? "Unknown Reason" : breakDownReasonCode;
 
-                    var body = $@"
-<p><strong>Attention:</strong></p>
-<p>The work center <strong>{workCenterNo}</strong> has encountered a <strong>breakdown</strong>.</p>
-<p><strong>Reason Code:</strong> {reasonText}</p>
-<p><strong>Time:</strong> {DateTime.Now:dd-MM-yyyy HH:mm:ss}</p>
-<p>Please take immediate action to investigate and resolve the issue.</p>
-";
+                        // Replace tokens if present
+                        string subject = mailTemplate.MailSubject;
+                        subject = subject.Replace("{workCenterNo}", workCenterNo);
+                        string body = mailTemplate.MailBody
+                            .Replace("{workCenterNo}", workCenterNo)
+                            .Replace("{reasonText}", reasonText)
+                            .Replace("{Time}", DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss"));
 
-                    await _emailService.SendEmailAsync(subject, body);
-                    return true;
+                        await _emailService.SendEmailAsync(
+                            subject,
+                            body,
+                            mailTemplate.MailTo,
+                            mailTemplate.MailCC,
+                            mailTemplate.MailBCC,
+                            mailTemplate.MailFrom
+                        );
+
+                        return true;
+                    }
+                    return false;
                 }
 
                 return false;
             }
             catch (Exception ex)
             {
-                Console.WriteLine("SQL Error: " + ex.Message);
+                await _systemLogger.LogAsync("BreakDownRepository", "StartBreakDownAsync", ex.ToString());
                 throw;
             }
         }
+
 
         public async Task<bool> EndBreakDownAsync(string workCenterNo, string? operatorId = null, string? breakDownReasonCode = null)
         {
@@ -73,7 +89,7 @@ namespace RouteCardProcess.Repositories
                 BreakDownReasonCode = breakDownReasonCode
             };
 
-            var rows = await connection.ExecuteAsync("sp_EndBreakDown", parameters, commandType: CommandType.StoredProcedure);
+            var rows = await connection.ExecuteAsync("usp_EndBreakDown", parameters, commandType: CommandType.StoredProcedure);
 
             if (rows > 0)
             {

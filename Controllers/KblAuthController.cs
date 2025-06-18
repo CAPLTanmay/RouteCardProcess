@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model.DTOs.Login;
-using Microsoft.Extensions.Logging;
+using RouteCardProcess.Repositories;
 
 namespace RouteCardProcess.Controllers
 {
@@ -10,12 +10,14 @@ namespace RouteCardProcess.Controllers
     public class KblAuthController : ControllerBase
     {
         private readonly IKblAuthService _kblService;
-        private readonly ILogger<KblAuthController> _logger;
+        private readonly ISystemLoggerRepository _systemLogger;
+        private readonly IUserMessageService _userMessageService;
 
-        public KblAuthController(IKblAuthService kblService, ILogger<KblAuthController> logger)
+        public KblAuthController(IKblAuthService kblService, ISystemLoggerRepository systemLogger, IUserMessageService userMessageService)
         {
             _kblService = kblService;
-            _logger = logger;
+            _systemLogger = systemLogger;
+            _userMessageService = userMessageService;
         }
 
         [HttpPost("login")]
@@ -33,15 +35,15 @@ namespace RouteCardProcess.Controllers
 
                 return Ok(new
                 {
-                    message = "Login successful",
+                    message = _userMessageService.GetMessage(2001), // Login successful
                     token,
                     employee = empInfo.EmpInfo.FirstOrDefault()
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during login");
-                return StatusCode(500, new { message = "Internal server error." });
+                await _systemLogger.LogAsync("KblAuthController", "FullLogin", ex.ToString());
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5001) });
             }
         }
     }

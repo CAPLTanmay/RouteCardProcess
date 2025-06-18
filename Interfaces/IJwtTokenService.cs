@@ -2,6 +2,6 @@
 {
     public interface IJwtTokenService
     {
-        string GenerateToken(string operatorId);
+        Task<string> GenerateTokenAsync(string operatorId);
     }
 }

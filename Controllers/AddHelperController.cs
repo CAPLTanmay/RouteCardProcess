@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model.DTOs.Helper;
-using Microsoft.Extensions.Logging;
+using RouteCardProcess.Repositories;
 
 namespace RouteCardProcess.Controllers
 {
@@ -12,12 +12,14 @@ namespace RouteCardProcess.Controllers
     public class AddHelperController : ControllerBase
     {
         private readonly IHelperRepository _helperRepository;
-        private readonly ILogger<AddHelperController> _logger;
+        private readonly ISystemLoggerRepository _systemLogger;
+        private readonly IUserMessageService _userMessageService;
 
-        public AddHelperController(IHelperRepository helperRepository, ILogger<AddHelperController> logger)
+        public AddHelperController(IHelperRepository helperRepository, ISystemLoggerRepository systemLogger, IUserMessageService userMessageService)
         {
             _helperRepository = helperRepository;
-            _logger = logger;
+            _systemLogger = systemLogger;
+            _userMessageService = userMessageService;
         }
 
         [HttpPost("add-helper")]
@@ -27,15 +29,16 @@ namespace RouteCardProcess.Controllers
             {
                 var result = await _helperRepository.AddHelperAsync(request);
 
-                if (result == "Helper added successfully.")
+                if (result == _userMessageService.GetMessage(1007))
                     return Ok(new { message = result });
 
                 return BadRequest(new { message = result });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in AddHelper");
-                return StatusCode(500, "Internal server error.");
+                await _systemLogger.LogAsync("AddHelperController", "add-helper", ex.ToString());
+                var message = _userMessageService.GetMessage(5001);
+                return StatusCode(500, message);
             }
         }
 
@@ -46,15 +49,16 @@ namespace RouteCardProcess.Controllers
             {
                 var result = await _helperRepository.EndHelperAsync(request);
 
-                if (result == "Helper end time updated and released successfully.")
+                if (result == _userMessageService.GetMessage(1008))
                     return Ok(new { message = result });
 
                 return BadRequest(new { message = result });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in EndHelper");
-                return StatusCode(500, "Internal server error.");
+                await _systemLogger.LogAsync("AddHelperController", "end-helper", ex.ToString());
+                var message = _userMessageService.GetMessage(5001);
+                return StatusCode(500, message);
             }
         }
 
@@ -68,8 +72,9 @@ namespace RouteCardProcess.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in ToggleHelperPause");
-                return StatusCode(500, "Internal server error.");
+                await _systemLogger.LogAsync("AddHelperController", "toggle-helper-pause", ex.ToString());
+                var message = _userMessageService.GetMessage(5001);
+                return StatusCode(500, message);
             }
         }
 
@@ -83,8 +88,9 @@ namespace RouteCardProcess.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in GetHelpersByMainOperatorId");
-                return StatusCode(500, "Internal server error.");
+                await _systemLogger.LogAsync("AddHelperController", "helpers", ex.ToString());
+                var message = _userMessageService.GetMessage(5001);
+                return StatusCode(500, message);
             }
         }
 

@@ -8,10 +8,12 @@ using RouteCardProcess.Repositories;
 public class MachiningRepository : IMachiningRepository
 {
     private readonly SqlConnectionFactory _connectionFactory;
+    private readonly IUserMessageService _userMessageService;
 
-    public MachiningRepository(SqlConnectionFactory connectionFactory)
+    public MachiningRepository(SqlConnectionFactory connectionFactory, IUserMessageService userMessageService)
     {
         _connectionFactory = connectionFactory;
+        _userMessageService = userMessageService;
     }
 
     private IDbConnection CreateConnection() => _connectionFactory.CreateConnection();
@@ -21,7 +23,7 @@ public class MachiningRepository : IMachiningRepository
         using var connection = CreateConnection();
         var MachiningId = Guid.NewGuid().ToString().Substring(0, 8);
         var result = await connection.QueryFirstOrDefaultAsync<MachiningMaster>(
-            "sp_CreateMachining",
+            "usp_CreateMachining",
             new
             {
                 obj.OperatorId,
@@ -49,10 +51,10 @@ public class MachiningRepository : IMachiningRepository
         try
         {
             // Check if the Machining ID exists in the database
-            var existingMachining = await connection.QueryFirstOrDefaultAsync(
-                "SELECT 1 FROM Machining_Trans_Master WHERE MachiningID = @MachiningID",
-                parameters
-            );
+            var existingMachining = await connection.QueryFirstOrDefaultAsync<int?>(
+           "usp_CheckMachiningExists",
+           parameters,
+           commandType: CommandType.StoredProcedure);
 
             if (existingMachining == null)
             {
@@ -63,17 +65,17 @@ public class MachiningRepository : IMachiningRepository
                     // Populate other necessary properties: OperatorID, WorkOrderNo, etc.
                 };
 
-                await connection.ExecuteAsync("sp_CreateMachining", machiningMasterDto, commandType: CommandType.StoredProcedure);
+                await connection.ExecuteAsync("usp_CreateMachining", machiningMasterDto, commandType: CommandType.StoredProcedure);
 
                 // Start machining after creating it
-                await connection.ExecuteAsync("sp_StartMachining", parameters, commandType: CommandType.StoredProcedure);
-                return "Machining created and started";
+                await connection.ExecuteAsync("usp_StartMachining", parameters, commandType: CommandType.StoredProcedure);
+                return _userMessageService.GetMessage(1031);
             }
             else
             {
                 // Start machining if it already exists
-                await connection.ExecuteAsync("sp_StartMachining", parameters, commandType: CommandType.StoredProcedure);
-                return "Machining started";
+                await connection.ExecuteAsync("usp_StartMachining", parameters, commandType: CommandType.StoredProcedure);
+                return _userMessageService.GetMessage(1082);
             }
         }
         catch (Exception ex)
@@ -85,7 +87,7 @@ public class MachiningRepository : IMachiningRepository
     {
         using var connection = CreateConnection();
         await connection.ExecuteAsync(
-            "sp_ToggleMachiningPause",
+            "usp_ToggleMachiningPause",
             new { MachiningID = machiningId, PauseCode = pauseCode },
             commandType: CommandType.StoredProcedure
         );
@@ -98,7 +100,7 @@ public class MachiningRepository : IMachiningRepository
 
         // 1. Get current status
         var machiningInfo = await connection.QueryFirstOrDefaultAsync<dynamic>(
-            "sp_GetMachiningStatusAndOperator",
+            "usp_GetMachiningStatusAndOperator",
             parameters,
             commandType: CommandType.StoredProcedure
         );
@@ -108,16 +110,16 @@ public class MachiningRepository : IMachiningRepository
         // 2. If paused, toggle resume
         if (status == "Machining Pause")
         {
-            await connection.ExecuteAsync("sp_ToggleMachiningPause", parameters, commandType: CommandType.StoredProcedure);
+            await connection.ExecuteAsync("usp_ToggleMachiningPause", parameters, commandType: CommandType.StoredProcedure);
         }
 
         // 3. End machining
-        var rowsAffected = await connection.ExecuteAsync("sp_EndMachining", parameters, commandType: CommandType.StoredProcedure);
+        var rowsAffected = await connection.ExecuteAsync("usp_EndMachining", parameters, commandType: CommandType.StoredProcedure);
 
         // 4. Update end time
         if (rowsAffected > 0)
         {
-            await connection.ExecuteAsync("sp_UpdateMachiningEndTime",
+            await connection.ExecuteAsync("usp_UpdateMachiningEndTime",
                 new { EndTime = DateTime.Now, MachiningID = machiningId },
                 commandType: CommandType.StoredProcedure);
             return true;
@@ -129,7 +131,7 @@ public class MachiningRepository : IMachiningRepository
     {
         using var connection = CreateConnection();
         await connection.ExecuteAsync(
-            "sp_AddQuantities",
+            "usp_AddQuantities",
             new
             {
                 MachiningID = machiningId,
@@ -144,7 +146,7 @@ public class MachiningRepository : IMachiningRepository
     {
         using var connection = CreateConnection();
         await connection.ExecuteAsync(
-            "sp_AddMachiningDelays",
+            "usp_AddMachiningDelays",
             new
             {
                 MachiningID = machiningId,
@@ -160,7 +162,7 @@ public class MachiningRepository : IMachiningRepository
     {
         using var connection = CreateConnection();
         var result = await connection.QueryFirstOrDefaultAsync<MachiningMaster>(
-            "dbo.sp_GetMachiningByCompositeKey",
+            "dbo.usp_GetMachiningByCompositeKey",
             new { WorkCenterNo = workCenterNo, WorkOrderNo = workOrderNo, OperationNo = operationNo },
             commandType: CommandType.StoredProcedure
         );
@@ -172,12 +174,10 @@ public class MachiningRepository : IMachiningRepository
         using var connection = CreateConnection();
 
         await connection.ExecuteAsync(
-            "sp_UpdateMachiningStatus",
+            "usp_UpdateMachiningStatus",
             new { MachiningId = machiningId },
             commandType: CommandType.StoredProcedure
         );
     }
-
-
 }
 

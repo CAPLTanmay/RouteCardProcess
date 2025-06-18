@@ -10,10 +10,11 @@ namespace RouteCardProcess.Repositories
     public class SetUpTransRepository:ISetUpTransRepository
     {
         private readonly SqlConnectionFactory _connectionFactory;
-
-        public SetUpTransRepository(SqlConnectionFactory connectionFactory)
+        private readonly IUserMessageService _userMessageService;
+        public SetUpTransRepository(SqlConnectionFactory connectionFactory, IUserMessageService userMessageService)
         {
             _connectionFactory = connectionFactory;
+            _userMessageService = userMessageService;
         }
 
         private IDbConnection CreateConnection() => _connectionFactory.CreateConnection();
@@ -22,39 +23,39 @@ namespace RouteCardProcess.Repositories
         {
             using var connection = CreateConnection();
             var parameters = new { WorkCenterNo = workCenterNo, WorkOrderNo = workOrderNo, OperationNo = operationNo };
-            return await connection.QueryFirstOrDefaultAsync<SetupMaster>("sp_GetSetUpByCompositeKey", parameters, commandType: CommandType.StoredProcedure);
+            return await connection.QueryFirstOrDefaultAsync<SetupMaster>("usp_GetSetUpByCompositeKey", parameters, commandType: CommandType.StoredProcedure);
         }
 
         public async Task<(int Flag, string SetupStatus, string MachiningStatus, string Message, string SetUpID, string MachiningID)>
-    CheckSetupNotificationStatusAsync(string workCenterNo, string workOrderNo, string operationNo)
+        CheckSetupNotificationStatusAsync(string workCenterNo, string workOrderNo, string operationNo)
         {
             using var connection = CreateConnection();
             var parameters = new { WorkCenterNo = workCenterNo, WorkOrderNo = workOrderNo, OperationNo = operationNo };
 
             var setup = await connection.QueryFirstOrDefaultAsync<SetupMaster>(
-                "sp_GetSetUpByCompositeKey", parameters, commandType: CommandType.StoredProcedure);
+                "usp_GetSetUpByCompositeKey", parameters, commandType: CommandType.StoredProcedure);
 
             var machining = await connection.QueryFirstOrDefaultAsync<MachiningMaster>(
-                "sp_GetMachiningByCompositeKey", parameters, commandType: CommandType.StoredProcedure);
+                "usp_GetMachiningByCompositeKey", parameters, commandType: CommandType.StoredProcedure);
 
             if (setup == null && machining == null)
-                return (0, null, null, "Setup or Machining not found", null, null);
+                return (0, null, null, _userMessageService.GetMessage(1036), null, null);
 
-            string setupMessage = null, machiningMessage = null;
+            string setupMessage = string.Empty, machiningMessage = string.Empty;
 
             if (setup != null)
             {
                 setupMessage = setup.SetupStatus switch
                 {
-                    "Setup Not Start" => "Previous operator login but Not Start Setup",
-                    "Setup Started" => "Previous operator Started Setup but not stopped",
-                    "Setup Pause" => "Previous operator paused Setup but not stopped",
-                    "Complete" => "Previous operator Completed Setup",
-                    "Rework" => "Previous setup is Rework",
-                    "Rejected" => "Previous setup is Rejected",
-                    "Handover" => "Previous operator has handed over the setup",
-                    "Setup Stopped" => "Previous operator stopped the setup but did not submit the report.",
-                    _ => "Unknown setup status"
+                    var s when s == _userMessageService.Messages[1073] => _userMessageService.GetMessage(1037),
+                    var s when s == _userMessageService.Messages[1074] => _userMessageService.GetMessage(1038),
+                    var s when s == _userMessageService.Messages[1075] => _userMessageService.GetMessage(1039),
+                    var s when s == _userMessageService.Messages[1076] => _userMessageService.GetMessage(1040),
+                    var s when s == _userMessageService.Messages[1077] => _userMessageService.GetMessage(1041),
+                    var s when s == _userMessageService.Messages[1078] => _userMessageService.GetMessage(1042),
+                    var s when s == _userMessageService.Messages[1079] => _userMessageService.GetMessage(1043),
+                    var s when s == _userMessageService.Messages[1080] => _userMessageService.GetMessage(1044),
+                    _ => _userMessageService.GetMessage(1045)
                 };
             }
 
@@ -62,15 +63,15 @@ namespace RouteCardProcess.Repositories
             {
                 machiningMessage = machining.MachiningStatus switch
                 {
-                    "Machining Not Started" => "Previous operator login but Machining Not Start",
-                    "Machining Started" => "Previous operator Machining Started but not stopped",
-                    "Machining Pause" => "Previous operator Machining paused but not stopped",
-                    "Complete" => "Previous operator Machining Completed",
-                    "Rework" => "Previous Machining is Rework",
-                    "Rejected" => "Previous Machining is Rejected",
-                    "Handover" => "Previous Machining is Handovered",
-                    "Machining Stopped" => "Previous operator stopped the Machining but did not submit the report.",
-                    _ => "Unknown Machining status"
+                    var s when s == _userMessageService.GetMessage(1081) => _userMessageService.GetMessage(1046),
+                    var s when s == _userMessageService.GetMessage(1082) => _userMessageService.GetMessage(1047),
+                    var s when s == _userMessageService.GetMessage(1083) => _userMessageService.GetMessage(1048),
+                    var s when s == _userMessageService.GetMessage(1076) => _userMessageService.GetMessage(1049),
+                    var s when s == _userMessageService.GetMessage(1077) => _userMessageService.GetMessage(1050),
+                    var s when s == _userMessageService.GetMessage(1078) => _userMessageService.GetMessage(1051),
+                    var s when s == _userMessageService.GetMessage(1079) => _userMessageService.GetMessage(1052),
+                    var s when s == _userMessageService.GetMessage(1084) => _userMessageService.GetMessage(1053),
+                    _ => _userMessageService.GetMessage(1054)
                 };
             }
 
@@ -99,20 +100,20 @@ namespace RouteCardProcess.Repositories
                 request.OperationNo,
                 SetUpID = SetupId,
                 IdealTime = idealTime,
-                SetupStatus = "Setup Not Start",
+                SetupStatus = _userMessageService.GetMessage(1073), 
                 OperatorStartTime = (DateTime?)null,
                 OperatorEndTime = (DateTime?)null
             };
 
             try
             {
-                return await connection.QuerySingleAsync<SetupMaster>("sp_CreateSetup", parameters, commandType: CommandType.StoredProcedure);
+                return await connection.QuerySingleAsync<SetupMaster>("usp_CreateSetup", parameters, commandType: CommandType.StoredProcedure);
             }
             catch (SqlException ex)
             {
                 if (ex.Number == 547 && ex.Message.Contains("FK_SetUp_Trans_Master_LogInMaster"))
                 {
-                    throw new Exception("Invalid Operator ID");
+                    throw new Exception(_userMessageService.GetMessage(1061));
                 }
                 throw;
             }
@@ -126,10 +127,11 @@ namespace RouteCardProcess.Repositories
             try
             {
                 // Check if the Setup ID exists in the database
-                var existingSetup = await connection.QueryFirstOrDefaultAsync(
-                    "SELECT 1 FROM SetUp_Trans_Master WHERE SetUpID = @SetUpID",
-                    new { SetUpID = setUpId }
-                );
+                var existingSetup = await connection.QueryFirstOrDefaultAsync<int?>(
+             "usp_CheckSetupExists",
+             parameters,
+             commandType: CommandType.StoredProcedure);
+                
 
                 if (existingSetup == null)
                 {
@@ -141,24 +143,25 @@ namespace RouteCardProcess.Repositories
                     };
 
                     // Call the stored procedure to create the new setup
-                    await connection.ExecuteAsync("sp_CreateSetup", setupMasterDto, commandType: CommandType.StoredProcedure);
+                    await connection.ExecuteAsync("usp_CreateSetup", setupMasterDto, commandType: CommandType.StoredProcedure);
 
                     // After creating, proceed with starting the setup
-                    await connection.ExecuteAsync("sp_StartSetup", parameters, commandType: CommandType.StoredProcedure);
-                    return "Setup created and started";
+                    await connection.ExecuteAsync("usp_StartSetup", parameters, commandType: CommandType.StoredProcedure);
+                    return _userMessageService.GetMessage(1055);
                 }
                 else
                 {
                     // If the setup exists, proceed with starting the setup
-                    await connection.ExecuteAsync("sp_StartSetup", parameters, commandType: CommandType.StoredProcedure);
-                    return "Setup started";
+                    await connection.ExecuteAsync("usp_StartSetup", parameters, commandType: CommandType.StoredProcedure);
+                    return _userMessageService.GetMessage(1056);
                 }
             }
             catch (Exception ex)
             {
-
-                throw new Exception($"Error starting setup: {ex.Message}", ex);
+                var errorPrefix = _userMessageService.GetMessage(1089); // "Error starting setup:"
+                throw new Exception($"{errorPrefix} {ex.Message}", ex);
             }
+
         }
 
         public async Task<string> TogglePauseAsync(SetupPauseRequest request)
@@ -166,20 +169,20 @@ namespace RouteCardProcess.Repositories
             using var connection = CreateConnection();
             try
             {
-                var setupInfo = await connection.QueryFirstOrDefaultAsync<dynamic>("sp_GetSetupStatusAndOperator", new { SetUpID = request.SetUpID }, commandType: CommandType.StoredProcedure);
+                var setupInfo = await connection.QueryFirstOrDefaultAsync<dynamic>("usp_GetSetupStatusAndOperator", new { SetUpID = request.SetUpID }, commandType: CommandType.StoredProcedure);
 
-                if (setupInfo == null) return "Invalid Setup ID";
+                if (setupInfo == null) return _userMessageService.GetMessage(1057);
 
                 string status = setupInfo.SetupStatus;
                 string operatorId = setupInfo.OperatorId;
 
-                if (status == "Setup Started")
+                if (status == _userMessageService.GetMessage(1074))
                 {
                     var parameters = new { SetUpID = request.SetUpID, OperatorId = operatorId, PauseCode = request.PauseCode };
-                    await connection.ExecuteAsync("sp_TogglePause_Start", parameters, commandType: CommandType.StoredProcedure);
-                    return "Setup paused";
+                    await connection.ExecuteAsync("usp_TogglePause_Start", parameters, commandType: CommandType.StoredProcedure);
+                    return _userMessageService.GetMessage(1058);
                 }
-                else if (status == "Setup Pause")
+                else if (status == _userMessageService.GetMessage(1075))
                 {
                     var parameters = new
                     {
@@ -187,16 +190,16 @@ namespace RouteCardProcess.Repositories
                         ResumeReasonCode = request.PauseCode 
                     };
 
-                    await connection.ExecuteAsync("sp_TogglePause_Resume", parameters, commandType: CommandType.StoredProcedure);
+                    await connection.ExecuteAsync("usp_TogglePause_Resume", parameters, commandType: CommandType.StoredProcedure);
 
-                    return "Setup resumed";
+                    return _userMessageService.GetMessage(1059);
                 }
 
-                return "Invalid setup status";
+                return _userMessageService.GetMessage(1060);
             }
             catch (Exception ex)
             {
-                throw new Exception("Error toggling pause", ex);
+                throw new Exception(_userMessageService.GetMessage(1088), ex);
             }
         }
 
@@ -206,22 +209,22 @@ namespace RouteCardProcess.Repositories
             var parameters = new { SetUpID = setUpId };
 
             var setupInfo = await connection.QueryFirstOrDefaultAsync<dynamic>(
-                "sp_GetSetupStatusAndOperator",
+                "usp_GetSetupStatusAndOperator",
                 new { SetUpID = setUpId },
                 commandType: CommandType.StoredProcedure);
 
             string status = setupInfo?.SetupStatus;
 
-            if (status == "Setup Pause")
+            if (status == _userMessageService.GetMessage(1075))
             {
-                await connection.ExecuteAsync("sp_TogglePause_Resume", new { SetUpID = setUpId }, commandType: CommandType.StoredProcedure);
+                await connection.ExecuteAsync("usp_TogglePause_Resume", new { SetUpID = setUpId }, commandType: CommandType.StoredProcedure);
             }
 
-            var rowsAffected = await connection.ExecuteAsync("sp_EndSetupTime", parameters, commandType: CommandType.StoredProcedure);
+            var rowsAffected = await connection.ExecuteAsync("usp_EndSetupTime", parameters, commandType: CommandType.StoredProcedure);
 
             if (rowsAffected > 0)
             {
-                await connection.ExecuteAsync("sp_UpdateSetupEndTime",
+                await connection.ExecuteAsync("usp_UpdateSetupEndTime",
                     new { EndTime = DateTime.Now, SetUpID = setUpId },
                     commandType: CommandType.StoredProcedure);
                 return true;
@@ -241,7 +244,7 @@ namespace RouteCardProcess.Repositories
                 if (request.Delays == null || request.Delays.Count == 0)
                 {
                     await connection.ExecuteAsync(
-                        "sp_UpdateSetupStatus",
+                        "usp_UpdateSetupStatus",
                         new { request.SetUpStatus, SetUpID = request.SetUpID },
                         transaction,
                         commandType: CommandType.StoredProcedure
@@ -253,7 +256,7 @@ namespace RouteCardProcess.Repositories
 
                 // Otherwise, proceed with normal delay insertion
                 var setup = await connection.QueryFirstOrDefaultAsync<dynamic>(
-                    "sp_GetSetupOperatorAndStatus",
+                    "usp_GetSetupOperatorAndStatus",
                     new { SetUpID = request.SetUpID },
                     transaction,
                     commandType: CommandType.StoredProcedure
@@ -274,7 +277,7 @@ namespace RouteCardProcess.Repositories
                 foreach (var delay in request.Delays)
                 {
                     await connection.ExecuteAsync(
-                        "sp_InsertDelays",
+                        "usp_InsertDelays",
                         new
                         {
                             SetUpID = request.SetUpID,
@@ -290,7 +293,7 @@ namespace RouteCardProcess.Repositories
                 }
 
                 await connection.ExecuteAsync(
-                    "sp_UpdateSetupStatus",
+                    "usp_UpdateSetupStatus",
                     new { request.SetUpStatus, SetUpID = request.SetUpID },
                     transaction,
                     commandType: CommandType.StoredProcedure
@@ -317,7 +320,7 @@ namespace RouteCardProcess.Repositories
             }
             else
             {
-                throw new ArgumentException("Invalid minutes format");
+                throw new ArgumentException(_userMessageService.GetMessage(1090));
             }
         }
     }
