@@ -240,21 +240,7 @@ namespace RouteCardProcess.Repositories
             using var transaction = connection.BeginTransaction();
             try
             {
-                // If no delays, just update status and return
-                if (request.Delays == null || request.Delays.Count == 0)
-                {
-                    await connection.ExecuteAsync(
-                        "usp_UpdateSetupStatus",
-                        new { request.SetUpStatus, SetUpID = request.SetUpID },
-                        transaction,
-                        commandType: CommandType.StoredProcedure
-                    );
-
-                    transaction.Commit();
-                    return true;
-                }
-
-                // Otherwise, proceed with normal delay insertion
+                // Get operator info once
                 var setup = await connection.QueryFirstOrDefaultAsync<dynamic>(
                     "usp_GetSetupOperatorAndStatus",
                     new { SetUpID = request.SetUpID },
@@ -268,30 +254,75 @@ namespace RouteCardProcess.Repositories
                     return false;
                 }
 
-                TimeSpan totalDelay = TimeSpan.Zero;
-                foreach (var delay in request.Delays)
+                // Insert Delays if any
+                if (request.Delays?.Any() == true)
                 {
-                    totalDelay += delay.DelayTime;
+                    TimeSpan totalDelay = request.Delays.Aggregate(TimeSpan.Zero, (sum, d) => sum + d.DelayTime);
+
+                    foreach (var delay in request.Delays)
+                    {
+                        await connection.ExecuteAsync(
+                            "usp_InsertDelays",
+                            new
+                            {
+                                SetUpID = request.SetUpID,
+                                OperatorId = setup.OperatorId,
+                                SetupStatus = request.SetUpStatus,
+                                DelayReasonCode = delay.DelayReasonCode,
+                                DelayTime = delay.DelayTime,
+                                TotalDelayedTime = totalDelay
+                            },
+                            transaction,
+                            commandType: CommandType.StoredProcedure
+                        );
+                    }
                 }
 
-                foreach (var delay in request.Delays)
+                // Insert Exceptions if any
+                if (request.Exceptions?.Any() == true)
                 {
-                    await connection.ExecuteAsync(
-                        "usp_InsertDelays",
-                        new
-                        {
-                            SetUpID = request.SetUpID,
-                            OperatorId = setup.OperatorId,
-                            SetupStatus = request.SetUpStatus,
-                            DelayReasonCode = delay.DelayReasonCode,
-                            DelayTime = delay.DelayTime,
-                            TotalDelayedTime = totalDelay
-                        },
-                        transaction,
-                        commandType: CommandType.StoredProcedure
-                    );
+                    foreach (var exception in request.Exceptions)
+                    {
+                        await connection.ExecuteAsync(
+                            "usp_InsertSetupException",
+                            new
+                            {
+                                SetUpID = request.SetUpID,
+                                OperatorId = setup.OperatorId,
+                                SetupStatus = request.SetUpStatus,
+                                exception.ExceptionsReasonCode,
+                                exception.Std_exceptions_ReasonCode,
+                                exception.ExceptionsTime,
+                                exception.Std_exceptions_Remark
+                            },
+                            transaction,
+                            commandType: CommandType.StoredProcedure
+                        );
+                    }
                 }
 
+                // Insert Idle Times if any
+                if (request.IdleTimes?.Any() == true)
+                {
+                    foreach (var idle in request.IdleTimes)
+                    {
+                        await connection.ExecuteAsync(
+                            "usp_InsertSetupIdle",
+                            new
+                            {
+                                SetUpID = request.SetUpID,
+                                OperatorId = setup.OperatorId,
+                                SetupStatus = request.SetUpStatus,
+                                idle.MSTIdleCode,
+                                idle.SetupIdleTime
+                            },
+                            transaction,
+                            commandType: CommandType.StoredProcedure
+                        );
+                    }
+                }
+
+                // Update setup status
                 await connection.ExecuteAsync(
                     "usp_UpdateSetupStatus",
                     new { request.SetUpStatus, SetUpID = request.SetUpID },
@@ -305,10 +336,10 @@ namespace RouteCardProcess.Repositories
             catch (Exception ex)
             {
                 transaction.Rollback();
-                // Consider logging the error here if you have a logger
                 throw;
             }
         }
+
         private TimeSpan ConvertMinutesToTimeSpan(string minutes)
         {
             if (double.TryParse(minutes.Trim(), out double parsedMinutes))
