@@ -94,5 +94,78 @@ namespace RouteCardProcess.Controllers
             }
         }
 
+        [HttpPost("check-helper-before-logout")]
+        public async Task<IActionResult> CheckHelperBeforeLogout([FromBody] MainOperatorRequestDto request)
+        {
+            try
+            {
+                var helpers = await _helperRepository.GetHelpersByMainOperatorIdAsync(request.MainOperatorId);
+
+                if (helpers != null && helpers.Any())
+                {
+                    return Ok(new
+                    {
+                        status = false,
+                        message = "Some helpers are still active. Please release them before logging out.",
+                        data = helpers
+                    });
+                }
+
+                return Ok(new
+                {
+                    status = true,
+                    message = "No active helpers. Safe to logout."
+                });
+            }
+            catch (Exception ex)
+            {
+                await _systemLogger.LogAsync("AddHelperController", "check-helper-before-logout", ex.ToString());
+                var message = _userMessageService.GetMessage(5001);
+                return StatusCode(500, message);
+            }
+        }
+
+        [HttpPost("release-all-helpers")]
+        public async Task<IActionResult> ReleaseAllHelpers([FromBody] MainOperatorRequestDto request)
+        {
+            try
+            {
+                // Step 1: Get all active helpers
+                var activeHelpers = await _helperRepository.GetHelpersByMainOperatorIdAsync(request.MainOperatorId);
+
+                if (activeHelpers == null || !activeHelpers.Any())
+                {
+                    return Ok(new { message = "No active helpers found to release." });
+                }
+
+                // Step 2: Loop through and release each helper
+                foreach (var helper in activeHelpers)
+                {
+                    var endHelperRequest = new EndHelperRequest
+                    {
+                        OperatorId = helper.OperatorId, 
+                        SetupId = helper.SetupId,
+                        MachiningId = helper.MachiningId
+                    };
+
+                    var result = await _helperRepository.EndHelperAsync(endHelperRequest);
+
+                    if (result != _userMessageService.GetMessage(1008))
+                    {
+                        return BadRequest(new { message = $"Failed to release helper {helper.OperatorId}: {result}" });
+                    }
+                }
+
+                return Ok(new { message = "All helpers released successfully." });
+            }
+            catch (Exception ex)
+            {
+                await _systemLogger.LogAsync("AddHelperController", "release-all-helpers", ex.ToString());
+                var message = _userMessageService.GetMessage(5001);
+                return StatusCode(500, message);
+            }
+        }
+
+
     }
 }

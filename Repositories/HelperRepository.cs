@@ -68,8 +68,6 @@ namespace RouteCardProcess.Repositories
             );
             return _userMessageService.GetMessage(1007);
         }
-
-
         public async Task<string> EndHelperAsync(EndHelperRequest request)
         {
             using var connection = CreateConnection();
@@ -155,6 +153,5 @@ namespace RouteCardProcess.Repositories
             );
             return result.Where(x => !x.IsRelease);
         }
-
     }
 }
