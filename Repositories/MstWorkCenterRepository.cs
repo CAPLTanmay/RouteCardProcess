@@ -33,18 +33,16 @@ namespace RouteCardProcess.Repositories
                     request.Dept
                 };
 
-                int rowsAffected = await connection.ExecuteAsync(
+                return await connection.ExecuteAsync(
                     "usp_AddWorkCenter",
                     parameters,
                     commandType: CommandType.StoredProcedure
                 );
-
-                return rowsAffected;
             }
             catch (Exception ex)
             {
                 await _systemLogger.LogAsync("MstWorkCenterRepository", "AddMstWorkCenterAsync", ex.ToString());
-                return 0; // 0 indicates failure
+                return 0;
             }
         }
 
@@ -63,13 +61,11 @@ namespace RouteCardProcess.Repositories
                     request.Dept
                 };
 
-                int rowsAffected = await connection.ExecuteAsync(
+                return await connection.ExecuteAsync(
                     "usp_UpdateWorkCenter",
                     parameters,
                     commandType: CommandType.StoredProcedure
                 );
-
-                return rowsAffected;
             }
             catch (Exception ex)
             {
@@ -85,12 +81,10 @@ namespace RouteCardProcess.Repositories
                 using var connection = _connectionFactory.CreateConnection();
                 await connection.OpenAsync();
 
-                var result = await connection.QueryAsync<MstWorkCenterRequest>(
+                return await connection.QueryAsync<MstWorkCenterRequest>(
                     "usp_GetAllMstWorkCenters",
                     commandType: CommandType.StoredProcedure
                 );
-
-                return result;
             }
             catch (Exception ex)
             {
@@ -106,11 +100,10 @@ namespace RouteCardProcess.Repositories
                 using var connection = _connectionFactory.CreateConnection();
                 await connection.OpenAsync();
 
-                var result = await connection.QueryAsync<string>(
+                return await connection.QueryAsync<string>(
                     "usp_GetDistinctDepartments",
-                    commandType: CommandType.StoredProcedure);
-
-                return result;
+                    commandType: CommandType.StoredProcedure
+                );
             }
             catch (Exception ex)
             {
@@ -126,17 +119,36 @@ namespace RouteCardProcess.Repositories
                 using var connection = _connectionFactory.CreateConnection();
                 await connection.OpenAsync();
 
-                var result = await connection.QueryAsync<MstWorkCenterRequest>(
+                return await connection.QueryAsync<MstWorkCenterRequest>(
                     "usp_GetWorkCentersByDept",
                     new { Dept = dept },
-                    commandType: CommandType.StoredProcedure);
-
-                return result;
+                    commandType: CommandType.StoredProcedure
+                );
             }
             catch (Exception ex)
             {
                 await _systemLogger.LogAsync("MstWorkCenterRepository", "GetWorkCentersByDeptAsync", ex.ToString());
                 return Enumerable.Empty<MstWorkCenterRequest>();
+            }
+        }
+        public async Task<int> DeleteMstWorkCenterAsync(string plant, string workCenter)
+        {
+            try
+            {
+                using var connection = _connectionFactory.CreateConnection();
+                await connection.OpenAsync();
+
+                var query = @"
+                    UPDATE MstWorkCenter 
+                    SET IsActive = 0 
+                    WHERE Plant = @Plant AND WorkCenter = @WorkCenter";
+
+                return await connection.ExecuteAsync(query, new { Plant = plant, WorkCenter = workCenter });
+            }
+            catch (Exception ex)
+            {
+                await _systemLogger.LogAsync("MstWorkCenterRepository", "DeleteMstWorkCenterAsync", ex.ToString());
+                return 0;
             }
         }
     }

@@ -7,5 +7,7 @@ namespace RouteCardProcess.Interfaces
         Task<int> AddIdleCodeAsync(IdleCodeRequest request);
         Task<int> UpdateIdleCodeAsync(IdleCodeRequest request);
         Task<IEnumerable<IdleCodeRequest>> GetAllIdleCodesAsync();
+        Task<int> DeleteIdleCodeAsync(string plant, string idleCode);
+
     }
 }

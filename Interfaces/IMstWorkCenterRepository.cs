@@ -9,5 +9,6 @@ namespace RouteCardProcess.Interfaces
         Task<IEnumerable<MstWorkCenterRequest>> GetAllMstWorkCentersAsync();
         Task<IEnumerable<string>> GetDistinctDepartmentsAsync();
         Task<IEnumerable<MstWorkCenterRequest>> GetWorkCentersByDeptAsync(string dept);
+        Task<int> DeleteMstWorkCenterAsync(string plant, string workCenter);
     }
 }

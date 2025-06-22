@@ -60,7 +60,8 @@ namespace RouteCardProcess.Repositories
                         login.OperatorName,
                         login.OperatorPassword,
                         login.OperatorRole,
-                        login.DepartmentId
+                        login.DepartmentId,
+                        login.OperatorDummyID
                     },
                     commandType: CommandType.StoredProcedure
                 );

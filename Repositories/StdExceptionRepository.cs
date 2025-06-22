@@ -29,16 +29,15 @@ namespace RouteCardProcess.Repositories
                 var parameters = new
                 {
                     request.Reason_Code,
-                    request.Comments_Std
+                    request.Comments_Std,
+                    IsActive = request.IsActive ?? true
                 };
 
-                int rowsAffected = await connection.ExecuteAsync(
+                return await connection.ExecuteAsync(
                     "usp_AddStdException",
                     parameters,
                     commandType: CommandType.StoredProcedure
                 );
-
-                return rowsAffected;
             }
             catch (Exception ex)
             {
@@ -57,16 +56,15 @@ namespace RouteCardProcess.Repositories
                 var parameters = new
                 {
                     request.Reason_Code,
-                    request.Comments_Std
+                    request.Comments_Std,
+                    request.IsActive
                 };
 
-                int rowsAffected = await connection.ExecuteAsync(
+                return await connection.ExecuteAsync(
                     "usp_UpdateStdException",
                     parameters,
                     commandType: CommandType.StoredProcedure
                 );
-
-                return rowsAffected;
             }
             catch (Exception ex)
             {
@@ -82,17 +80,37 @@ namespace RouteCardProcess.Repositories
                 using var connection = _connectionFactory.CreateConnection();
                 await connection.OpenAsync();
 
-                var result = await connection.QueryAsync<StdExceptionRequest>(
+                return await connection.QueryAsync<StdExceptionRequest>(
                     "usp_GetAllStdExceptions",
                     commandType: CommandType.StoredProcedure
                 );
-
-                return result;
             }
             catch (Exception ex)
             {
                 await _systemLogger.LogAsync("StdExceptionRepository", "GetAllStdExceptionsAsync", ex.ToString());
                 return Enumerable.Empty<StdExceptionRequest>();
+            }
+        }
+
+        public async Task<int> DeleteStdExceptionAsync(string reasonCode)
+        {
+            try
+            {
+                using var connection = _connectionFactory.CreateConnection();
+                await connection.OpenAsync();
+
+                var parameters = new { Reason_Code = reasonCode };
+
+                return await connection.ExecuteAsync(
+                    "usp_DeleteStdException",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+            }
+            catch (Exception ex)
+            {
+                await _systemLogger.LogAsync("StdExceptionRepository", "DeleteStdExceptionAsync", ex.ToString());
+                return 0;
             }
         }
     }

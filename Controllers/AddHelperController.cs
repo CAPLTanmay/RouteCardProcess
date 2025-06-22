@@ -106,7 +106,7 @@ namespace RouteCardProcess.Controllers
                     return Ok(new
                     {
                         status = false,
-                        message = "Some helpers are still active. Please release them before logging out.",
+                        message = _userMessageService.GetMessage(1100),
                         data = helpers
                     });
                 }
@@ -114,7 +114,7 @@ namespace RouteCardProcess.Controllers
                 return Ok(new
                 {
                     status = true,
-                    message = "No active helpers. Safe to logout."
+                    message = _userMessageService.GetMessage(1101)
                 });
             }
             catch (Exception ex)
@@ -135,7 +135,7 @@ namespace RouteCardProcess.Controllers
 
                 if (activeHelpers == null || !activeHelpers.Any())
                 {
-                    return Ok(new { message = "No active helpers found to release." });
+                    return Ok(new { message = _userMessageService.GetMessage(1102) });
                 }
 
                 // Step 2: Loop through and release each helper
@@ -152,11 +152,15 @@ namespace RouteCardProcess.Controllers
 
                     if (result != _userMessageService.GetMessage(1008))
                     {
-                        return BadRequest(new { message = $"Failed to release helper {helper.OperatorId}: {result}" });
+                        string messageTemplate = _userMessageService.GetMessage(1103);
+                        string formattedMessage = messageTemplate
+                            .Replace("{OperatorId}", helper.OperatorId.ToString())
+                            .Replace("{result}", result);
+                        return BadRequest(new { message = formattedMessage });
                     }
                 }
 
-                return Ok(new { message = "All helpers released successfully." });
+                return Ok(new { message = _userMessageService.GetMessage(1104) });
             }
             catch (Exception ex)
             {

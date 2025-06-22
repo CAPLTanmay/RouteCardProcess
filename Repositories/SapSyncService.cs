@@ -100,7 +100,7 @@ namespace RouteCardProcess.Repositories
                     };
 
                     await connection.ExecuteAsync(
-                "usp_UpsertSapRoutingData",
+                "usp_SyncSapRoutingData",
                 parameters,
                 transaction: transaction,
                 commandType: CommandType.StoredProcedure);

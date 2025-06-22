@@ -28,7 +28,8 @@ namespace RouteCardProcess.Repositories
                     request.Plant,
                     request.PauseCode,
                     request.PauseCodeDesc,
-                    request.PauseCodeDescM
+                    request.PauseCodeDescM,
+                    IsActive = request.IsActive ?? true
                 };
 
                 int rowsAffected = await connection.ExecuteAsync(
@@ -58,7 +59,8 @@ namespace RouteCardProcess.Repositories
                     request.Plant,
                     request.PauseCode,
                     request.PauseCodeDesc,
-                    request.PauseCodeDescM
+                    request.PauseCodeDescM,
+                    IsActive = request.IsActive
                 };
 
                 int rowsAffected = await connection.ExecuteAsync(
@@ -94,6 +96,30 @@ namespace RouteCardProcess.Repositories
             {
                 await _systemLogger.LogAsync("PauseCodeRepository", "GetAllPauseCodesAsync", ex.ToString());
                 return Enumerable.Empty<PauseCodeRequest>();
+            }
+        }
+
+        public async Task<int> DeletePauseCodeAsync(string plant, string pauseCode)
+        {
+            try
+            {
+                using var connection = _connectionFactory.CreateConnection();
+                await connection.OpenAsync();
+
+                var parameters = new { Plant = plant, PauseCode = pauseCode };
+
+                int rowsAffected = await connection.ExecuteAsync(
+                    "usp_DeletePauseCode",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+
+                return rowsAffected;
+            }
+            catch (Exception ex)
+            {
+                await _systemLogger.LogAsync("PauseCodeRepository", "DeletePauseCodeAsync", ex.ToString());
+                return 0;
             }
         }
     }

@@ -28,7 +28,8 @@ namespace RouteCardProcess.Repositories
                     request.Plant,
                     request.IdleCode,
                     request.IdleCodeDesc,
-                    request.IdleCodeDescM
+                    request.IdleCodeDescM,
+                    IsActive = request.IsActive ?? true
                 };
 
                 int rowsAffected = await connection.ExecuteAsync(
@@ -58,7 +59,8 @@ namespace RouteCardProcess.Repositories
                     request.Plant,
                     request.IdleCode,
                     request.IdleCodeDesc,
-                    request.IdleCodeDescM
+                    request.IdleCodeDescM,
+                    request.IsActive
                 };
 
                 int rowsAffected = await connection.ExecuteAsync(
@@ -96,5 +98,33 @@ namespace RouteCardProcess.Repositories
                 return Enumerable.Empty<IdleCodeRequest>();
             }
         }
+        public async Task<int> DeleteIdleCodeAsync(string plant, string idleCode)
+        {
+            try
+            {
+                using var connection = _connectionFactory.CreateConnection();
+                await connection.OpenAsync();
+
+                var parameters = new
+                {
+                    Plant = plant,
+                    IdleCode = idleCode
+                };
+
+                int rowsAffected = await connection.ExecuteAsync(
+                    "usp_DeleteIdleCode",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+
+                return rowsAffected;
+            }
+            catch (Exception ex)
+            {
+                await _systemLogger.LogAsync("IdleCodeRepository", "DeleteIdleCodeAsync", ex.ToString());
+                return 0;
+            }
+        }
+
     }
 }

@@ -63,5 +63,21 @@ namespace RouteCardProcess.Controllers
                 return StatusCode(500, new { message = _userMessageService.GetMessage(5001), error = ex.Message });
             }
         }
+        [HttpPost("deletePauseCode")]
+        public async Task<IActionResult> DeletePauseCode([FromBody] DeletePauseCodeRequest request)
+        {
+            try
+            {
+                var rowsAffected = await _pauseCodeRepository.DeletePauseCodeAsync(request.Plant, request.PauseCode);
+                return rowsAffected > 0
+                    ? Ok(new { message = _userMessageService.GetMessage(1095) })
+                    : BadRequest(new { message = _userMessageService.GetMessage(1096) });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5001), error = ex.Message });
+            }
+        }
+
     }
 }

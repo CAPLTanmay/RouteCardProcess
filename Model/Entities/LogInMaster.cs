@@ -13,6 +13,6 @@ namespace RouteCardProcess.Model.Entities
         public int DepartmentId { get; set; }
         public string Shift { get; set; }
         public bool IsFromKBL { get; set; }
-        public string OperatorDummyID { get;  set; }
+        public string? OperatorDummyID { get;  set; }
     }
 }

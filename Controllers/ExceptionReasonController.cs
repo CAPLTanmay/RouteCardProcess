@@ -26,8 +26,8 @@ namespace RouteCardProcess.Controllers
                 int result = await _exceptionReasonRepository.AddExceptionReasonAsync(request);
 
                 return result > 0
-                    ? Ok(new { message = _userMessageService.GetMessage(5003) }) 
-                    : BadRequest(new { message = _userMessageService.GetMessage(5004) }); 
+                    ? Ok(new { message = _userMessageService.GetMessage(5003) }) // Inserted successfully
+                    : BadRequest(new { message = _userMessageService.GetMessage(5004) }); // Insert failed
             }
             catch (Exception ex)
             {
@@ -43,8 +43,8 @@ namespace RouteCardProcess.Controllers
                 int result = await _exceptionReasonRepository.UpdateExceptionReasonAsync(request);
 
                 return result > 0
-                    ? Ok(new { message = _userMessageService.GetMessage(1095) }) 
-                    : BadRequest(new { message = _userMessageService.GetMessage(1096) }); 
+                    ? Ok(new { message = _userMessageService.GetMessage(1095) }) // Data updated successfully
+                    : BadRequest(new { message = _userMessageService.GetMessage(1096) }); // Update failed or not found
             }
             catch (Exception ex)
             {
@@ -59,6 +59,23 @@ namespace RouteCardProcess.Controllers
             {
                 var result = await _exceptionReasonRepository.GetAllExceptionReasonsAsync();
                 return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5001), error = ex.Message });
+            }
+        }
+
+        [HttpPost("deleteExceptionReason")]
+        public async Task<IActionResult> DeleteExceptionReason([FromBody] DeleteExceptionRequest request)
+        {
+            try
+            {
+                int result = await _exceptionReasonRepository.DeleteExceptionReasonAsync(request.Reason_Code);
+
+                return result > 0
+                    ? Ok(new { message = _userMessageService.GetMessage(1095) }) 
+                    : BadRequest(new { message = _userMessageService.GetMessage(1096) }); 
             }
             catch (Exception ex)
             {

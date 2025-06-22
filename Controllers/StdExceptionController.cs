@@ -24,10 +24,9 @@ namespace RouteCardProcess.Controllers
             try
             {
                 var result = await _stdExceptionRepository.AddStdExceptionAsync(request);
-                if (result > 0)
-                    return Ok(new { message = _userMessageService.GetMessage(5003) });
-                else
-                    return BadRequest(new { message = _userMessageService.GetMessage(5004) });
+                return result > 0
+                    ? Ok(new { message = _userMessageService.GetMessage(5003) }) // Inserted successfully
+                    : BadRequest(new { message = _userMessageService.GetMessage(5004) }); // Insert failed
             }
             catch (Exception ex)
             {
@@ -41,10 +40,9 @@ namespace RouteCardProcess.Controllers
             try
             {
                 var result = await _stdExceptionRepository.UpdateStdExceptionAsync(request);
-                if (result > 0)
-                    return Ok(new { message = _userMessageService.GetMessage(1095) });
-                else
-                    return BadRequest(new { message = _userMessageService.GetMessage(1096) });
+                return result > 0
+                    ? Ok(new { message = _userMessageService.GetMessage(1095) }) // Updated successfully
+                    : BadRequest(new { message = _userMessageService.GetMessage(1096) }); // Update failed or not found
             }
             catch (Exception ex)
             {
@@ -59,6 +57,22 @@ namespace RouteCardProcess.Controllers
             {
                 var result = await _stdExceptionRepository.GetAllStdExceptionsAsync();
                 return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5001), error = ex.Message });
+            }
+        }
+
+        [HttpPost("deleteStdException")]
+        public async Task<IActionResult> DeleteStdException([FromBody] DeleteStdExceptionRequest request)
+        {
+            try
+            {
+                var result = await _stdExceptionRepository.DeleteStdExceptionAsync(request.Reason_Code);
+                return result > 0
+                    ? Ok(new { message = _userMessageService.GetMessage(1095) }) // Deactivated successfully
+                    : BadRequest(new { message = _userMessageService.GetMessage(1096) }); // Not found
             }
             catch (Exception ex)
             {

@@ -7,5 +7,12 @@
         public string IdleCodeDesc { get; set; }
         public string IdleCodeDescM { get; set; }
         public string? FullIdleDescription { get;set; }
+        public bool? IsActive { get; set; }
+    }
+
+    public class DeleteCodeRequest
+    {
+        public string Plant { get; set; }
+        public string IdleCode { get; set; }
     }
 }

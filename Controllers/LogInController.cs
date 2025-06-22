@@ -26,7 +26,7 @@ namespace RouteCardProcess.Controllers
             _userMessageService = userMessageService;
         }
 
-        [HttpGet]
+        [HttpGet("GetAllUsers")]
         public async Task<IActionResult> GetAll()
         {
             try
@@ -42,7 +42,7 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-        [HttpPost]
+        [HttpPost("AddUser")]
         public async Task<IActionResult> Create([FromBody] LogInMaster login)
         {
             try

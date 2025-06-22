@@ -26,8 +26,8 @@ namespace RouteCardProcess.Controllers
                 var rowsAffected = await _mstWorkCenterRepository.AddMstWorkCenterAsync(request);
 
                 return rowsAffected > 0
-                    ? Ok(new { message = _userMessageService.GetMessage(1091) }) 
-                    : BadRequest(new { message = _userMessageService.GetMessage(1092) }); 
+                    ? Ok(new { message = _userMessageService.GetMessage(1091) })
+                    : BadRequest(new { message = _userMessageService.GetMessage(1092) });
             }
             catch (Exception ex)
             {
@@ -43,7 +43,7 @@ namespace RouteCardProcess.Controllers
                 var rowsAffected = await _mstWorkCenterRepository.UpdateMstWorkCenterAsync(request);
 
                 return rowsAffected > 0
-                    ? Ok(new { message = _userMessageService.GetMessage(1093) }) 
+                    ? Ok(new { message = _userMessageService.GetMessage(1093) })
                     : NotFound(new { message = _userMessageService.GetMessage(1094) });
             }
             catch (Exception ex)
@@ -65,6 +65,7 @@ namespace RouteCardProcess.Controllers
                 return StatusCode(500, new { message = _userMessageService.GetMessage(5001), error = ex.Message });
             }
         }
+
         [HttpGet("departments")]
         public async Task<IActionResult> GetDepartments()
         {
@@ -96,5 +97,23 @@ namespace RouteCardProcess.Controllers
             }
         }
 
+        [HttpPost("deleteMstWorkCenter")]
+        public async Task<IActionResult> DeleteMstWorkCenter([FromBody] MstWorkCenterDeleteRequest request)
+        {
+            if (string.IsNullOrEmpty(request?.Plant) || string.IsNullOrEmpty(request?.WorkCenter))
+                return BadRequest(new { message = "Plant and WorkCenter are required" });
+
+            try
+            {
+                var result = await _mstWorkCenterRepository.DeleteMstWorkCenterAsync(request.Plant, request.WorkCenter);
+                return result > 0
+                    ? Ok(new { message = _userMessageService.GetMessage(1095) }) // "Deleted successfully"
+                    : NotFound(new { message = _userMessageService.GetMessage(1096) }); // "WorkCenter not found"
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5001), error = ex.Message });
+            }
+        }
     }
 }

@@ -63,5 +63,22 @@ namespace RouteCardProcess.Controllers
                 return StatusCode(500, new { message = _userMessageService.GetMessage(5001), error = ex.Message });
             }
         }
+
+        [HttpPost("deleteIdleCode")]
+        public async Task<IActionResult> DeleteIdleCode([FromBody] DeleteCodeRequest request)
+        {
+            try
+            {
+                var rowsAffected = await _idleCodeRepository.DeleteIdleCodeAsync(request.Plant, request.IdleCode);
+                return rowsAffected > 0
+                    ? Ok(new { message = _userMessageService.GetMessage(1095) }) // success
+                    : BadRequest(new { message = _userMessageService.GetMessage(1096) }); // failure
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5001), error = ex.Message });
+            }
+        }
+
     }
 }
