@@ -28,7 +28,7 @@ namespace RouteCardProcess.Controllers
             {
                 var result = await _repo.CheckSetupNotificationStatusAsync(
                     request.WorkCenterNo,
-                    request.WorkOrderNo,
+                    request.ProductionOrderNo,
                     request.OperationNo
                 );
 
@@ -54,30 +54,42 @@ namespace RouteCardProcess.Controllers
         {
             try
             {
-                var existing = await _repo.GetByCompositeKeyAsync(request.WorkCenterNo, request.WorkOrderNo, request.OperationNo);
+                var existing = await _repo.GetByCompositeKeyAsync(request.WorkCenterNo, request.ProductionOrderNo, request.OperationNo);
 
-                if (existing != null)
+                if (existing != null && !string.Equals(existing.SetupStatus, "Completed", StringComparison.OrdinalIgnoreCase))
                 {
-                    var startTime = existing.SetupStartTime;
-                    var endTime = existing.SetupEndTime ?? DateTime.Now;
+                    bool isOperatorEnded = existing.OperatorEndTime != DateTime.MinValue;
+                    bool isDifferentOperator = !string.IsNullOrEmpty(request.OperatorId) &&
+                                               !string.Equals(existing.OperatorId, request.OperatorId, StringComparison.OrdinalIgnoreCase);
 
-                    TimeSpan? adjustedTotalSetupTime = null;
+                    if (isOperatorEnded || isDifferentOperator)
+                    {
+                        // Insert into Trans_Setup_Operator only
+                        await _repo.InsertSetupOperatorStartAsync(existing.SetUpID, request.OperatorId, DateTime.Now);
 
-                    if (startTime.HasValue)
-                        adjustedTotalSetupTime = endTime - startTime;
+                        return Ok(new
+                        {
+                            message = _userMessageService.GetMessage(1086), // e.g. "Operator started successfully"
+                            SetUpID = existing.SetUpID,
+                            setup = existing
+                        });
+                    }
 
+                    // Existing setup and same operator continuing
                     return Ok(new
                     {
-                        message = _userMessageService.GetMessage(1086),
+                        message = _userMessageService.GetMessage(1086), // e.g. "Setup already in progress"
                         SetUpID = existing.SetUpID,
                         setup = existing
                     });
                 }
 
+                // Setup doesn't exist or it's completed → Create new
                 var created = await _repo.CreateSetupAsync(request);
+
                 return Ok(new
                 {
-                    message = _userMessageService.GetMessage(1085),
+                    message = _userMessageService.GetMessage(1085), // e.g. "Setup created successfully"
                     SetUpId = created.SetUpID,
                     setup = created
                 });
@@ -85,12 +97,15 @@ namespace RouteCardProcess.Controllers
             catch (Exception ex)
             {
                 await _systemLogger.LogAsync("SetUpTransController", "check-or-create", ex.ToString());
+
                 if (ex.Message == _userMessageService.GetMessage(1061))
                     return BadRequest(new { message = ex.Message });
 
                 return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
             }
         }
+
+
 
         [HttpPost("start-setup")]
         public async Task<IActionResult> StartSetup([FromBody] SetupIdentifierRequest request)

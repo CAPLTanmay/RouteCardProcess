@@ -8,7 +8,7 @@ namespace RouteCardProcess.Interfaces
         Task<SetupMaster> GetByCompositeKeyAsync(string workCenterNo, string workOrderNo, string operationNo);
 
         Task<(int Flag, string SetupStatus, string MachiningStatus, string Message, string SetUpID, string MachiningID)>
-            CheckSetupNotificationStatusAsync(string workCenterNo, string workOrderNo, string operationNo);
+        CheckSetupNotificationStatusAsync(string workCenterNo, string workOrderNo, string operationNo);
 
         Task<SetupMaster> CreateSetupAsync(SetupMasterDto request);
 
@@ -19,5 +19,6 @@ namespace RouteCardProcess.Interfaces
         Task<bool> EndSetupTimeAsync(string setUpId);
 
         Task<bool> InsertDelaysAsync(SetupDelayRequest request);
+        Task InsertSetupOperatorStartAsync(string setupId, string operatorId, DateTime startTime);
     }
 }

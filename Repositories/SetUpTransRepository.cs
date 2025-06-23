@@ -7,7 +7,7 @@ using RouteCardProcess.Model.Entities;
 
 namespace RouteCardProcess.Repositories
 {
-    public class SetUpTransRepository:ISetUpTransRepository
+    public class SetUpTransRepository : ISetUpTransRepository
     {
         private readonly SqlConnectionFactory _connectionFactory;
         private readonly IUserMessageService _userMessageService;
@@ -88,7 +88,7 @@ namespace RouteCardProcess.Repositories
 
         public async Task<SetupMaster> CreateSetupAsync(SetupMasterDto request)
         {
-            TimeSpan idealTime = ConvertMinutesToTimeSpan(request.IdealTime);
+            TimeSpan StandardSetupTime = ConvertMinutesToTimeSpan(request.StandardSetupTime);
             var SetupId = Guid.NewGuid().ToString().Substring(0, 8);
 
             using var connection = CreateConnection();
@@ -96,11 +96,11 @@ namespace RouteCardProcess.Repositories
             {
                 request.OperatorId,
                 request.WorkCenterNo,
-                request.WorkOrderNo,
                 request.OperationNo,
+                request.ProductionOrderNo,
                 SetUpID = SetupId,
-                IdealTime = idealTime,
-                SetupStatus = _userMessageService.GetMessage(1073), 
+                StandardSetupTime = StandardSetupTime,
+                SetupStatus = _userMessageService.GetMessage(1073),
                 OperatorStartTime = (DateTime?)null,
                 OperatorEndTime = (DateTime?)null
             };
@@ -131,7 +131,7 @@ namespace RouteCardProcess.Repositories
              "usp_CheckSetupExists",
              parameters,
              commandType: CommandType.StoredProcedure);
-                
+
 
                 if (existingSetup == null)
                 {
@@ -180,14 +180,14 @@ namespace RouteCardProcess.Repositories
                 {
                     var parameters = new { SetUpID = request.SetUpID, OperatorId = operatorId, PauseCode = request.PauseCode };
                     await connection.ExecuteAsync("usp_TogglePause_Start", parameters, commandType: CommandType.StoredProcedure);
-                    return _userMessageService.GetMessage(1058);
+                    return _userMessageService.GetMessage(1075);
                 }
                 else if (status == _userMessageService.GetMessage(1075))
                 {
                     var parameters = new
                     {
                         SetUpID = request.SetUpID,
-                        ResumeReasonCode = request.PauseCode 
+                        ResumeReasonCode = request.PauseCode
                     };
 
                     await connection.ExecuteAsync("usp_TogglePause_Resume", parameters, commandType: CommandType.StoredProcedure);
@@ -242,7 +242,7 @@ namespace RouteCardProcess.Repositories
             {
                 // Get operator info once
                 var setup = await connection.QueryFirstOrDefaultAsync<dynamic>(
-                    "usp_GetSetupOperatorAndStatus",
+                    "usp_GetSetupStatusAndOperator",
                     new { SetUpID = request.SetUpID },
                     transaction,
                     commandType: CommandType.StoredProcedure
@@ -354,5 +354,25 @@ namespace RouteCardProcess.Repositories
                 throw new ArgumentException(_userMessageService.GetMessage(1090));
             }
         }
+
+        public async Task InsertSetupOperatorStartAsync(string setupId, string operatorId, DateTime startTime)
+        {
+            using var connection = _connectionFactory.CreateConnection();
+
+            var query = @"
+        INSERT INTO Trans_Setup_Operator 
+        (SetupId, OperatorId, OperatorStartTime)
+        VALUES (@SetupId, @OperatorId, @StartTime)";
+
+            var parameters = new
+            {
+                SetupId = setupId,
+                OperatorId = operatorId,
+                StartTime = startTime
+            };
+
+            await connection.ExecuteAsync(query, parameters);
+        }
+
     }
 }

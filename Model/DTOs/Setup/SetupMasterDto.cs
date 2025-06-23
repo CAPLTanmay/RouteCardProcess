@@ -8,16 +8,14 @@ namespace RouteCardProcess.Model.DTOs.Setup
 
         [Required]
         public string WorkCenterNo { get; set; }
-
         [Required]
-        public string WorkOrderNo { get; set; }
-
+        public string ProductionOrderNo { get; set; }
         [Required]
         public string OperationNo { get; set; }
 
         [Required]
         public string OperatorId { get; set; }
 
-        public string? IdealTime { get; set; }
+        public string? StandardSetupTime { get; set; }
     }
 }
