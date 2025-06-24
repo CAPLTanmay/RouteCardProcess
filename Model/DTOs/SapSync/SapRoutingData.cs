@@ -49,5 +49,6 @@
         public string WorkCenterText { get; set; }
         public string Material { get; set; }
         public string MaterialText { get; set; }
+        public string? MaterialTextLink { get; set; }
     }
 }

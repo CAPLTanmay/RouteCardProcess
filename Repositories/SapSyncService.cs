@@ -13,6 +13,7 @@ namespace RouteCardProcess.Repositories
         private readonly HttpClient _httpClient;
         private readonly SqlConnectionFactory _connectionFactory;
         private readonly string _baseUrl;
+        private readonly string _materialBaseUrl;
 
         public SapSyncService(HttpClient httpClient, IConfiguration configuration, SqlConnectionFactory connectionFactory)
         {
@@ -22,6 +23,7 @@ namespace RouteCardProcess.Repositories
             var username = configuration["SapSettings:Username"];
             var password = configuration["SapSettings:Password"];
             _baseUrl = configuration["SapSettings:BaseUrl"];
+            _materialBaseUrl = configuration["RoutingData:MaterialBaseUrl"];
 
             var byteArray = Encoding.ASCII.GetBytes($"{username}:{password}");
             _httpClient.DefaultRequestHeaders.Authorization =
@@ -118,10 +120,18 @@ namespace RouteCardProcess.Repositories
         {
             using var connection = _connectionFactory.CreateConnection();
 
-            return await connection.QueryAsync<RoutingDataResponse>(
-                "usp_GetRoutingDataByOrder",
-                new { OrderNumber = orderNumber },
-                commandType: CommandType.StoredProcedure);
+            var data = (await connection.QueryAsync<RoutingDataResponse>(
+     "usp_GetRoutingDataByOrder",
+     new { OrderNumber = orderNumber },
+     commandType: CommandType.StoredProcedure)).ToList();
+
+            foreach (var item in data)
+            {
+                item.MaterialTextLink = $"{_materialBaseUrl}{item.Material}";
+            }
+
+            return data;
+
         }
 
     }

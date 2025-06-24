@@ -88,7 +88,7 @@ namespace RouteCardProcess.Repositories
 
         public async Task<SetupMaster> CreateSetupAsync(SetupMasterDto request)
         {
-            TimeSpan StandardSetupTime = ConvertMinutesToTimeSpan(request.StandardSetupTime);
+           // TimeSpan StandardSetupTime = ConvertMinutesToTimeSpan(request.StandardSetupTime);
             var SetupId = Guid.NewGuid().ToString().Substring(0, 8);
 
             using var connection = CreateConnection();
@@ -99,7 +99,8 @@ namespace RouteCardProcess.Repositories
                 request.OperationNo,
                 request.ProductionOrderNo,
                 SetUpID = SetupId,
-                StandardSetupTime = StandardSetupTime,
+                //StandardSetupTime = StandardSetupTime,
+                request.StandardSetupTime,
                 SetupStatus = _userMessageService.GetMessage(1073),
                 OperatorStartTime = (DateTime?)null,
                 OperatorEndTime = (DateTime?)null
@@ -354,15 +355,9 @@ namespace RouteCardProcess.Repositories
                 throw new ArgumentException(_userMessageService.GetMessage(1090));
             }
         }
-
         public async Task InsertSetupOperatorStartAsync(string setupId, string operatorId, DateTime startTime)
         {
             using var connection = _connectionFactory.CreateConnection();
-
-            var query = @"
-        INSERT INTO Trans_Setup_Operator 
-        (SetupId, OperatorId, OperatorStartTime)
-        VALUES (@SetupId, @OperatorId, @StartTime)";
 
             var parameters = new
             {
@@ -371,7 +366,10 @@ namespace RouteCardProcess.Repositories
                 StartTime = startTime
             };
 
-            await connection.ExecuteAsync(query, parameters);
+            await connection.ExecuteAsync(
+                "usp_InsertSetupOperatorStart",
+                parameters,
+                commandType: CommandType.StoredProcedure);
         }
 
     }
