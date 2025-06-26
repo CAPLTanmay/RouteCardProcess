@@ -22,8 +22,6 @@ builder.Services.Configure<KblApiConfig>(builder.Configuration.GetSection("KblAp
 builder.Services.AddHttpClient<ISapSyncService, SapSyncService>();
 builder.Services.AddHttpClient();
 
-// Load config from environment-specific files (already handled by default in WebApplication.CreateBuilder)
-// Load config based on environment
 var environment = builder.Environment.EnvironmentName;
 
 builder.Configuration
@@ -34,17 +32,15 @@ builder.Configuration
 
 var useKblAuth = builder.Configuration.GetValue<bool>("UseKblAuthAPI");
 builder.Services.AddSingleton(new KblAuthConfig { UseKblAuthAPI = useKblAuth });
-
 builder.Configuration["UseKblAuth"] = useKblAuth.ToString();
 var allowedOrigin = builder.Configuration["Cors:AllowedOrigin"];
 
-// Add Swagger with JWT Auth support
+// Swagger + JWT
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "RouteCardProcess API", Version = "v1" });
-
-    var securityScheme = new OpenApiSecurityScheme
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
         Type = SecuritySchemeType.Http,
@@ -52,25 +48,19 @@ builder.Services.AddSwaggerGen(c =>
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
         Description = "Enter 'Bearer' [space] and then your valid JWT token"
-    };
-
-    c.AddSecurityDefinition("Bearer", securityScheme);
-
+    });
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
             new OpenApiSecurityScheme
             {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
             },
             Array.Empty<string>()
         }
     });
 });
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("DefaultCorsPolicy", policy =>
@@ -81,7 +71,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Register  repositories
+// Repositories
 builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
 builder.Services.AddScoped<ILogInRepository, LogInRepository>();
 builder.Services.AddScoped<ISetUpTransRepository, SetUpTransRepository>();
@@ -99,12 +89,12 @@ builder.Services.AddScoped<ISystemLoggerRepository, SystemLoggerRepository>();
 
 // Services
 builder.Services.AddScoped<IEmailService, EmailService>();
-builder.Services.AddScoped<IJwtTokenService, JwtTokenService>(); 
+builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IKblAuthService, KblAuthService>();
 builder.Services.AddHttpClient<IKblAuthService, KblAuthService>();
 builder.Services.AddSingleton<IUserMessageService, UserMessageService>();
 
-// JWT Authentication configuration
+// JWT Auth
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 builder.Services.AddAuthentication(options =>
 {
@@ -129,8 +119,24 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// Middleware
+// Security Headers
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.Add("X-Content-Type-Options", "nosniff");
+    context.Response.Headers.Add("X-Frame-Options", "DENY");
+    context.Response.Headers.Add("X-XSS-Protection", "1; mode=block");
+    await next();
+});
+
+// Production-Only HSTS
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+}
+
 app.UseMiddleware<ExceptionMiddleware>();
+
+// Swagger
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {

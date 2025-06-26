@@ -161,6 +161,7 @@ namespace RouteCardProcess.Controllers
             }
         }
 
+        [AllowAnonymous]
         [HttpPost("add-delays")]
         public async Task<IActionResult> AddDelays([FromBody] SetupDelayRequest request)
         {

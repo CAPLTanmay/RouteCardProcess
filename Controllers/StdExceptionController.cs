@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model.Entities;
 using RouteCardProcess.Repositories;
@@ -7,6 +8,7 @@ namespace RouteCardProcess.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class StdExceptionController : ControllerBase
     {
         private readonly IStdExceptionRepository _stdExceptionRepository;

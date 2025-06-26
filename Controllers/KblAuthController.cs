@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model.DTOs.Login;
 using RouteCardProcess.Repositories;
@@ -7,6 +8,7 @@ namespace RouteCardProcess.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class KblAuthController : ControllerBase
     {
         private readonly IKblAuthService _kblService;

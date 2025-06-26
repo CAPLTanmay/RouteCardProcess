@@ -290,7 +290,6 @@ namespace RouteCardProcess.Repositories
                             {
                                 SetUpID = request.SetUpID,
                                 OperatorId = setup.OperatorId,
-                                SetupStatus = request.SetUpStatus,
                                 exception.ExceptionsReasonCode,
                                 exception.Std_exceptions_ReasonCode,
                                 exception.ExceptionsTime,
@@ -313,7 +312,6 @@ namespace RouteCardProcess.Repositories
                             {
                                 SetUpID = request.SetUpID,
                                 OperatorId = setup.OperatorId,
-                                SetupStatus = request.SetUpStatus,
                                 idle.MSTIdleCode,
                                 idle.SetupIdleTime
                             },

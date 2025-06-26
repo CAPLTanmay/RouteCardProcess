@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model.DTOs.SapValidation;
 using RouteCardProcess.Repositories;
 
 [ApiController]
 [Route("api/sync")]
+[Authorize]
 public class SapSyncController : ControllerBase
 {
     private readonly ISapSyncService _sapSyncService;
