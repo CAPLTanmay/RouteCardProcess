@@ -96,11 +96,15 @@ namespace RouteCardProcess.Repositories
             {
                 request.OperatorId,
                 request.WorkCenterNo,
+                request.DepartmentId,
                 request.OperationNo,
                 request.ProductionOrderNo,
                 SetUpID = SetupId,
-                //StandardSetupTime = StandardSetupTime,
-                request.StandardSetupTime,
+                StandardSetupTime = double.TryParse(request.StandardSetupTime, out var mins)
+    ? TimeSpan.FromMinutes(mins)
+    : TimeSpan.Zero
+,
+                //request.StandardSetupTime,
                 SetupStatus = _userMessageService.GetMessage(1073),
                 OperatorStartTime = (DateTime?)null,
                 OperatorEndTime = (DateTime?)null
@@ -254,31 +258,6 @@ namespace RouteCardProcess.Repositories
                     transaction.Rollback();
                     return false;
                 }
-
-                // Insert Delays if any
-                if (request.Delays?.Any() == true)
-                {
-                    TimeSpan totalDelay = request.Delays.Aggregate(TimeSpan.Zero, (sum, d) => sum + d.DelayTime);
-
-                    foreach (var delay in request.Delays)
-                    {
-                        await connection.ExecuteAsync(
-                            "usp_InsertDelays",
-                            new
-                            {
-                                SetUpID = request.SetUpID,
-                                OperatorId = setup.OperatorId,
-                                SetupStatus = request.SetUpStatus,
-                                DelayReasonCode = delay.DelayReasonCode,
-                                DelayTime = delay.DelayTime,
-                                TotalDelayedTime = totalDelay
-                            },
-                            transaction,
-                            commandType: CommandType.StoredProcedure
-                        );
-                    }
-                }
-
                 // Insert Exceptions if any
                 if (request.Exceptions?.Any() == true)
                 {

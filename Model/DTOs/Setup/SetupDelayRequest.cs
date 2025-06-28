@@ -6,15 +6,8 @@ namespace RouteCardProcess.Model.DTOs.Setup
     {
         public string SetUpID { get; set; }
         public string SetUpStatus { get; set; }
-        public List<DelayFullRequest> Delays { get; set; } 
         public List<ExceptionsRequest> Exceptions { get; set; } 
         public List<IdleTimeRequest> IdleTimes { get; set; }
-    }
-
-    public class DelayFullRequest
-    {
-        public string DelayReasonCode { get; set; }
-        public TimeSpan DelayTime { get; set; }
     }
 
     public class ExceptionsRequest

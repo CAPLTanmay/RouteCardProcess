@@ -6,7 +6,6 @@ using RouteCardProcess.Repositories;
 
 [ApiController]
 [Route("api/sync")]
-[Authorize]
 public class SapSyncController : ControllerBase
 {
     private readonly ISapSyncService _sapSyncService;

@@ -4,6 +4,7 @@
     {
         public string? SetUpID { get; set; }
         public string WorkCenterNo { get; set; }
+        public string DepartmentId { get; set; }
         public string ProductionOrderNo { get; set; }
         public string OperationNo { get; set; }
         public string OperatorId { get; set; }

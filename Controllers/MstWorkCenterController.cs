@@ -8,7 +8,7 @@ namespace RouteCardProcess.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+
     public class MstWorkCenterController : ControllerBase
     {
         private readonly IMstWorkCenterRepository _mstWorkCenterRepository;

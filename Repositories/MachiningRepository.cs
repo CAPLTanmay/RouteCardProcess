@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using Dapper;
+using Microsoft.Data.SqlClient;
 using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model.DTOs.Machining;
 using RouteCardProcess.Model.Entities;
@@ -21,31 +22,33 @@ public class MachiningRepository : IMachiningRepository
     public async Task<MachiningMaster> CreateAsync(MachiningDto obj)
     {
         using var connection = CreateConnection();
-        var MachiningId = Guid.NewGuid().ToString().Substring(0, 8);
+        var machiningId = Guid.NewGuid().ToString().Substring(0, 8);
+
         var result = await connection.QueryFirstOrDefaultAsync<MachiningMaster>(
-            "usp_CreateMachining",
+            "usp_CreateMachining", 
             new
             {
-                obj.OperatorId,
-                obj.WorkCenterNo,
-                obj.WorkOrderNo,
-                obj.OperationNo,
-                MachiningID = MachiningId,
-                IdealTime = double.TryParse(obj.IdealTime, out var minutes)
-    ? TimeSpan.FromMinutes(minutes)
-    : TimeSpan.Zero,
+                MachiningId = machiningId,
+                OperatorId = obj.OperatorId,
+                WorkCenterNo = obj.WorkCenterNo,
+                DepartmentId=obj.DepartmentId,
+                ProductionOrderNo = obj.ProductionOrderNo,
+                OperationNo = obj.OperationNo,
+                StandardMachiningTime = double.TryParse(obj.StandardMachiningTime, out var mins)
+    ? TimeSpan.FromMinutes(mins)
+    : TimeSpan.Zero
 
-                obj.TotalQty,
-                obj.ProcessedQty
-            },
+    },
             commandType: CommandType.StoredProcedure
         );
+
         return result;
     }
 
+
     public async Task<string> StartMachiningAsync(string machiningId)
     {
-        using var connection = CreateConnection(); // Assuming same factory method
+        using var connection = CreateConnection(); 
         var parameters = new { MachiningID = machiningId };
 
         try
@@ -142,6 +145,55 @@ public class MachiningRepository : IMachiningRepository
             commandType: CommandType.StoredProcedure
         );
     }
+
+    public async Task ProcessQuantitiesAsync(AddQuantity request)
+    {
+        using var connection = (SqlConnection)CreateConnection();
+        await connection.OpenAsync();
+        using var transaction = connection.BeginTransaction();
+
+        try
+        {
+            int totalCompleted = 0;
+            int totalHandover = 0;
+
+            foreach (var item in request.QuantityList)
+            {
+                var qty = int.Parse(item.ProcessedQty);
+
+                if (item.MachiningStatus.Equals("Completed", StringComparison.OrdinalIgnoreCase))
+                    totalCompleted += qty;
+                else if (item.MachiningStatus.Equals("Handover", StringComparison.OrdinalIgnoreCase))
+                    totalHandover += qty;
+            }
+
+            // Decide status
+            string newStatus = totalHandover > 0 ? "Handover" : "Completed";
+
+            // Call SP once with everything
+            await connection.ExecuteAsync(
+                "usp_AddQuantities",
+                new
+                {
+                    MachiningID = request.MachiningId,
+                    CompletedQty = totalCompleted,
+                    HandoverQty = totalHandover,
+                    MachiningStatus = newStatus
+                },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure
+            );
+
+            transaction.Commit();
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
+    }
+
+
     public async Task AddDelaysAsync(string machiningId, int processedQty, TimeSpan delayTime, string reasonCode, TimeSpan totalDelayedTime)
     {
         using var connection = CreateConnection();
@@ -158,12 +210,12 @@ public class MachiningRepository : IMachiningRepository
             commandType: CommandType.StoredProcedure
         );
     }
-    public async Task<MachiningMaster> GetByCompositeKeyAsync(string workCenterNo, string workOrderNo, string operationNo)
+    public async Task<MachiningMaster> GetByCompositeKeyAsync(string workCenterNo, string ProductionOrderNo, string operationNo)
     {
         using var connection = CreateConnection();
         var result = await connection.QueryFirstOrDefaultAsync<MachiningMaster>(
             "dbo.usp_GetMachiningByCompositeKey",
-            new { WorkCenterNo = workCenterNo, WorkOrderNo = workOrderNo, OperationNo = operationNo },
+            new { WorkCenterNo = workCenterNo, ProductionOrderNo = ProductionOrderNo, OperationNo = operationNo },
             commandType: CommandType.StoredProcedure
         );
         return result;

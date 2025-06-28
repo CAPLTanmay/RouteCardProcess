@@ -8,6 +8,7 @@ namespace RouteCardProcess.Model.DTOs.Setup
 
         [Required]
         public string WorkCenterNo { get; set; }
+        public string DepartmentId { get; set; }
         [Required]
         public string ProductionOrderNo { get; set; }
         [Required]

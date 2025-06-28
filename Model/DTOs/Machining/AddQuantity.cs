@@ -6,9 +6,6 @@ namespace RouteCardProcess.Model.DTOs.Machining
     {
         [Required]
         public string MachiningId { get; set; } = string.Empty;
-
-        public string? TotalQty { get; set; }
-
         public List<QuantityList> QuantityList { get; set; } = new();
     }
 

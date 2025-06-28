@@ -6,6 +6,7 @@
         public string WorkCenter { get; set; }
         public string WorkCenterDesc { get; set; }
         public string Dept { get; set; }
+        public string DepartmentId { get; set; }
         public string? FullWorkCenter { get; set; }
         public string? IsActive { get; set; }
     }

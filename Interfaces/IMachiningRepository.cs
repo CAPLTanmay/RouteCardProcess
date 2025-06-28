@@ -10,6 +10,7 @@ namespace RouteCardProcess.Interfaces
         Task TogglePauseAsync(string machiningId, string pauseCode);
         Task<bool> EndMachiningAsync(string machiningId);
         Task AddQuantitiesAsync(string machiningId, int totalQty, int processedQty, string qtyStatus);
+        Task ProcessQuantitiesAsync(AddQuantity request);
         Task AddDelaysAsync(string machiningId, int processedQty, TimeSpan delayTime, string reasonCode, TimeSpan totalDelayedTime);
         Task<MachiningMaster> GetByCompositeKeyAsync(string workCenterNo, string workOrderNo, string operationNo);
         Task UpdateMachiningStatusAsync(string machiningId);

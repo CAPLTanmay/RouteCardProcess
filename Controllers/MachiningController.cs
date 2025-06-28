@@ -8,7 +8,6 @@ namespace RouteCardProcess.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
     public class MachiningController : ControllerBase
     {
         private readonly IMachiningRepository _repo;
@@ -27,50 +26,57 @@ namespace RouteCardProcess.Controllers
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(request.WorkCenterNo) ||
-                    string.IsNullOrWhiteSpace(request.WorkOrderNo) ||
-                    string.IsNullOrWhiteSpace(request.OperationNo))
+                var existing = await _repo.GetByCompositeKeyAsync(request.WorkCenterNo, request.ProductionOrderNo, request.OperationNo);
+
+                if (existing != null && !string.Equals(existing.MachiningStatus, "Completed", StringComparison.OrdinalIgnoreCase))
                 {
-                    return BadRequest(new { message = _userMessageService.GetMessage(1020)});
-                }
+                    bool isOperatorEnded = existing.OperatorEndTime != DateTime.MinValue;
+                    bool isDifferentOperator = !string.IsNullOrEmpty(request.OperatorId) &&
+                                               !string.Equals(existing.OperatorId, request.OperatorId, StringComparison.OrdinalIgnoreCase);
 
-                var existing = await _repo.GetByCompositeKeyAsync(request.WorkCenterNo, request.WorkOrderNo, request.OperationNo);
+                    if (isOperatorEnded || isDifferentOperator)
+                    {
+                        // Insert into Trans_Machining_Operator only
+                       // await _repo.InsertMachiningOperatorStartAsync(existing.MachiningId, request.OperatorId, DateTime.Now);
 
-                if (existing != null)
-                {
-                    var startTime = existing.MachiningStartTime;
-                    var endTime = existing.MachiningEndTime ?? DateTime.Now;
+                        return Ok(new
+                        {
+                            message = _userMessageService.GetMessage(1086), // "Operator started successfully"
+                            MachiningId = existing.MachiningId,
+                            machining = existing
+                        });
+                    }
 
-                    TimeSpan? adjustedTotalTime = null;
-
-                    if (startTime.HasValue)
-                        adjustedTotalTime = endTime - startTime;
-
+                    // Existing machining and same operator continuing
                     return Ok(new
                     {
-                        message = _userMessageService.GetMessage(1021),
-                        machiningID = existing.MachiningId,
-                        machining = existing,
+                        message = _userMessageService.GetMessage(1021), // "Machining already in progress"
+                        MachiningId = existing.MachiningId,
+                        machining = existing
                     });
                 }
 
+                // Machining doesn't exist or is completed → Create new
                 var created = await _repo.CreateAsync(request);
-                return CreatedAtAction(nameof(GetById), new { machiningId = created.MachiningId }, new
+
+                return Ok(new
                 {
-                    message = _userMessageService.GetMessage(1022),
-                    machiningID = created.MachiningId,
+                    message = _userMessageService.GetMessage(1022), // "Machining created successfully"
+                    MachiningId = created.MachiningId,
                     machining = created
                 });
             }
             catch (Exception ex)
             {
-                await _systemLogger.LogAsync("MachiningController", "CheckOrCreateMachining", ex.ToString());
-                if (ex.Message == "Invalid Operator ID")
+                await _systemLogger.LogAsync("MachiningController", "check-or-create-machining", ex.ToString());
+
+                if (ex.Message == _userMessageService.GetMessage(1061))
                     return BadRequest(new { message = ex.Message });
 
                 return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
             }
         }
+
 
         [HttpPost("start-machining")]
         public async Task<IActionResult> StartMachining([FromBody] MachiningIdentifierRequest request)
@@ -135,21 +141,16 @@ namespace RouteCardProcess.Controllers
                 if (request?.QuantityList == null || !request.QuantityList.Any())
                     return BadRequest(new { success = false, message = _userMessageService.GetMessage(1028) });
 
-                if (string.IsNullOrWhiteSpace(request.MachiningId) || string.IsNullOrWhiteSpace(request.TotalQty))
+                if (string.IsNullOrWhiteSpace(request.MachiningId))
                     return BadRequest(new { success = false, message = _userMessageService.GetMessage(1029) });
 
-                var totalProcessed = request.QuantityList.Sum(q => int.Parse(q.ProcessedQty));
-                // Step 1: Insert Quantities
-                await _repo.AddQuantitiesAsync(request.MachiningId, int.Parse(request.TotalQty), totalProcessed, "Processed");
-
-                // Step 2: Update Machining Status
-                await _repo.UpdateMachiningStatusAsync(request.MachiningId);
+                await _repo.ProcessQuantitiesAsync(request);
 
                 return Ok(new
                 {
                     success = true,
-                    message =  _userMessageService.GetMessage(1030),
-                    data = new { request.MachiningId, request.TotalQty, request.QuantityList }
+                    message = _userMessageService.GetMessage(1030),
+                    data = new { request.MachiningId, request.QuantityList }
                 });
             }
             catch (Exception ex)
@@ -158,6 +159,8 @@ namespace RouteCardProcess.Controllers
                 return StatusCode(500, new { success = false, message = _userMessageService.GetMessage(1003), error = ex.Message });
             }
         }
+
+
 
         [HttpPost("add-delays")]
         public async Task<IActionResult> AddDelays([FromBody] MachiningDelayRequest request)
