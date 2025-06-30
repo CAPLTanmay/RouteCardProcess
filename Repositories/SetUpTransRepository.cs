@@ -35,8 +35,15 @@ namespace RouteCardProcess.Repositories
             var setup = await connection.QueryFirstOrDefaultAsync<SetupMaster>(
                 "usp_GetSetUpByCompositeKey", parameters, commandType: CommandType.StoredProcedure);
 
+            var MachiningParameters = new
+            {
+                WorkCenterNo = workCenterNo,
+                ProductionOrderNo = workOrderNo, 
+                OperationNo = operationNo
+            };
+
             var machining = await connection.QueryFirstOrDefaultAsync<MachiningMaster>(
-                "usp_GetMachiningByCompositeKey", parameters, commandType: CommandType.StoredProcedure);
+                "usp_GetMachiningByCompositeKey", MachiningParameters, commandType: CommandType.StoredProcedure);
 
             if (setup == null && machining == null)
                 return (0, null, null, _userMessageService.GetMessage(1036), null, null);
@@ -88,10 +95,25 @@ namespace RouteCardProcess.Repositories
 
         public async Task<SetupMaster> CreateSetupAsync(SetupMasterDto request)
         {
-           // TimeSpan StandardSetupTime = ConvertMinutesToTimeSpan(request.StandardSetupTime);
+            // TimeSpan StandardSetupTime = ConvertMinutesToTimeSpan(request.StandardSetupTime);
             var SetupId = Guid.NewGuid().ToString().Substring(0, 8);
 
+            TimeSpan standardSetupTime;
+            if (TimeSpan.TryParse(request.StandardSetupTime, out var tsValue))
+            {
+                standardSetupTime = tsValue;
+            }
+            else if (double.TryParse(request.StandardSetupTime, out var mins))
+            {
+                standardSetupTime = TimeSpan.FromMinutes(mins);
+            }
+            else
+            {
+                standardSetupTime = TimeSpan.Zero;
+            }
+
             using var connection = CreateConnection();
+
             var parameters = new
             {
                 request.OperatorId,
@@ -100,10 +122,7 @@ namespace RouteCardProcess.Repositories
                 request.OperationNo,
                 request.ProductionOrderNo,
                 SetUpID = SetupId,
-                StandardSetupTime = double.TryParse(request.StandardSetupTime, out var mins)
-    ? TimeSpan.FromMinutes(mins)
-    : TimeSpan.Zero
-,
+                StandardSetupTime = standardSetupTime,
                 //request.StandardSetupTime,
                 SetupStatus = _userMessageService.GetMessage(1073),
                 OperatorStartTime = (DateTime?)null,

@@ -7,30 +7,30 @@ namespace RouteCardProcess.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class OrderTypeController : ControllerBase
+    public class LossOrderController : ControllerBase
     {
-        private readonly IOrderTypeRepository _orderTypeRepository;
+        private readonly ILossOrderRepository _lossOrderRepository;
         private readonly IUserMessageService _userMessageService;
 
-        public OrderTypeController(IOrderTypeRepository orderTypeRepository, IUserMessageService userMessageService)
+        public LossOrderController(ILossOrderRepository lossOrderRepository, IUserMessageService userMessageService)
         {
-            _orderTypeRepository = orderTypeRepository;
+            _lossOrderRepository = lossOrderRepository;
             _userMessageService = userMessageService;
         }
 
-        [HttpPost("addOrderType")]
-        public async Task<IActionResult> AddOrderType([FromBody] OrderTypeRequest request)
+        [HttpPost("addLossOrder")]
+        public async Task<IActionResult> AddLossOrder([FromBody] LossOrderRequest request)
         {
             try
             {
-                var rowsAffected = await _orderTypeRepository.AddOrderTypeAsync(request);
-                return rowsAffected > 0
+                var result = await _lossOrderRepository.AddLossOrderAsync(request);
+                return result > 0
                     ? Ok(new { message = _userMessageService.GetMessage(5003) })
                     : BadRequest(new { message = _userMessageService.GetMessage(5004) });
             }
-            catch (ApplicationException ex) when (ex.Message == "OrderType already exists")
+            catch (ApplicationException ex) when (ex.Message == "LossOrder already exists.")
             {
-                return Conflict(new { message = _userMessageService.GetMessage(1105) });
+                return Conflict(new { message = _userMessageService.GetMessage(1106) }); 
             }
             catch (Exception ex)
             {
@@ -38,13 +38,13 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-        [HttpPost("updateOrderType")]
-        public async Task<IActionResult> UpdateOrderType([FromBody] OrderTypeRequest request)
+        [HttpPost("updateLossOrder")]
+        public async Task<IActionResult> UpdateLossOrder([FromBody] LossOrderRequest request)
         {
             try
             {
-                var rowsAffected = await _orderTypeRepository.UpdateOrderTypeAsync(request);
-                return rowsAffected > 0
+                var result = await _lossOrderRepository.UpdateLossOrderAsync(request);
+                return result > 0
                     ? Ok(new { message = _userMessageService.GetMessage(1095) })
                     : BadRequest(new { message = _userMessageService.GetMessage(1096) });
             }
@@ -54,13 +54,13 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-        [HttpGet("allOrderTypes")]
-        public async Task<IActionResult> GetAllOrderTypes()
+        [HttpGet("allLossOrders")]
+        public async Task<IActionResult> GetAllLossOrders()
         {
             try
             {
-                var orderTypes = await _orderTypeRepository.GetAllOrderTypesAsync();
-                return Ok(orderTypes);
+                var data = await _lossOrderRepository.GetAllLossOrdersAsync();
+                return Ok(data);
             }
             catch (Exception ex)
             {
@@ -68,13 +68,14 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-        [HttpPost("deleteOrderType")]
-        public async Task<IActionResult> DeleteOrderType([FromBody] DeleteOrderTypeRequest request)
+        [HttpPost("deleteLossOrder")]
+        public async Task<IActionResult> DeleteLossOrder([FromBody] DeleteLossOrderRequest request)
         {
             try
             {
-                var rowsAffected = await _orderTypeRepository.DeleteOrderTypeAsync(request.Plant, request.OrderType);
-                return rowsAffected > 0
+                var result = await _lossOrderRepository.DeleteLossOrderAsync(request);
+
+                return result > 0
                     ? Ok(new { message = _userMessageService.GetMessage(1095) })
                     : BadRequest(new { message = _userMessageService.GetMessage(1096) });
             }

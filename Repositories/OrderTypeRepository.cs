@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using Dapper;
+using Microsoft.Data.SqlClient;
 using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model.Entities;
 
@@ -9,7 +10,7 @@ namespace RouteCardProcess.Repositories
     {
         private readonly SqlConnectionFactory _connectionFactory;
         private readonly ISystemLoggerRepository _systemLogger;
-
+       
         public OrderTypeRepository(SqlConnectionFactory connectionFactory, ISystemLoggerRepository systemLogger)
         {
             _connectionFactory = connectionFactory;
@@ -38,6 +39,10 @@ namespace RouteCardProcess.Repositories
                 );
 
                 return rowsAffected;
+            }
+            catch (SqlException ex) when (ex.Message.Contains("OrderType already exists"))
+            {
+                throw new ApplicationException("OrderType already exists.");
             }
             catch (Exception ex)
             {
