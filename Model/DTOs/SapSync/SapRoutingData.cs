@@ -50,5 +50,6 @@
         public string Material { get; set; }
         public string MaterialText { get; set; }
         public string? MaterialTextLink { get; set; }
+        public string OrderTypeDesc { get; set; }
     }
 }

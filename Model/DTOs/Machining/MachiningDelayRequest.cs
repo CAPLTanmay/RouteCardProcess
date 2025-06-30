@@ -4,20 +4,22 @@ namespace RouteCardProcess.Model.DTOs.Machining
 {
     public class MachiningDelayRequest
     {
-        [Required]
-        public string MachiningId { get; set; } = string.Empty;
-
-        public TimeSpan? TotalDelayedTime { get; set; }
-
-        public string? TotalQty { get; set; }
-
-        public List<MachiningDelayReasonCode>? Delays { get; set; } = new();
+        public string MachiningId { get; set; }
+        public List<MachiningExceptionsRequest> Exceptions { get; set; }
+        public List<MachiningIdleTimeRequest> IdleTimes { get; set; }
+    }
+    public class MachiningExceptionsRequest
+    {
+        public string ExceptionsReasonCode { get; set; }
+        public string Std_exceptions_ReasonCode { get; set; }
+        public string Std_exceptions_Remark { get; set; }
+        public TimeSpan? ExceptionsTime { get; set; }
     }
 
-    public class MachiningDelayReasonCode
+    public class MachiningIdleTimeRequest
     {
-        public string ProcessedQty { get; set; } = string.Empty;
-        public TimeSpan DelayTime { get; set; }
-        public string DelayReasonCode { get; set; } = string.Empty;
+        public string MSTIdleCode { get; set; }
+        public TimeSpan? SetupIdleTime { get; set; }
     }
 }
+

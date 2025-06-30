@@ -193,22 +193,77 @@ public class MachiningRepository : IMachiningRepository
         }
     }
 
-
-    public async Task AddDelaysAsync(string machiningId, int processedQty, TimeSpan delayTime, string reasonCode, TimeSpan totalDelayedTime)
+    public async Task<bool> AddDelaysAsync(MachiningDelayRequest request)
     {
-        using var connection = CreateConnection();
-        await connection.ExecuteAsync(
-            "usp_AddMachiningDelays",
-            new
+        using var connection = (SqlConnection)CreateConnection();
+        await connection.OpenAsync();
+        using var transaction = connection.BeginTransaction();
+
+        try
+        {
+            // Get operator info once
+            var machining = await connection.QueryFirstOrDefaultAsync<dynamic>(
+                "usp_GetMachiningStatusAndOperator",
+                new { MachiningID = request.MachiningId },
+                transaction,
+                commandType: CommandType.StoredProcedure
+            );
+
+            if (machining == null)
             {
-                MachiningID = machiningId,
-                ProcessedQty = processedQty,
-                ProcessQtyDelayTime = delayTime,
-                ReasonCode = reasonCode,
-                TotalDelayedTime = totalDelayedTime
-            },
-            commandType: CommandType.StoredProcedure
-        );
+                transaction.Rollback();
+                return false;
+            }
+
+            // Insert Exceptions if any
+            if (request.Exceptions?.Any() == true)
+            {
+                foreach (var exception in request.Exceptions)
+                {
+                    await connection.ExecuteAsync(
+                        "usp_InsertMachiningException",
+                        new
+                        {
+                            MachiningID = request.MachiningId,
+                            OperatorId = machining.OperatorId,
+                            exception.ExceptionsReasonCode,
+                            exception.Std_exceptions_ReasonCode,
+                            exception.ExceptionsTime,
+                            exception.Std_exceptions_Remark
+                        },
+                        transaction,
+                        commandType: CommandType.StoredProcedure
+                    );
+                }
+            }
+
+            // Insert Idle Times if any
+            if (request.IdleTimes?.Any() == true)
+            {
+                foreach (var idle in request.IdleTimes)
+                {
+                    await connection.ExecuteAsync(
+                        "usp_InsertMachiningIdle",
+                        new
+                        {
+                            MachiningID = request.MachiningId,
+                            OperatorId = machining.OperatorId,
+                            idle.MSTIdleCode,
+                            idle.SetupIdleTime
+                        },
+                        transaction,
+                        commandType: CommandType.StoredProcedure
+                    );
+                }
+            }     
+            transaction.Commit();
+            return true;
+        }
+        catch (Exception)
+        {
+            transaction.Rollback();
+            throw;
+        }
     }
     public async Task<MachiningMaster> GetByCompositeKeyAsync(string workCenterNo, string ProductionOrderNo, string operationNo)
     {

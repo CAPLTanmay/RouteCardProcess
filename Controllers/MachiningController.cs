@@ -160,43 +160,24 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-
-
         [HttpPost("add-delays")]
         public async Task<IActionResult> AddDelays([FromBody] MachiningDelayRequest request)
         {
             try
             {
-                if (request?.Delays == null || !request.Delays.Any())
-                    return Ok(new
-                    {
-                        success = true,
-                        message = _userMessageService.GetMessage(1034),
-                        data = new { request.MachiningId, request.TotalDelayedTime, request.Delays }
-                    });
+                var result = await _repo.AddDelaysAsync(request);
 
-                if (string.IsNullOrWhiteSpace(request.MachiningId))
-                    return BadRequest(new { success = false, message = _userMessageService.GetMessage(1024) });
-
-                var totalProcessed = request.Delays.Sum(d => int.Parse(d.ProcessedQty));
-                var delayCode = request.Delays.First().DelayReasonCode;
-                var delayTime = request.TotalDelayedTime ?? TimeSpan.Zero;
-
-                await _repo.AddDelaysAsync(request.MachiningId, totalProcessed, delayTime, delayCode, delayTime);
-
-                return Ok(new
-                {
-                    success = true,
-                    message = _userMessageService.GetMessage(1034),
-                    data = new { request.MachiningId, request.TotalDelayedTime, request.Delays }
-                });
+                return result
+                    ? Ok(new { message = _userMessageService.GetMessage(1034) })
+                    : BadRequest(new { message = _userMessageService.GetMessage(1035) });
             }
             catch (Exception ex)
             {
                 await _systemLogger.LogAsync("MachiningController", "add-delays", ex.ToString());
-                return StatusCode(500, new { success = false, message = _userMessageService.GetMessage(1003), error = ex.Message });
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
             }
         }
+
 
         [HttpGet("{machiningId}")]
         public async Task<IActionResult> GetById(string machiningId)
