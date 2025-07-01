@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using Azure.Core;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using RouteCardProcess.Interfaces;
@@ -24,6 +25,20 @@ public class MachiningRepository : IMachiningRepository
         using var connection = CreateConnection();
         var machiningId = Guid.NewGuid().ToString().Substring(0, 8);
 
+        TimeSpan StandardMachiningTime;
+        if (TimeSpan.TryParse(obj.StandardMachiningTime, out var tsValue))
+        {
+            StandardMachiningTime = tsValue;
+        }
+        else if (double.TryParse(obj.StandardMachiningTime, out var mins))
+        {
+            StandardMachiningTime = TimeSpan.FromMinutes(mins);
+        }
+        else
+        {
+            StandardMachiningTime = TimeSpan.Zero;
+        }
+
         var result = await connection.QueryFirstOrDefaultAsync<MachiningMaster>(
             "usp_CreateMachining", 
             new
@@ -34,11 +49,9 @@ public class MachiningRepository : IMachiningRepository
                 DepartmentId=obj.DepartmentId,
                 ProductionOrderNo = obj.ProductionOrderNo,
                 OperationNo = obj.OperationNo,
-                StandardMachiningTime = double.TryParse(obj.StandardMachiningTime, out var mins)
-    ? TimeSpan.FromMinutes(mins)
-    : TimeSpan.Zero
+                StandardMachiningTime = StandardMachiningTime,
 
-    },
+            },
             commandType: CommandType.StoredProcedure
         );
 

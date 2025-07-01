@@ -41,6 +41,16 @@ namespace RouteCardProcess.Controllers
                     data = data
                 });
             }
+            catch (HttpRequestException ex) when (ex.Message.Contains("400"))
+            {
+                await _systemLogger.LogAsync("ValidationController", "validate-workcenter", ex.ToString());
+                return BadRequest(new
+                {
+                    success = false,
+                    message = _userMessageService.GetMessage(1107),
+                    details = ex.Message
+                });
+            }
             catch (HttpRequestException ex)
             {
                 await _systemLogger.LogAsync("ValidationController", "validate-workcenter", ex.ToString());
@@ -77,6 +87,16 @@ namespace RouteCardProcess.Controllers
                     success = true,
                     message = _userMessageService.GetMessage(1065),
                     data = data
+                });
+            }
+            catch (HttpRequestException ex) when (ex.Message.Contains("400"))
+            {
+                await _systemLogger.LogAsync("ValidationController", "validate-order", ex.ToString());
+                return BadRequest(new
+                {
+                    success = false,
+                    message = _userMessageService.GetMessage(1107),
+                    details = ex.Message
                 });
             }
             catch (HttpRequestException ex)
@@ -118,6 +138,16 @@ namespace RouteCardProcess.Controllers
                     data = data
                 });
             }
+            catch (HttpRequestException ex) when (ex.Message.Contains("400"))
+            {
+                await _systemLogger.LogAsync("ValidationController", "routing-data", ex.ToString());
+                return BadRequest(new
+                {
+                    success = false,
+                    message = _userMessageService.GetMessage(1107),
+                    details = ex.Message
+                });
+            }
             catch (HttpRequestException ex)
             {
                 await _systemLogger.LogAsync("ValidationController", "routing-data", ex.ToString());
@@ -155,6 +185,16 @@ namespace RouteCardProcess.Controllers
                     success = true,
                     message = _userMessageService.GetMessage(1067),
                     data = data
+                });
+            }
+            catch (HttpRequestException ex) when (ex.Message.Contains("400"))
+            {
+                await _systemLogger.LogAsync("ValidationController", "loss-data", ex.ToString());
+                return BadRequest(new
+                {
+                    success = false,
+                    message = _userMessageService.GetMessage(1107),
+                    details = ex.Message
                 });
             }
             catch (HttpRequestException ex)
@@ -196,6 +236,16 @@ namespace RouteCardProcess.Controllers
                     data = data
                 });
             }
+            catch (HttpRequestException ex) when (ex.Message.Contains("400"))
+            {
+                await _systemLogger.LogAsync("ValidationController", "maintenance-notifications", ex.ToString());
+                return BadRequest(new
+                {
+                    success = false,
+                    message = _userMessageService.GetMessage(1107),
+                    details = ex.Message
+                });
+            }
             catch (HttpRequestException ex)
             {
                 await _systemLogger.LogAsync("ValidationController", "maintenance-notifications", ex.ToString());
@@ -232,6 +282,16 @@ namespace RouteCardProcess.Controllers
                     data = JsonSerializer.Deserialize<object>(response)
                 });
             }
+            catch (HttpRequestException ex) when (ex.Message.Contains("400"))
+            {
+                await _systemLogger.LogAsync("ValidationController", "updateWorkCenter", ex.ToString());
+                return BadRequest(new
+                {
+                    success = false,
+                    message = _userMessageService.GetMessage(1107),
+                    details = ex.Message
+                });
+            }
             catch (HttpRequestException ex)
             {
                 await _systemLogger.LogAsync("ValidationController", "updateWorkCenter", ex.ToString());
@@ -256,6 +316,16 @@ namespace RouteCardProcess.Controllers
                     success = true,
                     message = _userMessageService.GetMessage(1070),
                     data = JsonSerializer.Deserialize<object>(response)
+                });
+            }
+            catch (HttpRequestException ex) when (ex.Message.Contains("400"))
+            {
+                await _systemLogger.LogAsync("ValidationController", "confirmProductionOrder", ex.ToString());
+                return BadRequest(new
+                {
+                    success = false,
+                    message = _userMessageService.GetMessage(1107),
+                    details = ex.Message
                 });
             }
             catch (HttpRequestException ex)
