@@ -39,24 +39,31 @@ public class MachiningRepository : IMachiningRepository
             StandardMachiningTime = TimeSpan.Zero;
         }
 
-        var result = await connection.QueryFirstOrDefaultAsync<MachiningMaster>(
-            "usp_CreateMachining", 
-            new
-            {
-                MachiningId = machiningId,
-                OperatorId = obj.OperatorId,
-                WorkCenterNo = obj.WorkCenterNo,
-                DepartmentId=obj.DepartmentId,
-                ProductionOrderNo = obj.ProductionOrderNo,
-                OperationNo = obj.OperationNo,
-                StandardMachiningTime = StandardMachiningTime,
+        var parameters = new
+        {
+            MachiningId = machiningId,
+            OperatorId = obj.OperatorId,
+            WorkCenterNo = obj.WorkCenterNo,
+            DepartmentId = obj.DepartmentId,
+            ProductionOrderNo = obj.ProductionOrderNo,
+            OperationNo = obj.OperationNo,
+            StandardMachiningTime = StandardMachiningTime
+        };
 
-            },
-            commandType: CommandType.StoredProcedure
-        );
+        using var multi = await connection.QueryMultipleAsync("usp_CreateMachining", parameters, commandType: CommandType.StoredProcedure);
 
-        return result;
+        var machiningData = await multi.ReadFirstOrDefaultAsync<MachiningMaster>();
+        var totalQty = await multi.ReadFirstOrDefaultAsync<int>();
+
+        // Optional: you can set TotalQty into the MachiningMaster object if you’ve added a property for it
+        if (machiningData != null)
+        {
+            machiningData.TotalQty = totalQty;
+        }
+
+        return machiningData;
     }
+
 
 
     public async Task<string> StartMachiningAsync(string machiningId)

@@ -16,5 +16,7 @@
         public DateTime? MachiningEndTime { get; set; }
         public string? TotalMachiningTime { get; set; }
         public string ActualMachiningTime { get; set; }
+        public int TotalQty { get; set; }
+
     }
 }
