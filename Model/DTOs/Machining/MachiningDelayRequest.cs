@@ -19,7 +19,7 @@ namespace RouteCardProcess.Model.DTOs.Machining
     public class MachiningIdleTimeRequest
     {
         public string MSTIdleCode { get; set; }
-        public TimeSpan? SetupIdleTime { get; set; }
+        public TimeSpan? MachiningIdleTime { get; set; }
     }
 }
 

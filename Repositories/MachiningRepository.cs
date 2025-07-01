@@ -262,7 +262,7 @@ public class MachiningRepository : IMachiningRepository
                             MachiningID = request.MachiningId,
                             OperatorId = machining.OperatorId,
                             idle.MSTIdleCode,
-                            idle.SetupIdleTime
+                            idle.MachiningIdleTime
                         },
                         transaction,
                         commandType: CommandType.StoredProcedure

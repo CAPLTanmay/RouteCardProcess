@@ -88,6 +88,7 @@ builder.Services.AddHttpClient<IValidationRepository, ValidationRepository>();
 builder.Services.AddScoped<ISystemLoggerRepository, SystemLoggerRepository>();
 builder.Services.AddScoped<IOrderTypeRepository, OrderTypeRepository>();
 builder.Services.AddScoped<ILossOrderRepository, LossOrderRepository>();
+builder.Services.AddScoped<IBreakdownGroupCodeRepository, BreakdownGroupCodeRepository>();
 
 // Services
 builder.Services.AddScoped<IEmailService, EmailService>();
