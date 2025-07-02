@@ -46,20 +46,20 @@ namespace RouteCardProcess.Repositories
             }
         }
 
-        public async Task<int> UpdateLossOrderAsync(LossOrderRequest request)
+        public async Task<int> UpdateLossOrderAsync(DeleteLossOrderRequest request)
         {
             try
             {
                 using var connection = _connectionFactory.CreateConnection();
                 await connection.OpenAsync();
 
+                var currentYearMonth = DateTime.Now.ToString("yyyyMM");
+
                 var parameters = new
                 {
                     request.LossOrderDepartment,
-                    request.LossOrderYearMonth,
-                    request.LossOrderNumber,
-                    request.LossOrderDesc,
-                    request.IsActive
+                    LossOrderYearMonth = currentYearMonth,
+                    request.LossOrderNumber
                 };
 
                 return await connection.ExecuteAsync("usp_UpdateLossOrder", parameters, commandType: CommandType.StoredProcedure);

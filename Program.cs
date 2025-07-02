@@ -89,6 +89,7 @@ builder.Services.AddScoped<ISystemLoggerRepository, SystemLoggerRepository>();
 builder.Services.AddScoped<IOrderTypeRepository, OrderTypeRepository>();
 builder.Services.AddScoped<ILossOrderRepository, LossOrderRepository>();
 builder.Services.AddScoped<IBreakdownGroupCodeRepository, BreakdownGroupCodeRepository>();
+builder.Services.AddScoped<IBreakdownCodeRepository, BreakdownCodeRepository>();
 
 // Services
 builder.Services.AddScoped<IEmailService, EmailService>();

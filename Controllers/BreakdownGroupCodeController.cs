@@ -19,7 +19,7 @@ namespace RouteCardProcess.Controllers
             _userMessageService = userMessageService;
         }
 
-        [HttpPost("add")]
+        [HttpPost("addBreakdownGroupCode")]
         public async Task<IActionResult> Add([FromBody] BreakdownGroupCodeRequest request)
         {
             try
@@ -39,7 +39,7 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-        [HttpPost("update")]
+        [HttpPost("updateBreakdownGroupCode")]
         public async Task<IActionResult> Update([FromBody] BreakdownGroupCodeRequest request)
         {
             try
@@ -55,7 +55,7 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-        [HttpGet("all")]
+        [HttpGet("getAllBreakdownGroupCode")]
         public async Task<IActionResult> GetAll()
         {
             try
@@ -69,7 +69,7 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-        [HttpPost("delete")]
+        [HttpPost("deleteBreakdownGroupCode")]
         public async Task<IActionResult> Delete([FromBody] string breakdownCodeGroup)
         {
             try
@@ -84,6 +84,21 @@ namespace RouteCardProcess.Controllers
                 return StatusCode(500, new { message = _userMessageService.GetMessage(5001), error = ex.Message });
             }
         }
+
+        [HttpPost("getBreakdownCode")]
+        public async Task<IActionResult> GetByGroup([FromBody] BreakdownCodesByGroup request)
+        {
+            try
+            {
+                var result = await _repository.GetByGroupAsync(request.BreakdownCodeGroup);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5001), error = ex.Message });
+            }
+        }
+
     }
 
 }

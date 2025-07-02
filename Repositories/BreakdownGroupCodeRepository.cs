@@ -98,5 +98,29 @@ namespace RouteCardProcess.Repositories
                 return 0;
             }
         }
+        public async Task<IEnumerable<BreakdownCodeRequest>> GetByGroupAsync(string breakdownCodesByGroup)
+        {
+            try
+            {
+                using var connection = _connectionFactory.CreateConnection();
+                await connection.OpenAsync();
+
+                var parameters = new { BreakdownCodeGroup = breakdownCodesByGroup };
+
+                var result = await connection.QueryAsync<BreakdownCodeRequest>(
+                    "usp_GetBreakdownCodesByGroup",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await _systemLogger.LogAsync("BreakdownCodeRepository", "GetByGroupAsync", ex.ToString());
+                return Enumerable.Empty<BreakdownCodeRequest>();
+            }
+        }
+
     }
 }

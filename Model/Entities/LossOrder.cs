@@ -12,7 +12,7 @@
     public class DeleteLossOrderRequest
     {
         public string LossOrderDepartment { get; set; }
-        public int LossOrderYearMonth { get; set; }
+        public int? LossOrderYearMonth { get; set; }
         public long LossOrderNumber { get; set; }
     }
 }

@@ -7,30 +7,26 @@ namespace RouteCardProcess.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class LossOrderController : ControllerBase
+    public class BreakdownCodeController : ControllerBase
     {
-        private readonly ILossOrderRepository _lossOrderRepository;
+        private readonly IBreakdownCodeRepository _repository;
         private readonly IUserMessageService _userMessageService;
 
-        public LossOrderController(ILossOrderRepository lossOrderRepository, IUserMessageService userMessageService)
+        public BreakdownCodeController(IBreakdownCodeRepository repository, IUserMessageService userMessageService)
         {
-            _lossOrderRepository = lossOrderRepository;
+            _repository = repository;
             _userMessageService = userMessageService;
         }
 
-        [HttpPost("addLossOrder")]
-        public async Task<IActionResult> AddLossOrder([FromBody] LossOrderRequest request)
+        [HttpPost("addBreakdownCode")]
+        public async Task<IActionResult> Add([FromBody] BreakdownCodeRequest request)
         {
             try
             {
-                var result = await _lossOrderRepository.AddLossOrderAsync(request);
+                var result = await _repository.AddAsync(request);
                 return result > 0
                     ? Ok(new { message = _userMessageService.GetMessage(5003) })
                     : BadRequest(new { message = _userMessageService.GetMessage(5004) });
-            }
-            catch (ApplicationException ex) when (ex.Message == "LossOrder already exists.")
-            {
-                return Conflict(new { message = _userMessageService.GetMessage(1106) }); 
             }
             catch (Exception ex)
             {
@@ -38,12 +34,12 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-        [HttpPost("updateLossOrder")]
-        public async Task<IActionResult> UpdateLossOrder([FromBody] DeleteLossOrderRequest request)
+        [HttpPost("updateBreakdownCode")]
+        public async Task<IActionResult> Update([FromBody] BreakdownCodeRequest request)
         {
             try
             {
-                var result = await _lossOrderRepository.UpdateLossOrderAsync(request);
+                var result = await _repository.UpdateAsync(request);
                 return result > 0
                     ? Ok(new { message = _userMessageService.GetMessage(1095) })
                     : BadRequest(new { message = _userMessageService.GetMessage(1096) });
@@ -54,13 +50,13 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-        [HttpGet("allLossOrders")]
-        public async Task<IActionResult> GetAllLossOrders()
+        [HttpGet("alBreakdownCodel")]
+        public async Task<IActionResult> GetAll()
         {
             try
             {
-                var data = await _lossOrderRepository.GetAllLossOrdersAsync();
-                return Ok(data);
+                var list = await _repository.GetAllAsync();
+                return Ok(list);
             }
             catch (Exception ex)
             {
@@ -68,13 +64,12 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-        [HttpPost("deleteLossOrder")]
-        public async Task<IActionResult> DeleteLossOrder([FromBody] DeleteLossOrderRequest request)
+        [HttpPost("deleteBreakdownCode")]
+        public async Task<IActionResult> Delete([FromBody] BreakdownCodeRequest request)
         {
             try
             {
-                var result = await _lossOrderRepository.DeleteLossOrderAsync(request);
-
+                var result = await _repository.DeleteAsync(request.BreakdownCodeGroup, request.BreakdownCode);
                 return result > 0
                     ? Ok(new { message = _userMessageService.GetMessage(1095) })
                     : BadRequest(new { message = _userMessageService.GetMessage(1096) });

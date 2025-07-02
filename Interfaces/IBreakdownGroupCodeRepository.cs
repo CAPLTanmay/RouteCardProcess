@@ -8,5 +8,7 @@ namespace RouteCardProcess.Interfaces
         Task<int> UpdateAsync(BreakdownGroupCodeRequest request);
         Task<IEnumerable<BreakdownGroupCodeRequest>> GetAllAsync();
         Task<int> DeleteAsync(string breakdownCodeGroup);
+        Task<IEnumerable<BreakdownCodeRequest>> GetByGroupAsync(string breakdownCodesByGroup);
+
     }
 }
