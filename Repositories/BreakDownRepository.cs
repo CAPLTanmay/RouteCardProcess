@@ -1,7 +1,10 @@
-﻿using System.Data;
+﻿using System.Collections.Generic;
+using System.Data;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using RouteCardProcess.Interfaces;
+using RouteCardProcess.Model.DTOs.BreakDownDto;
+using RouteCardProcess.Model.DTOs.SapValidation;
 
 namespace RouteCardProcess.Repositories
 {
@@ -10,12 +13,13 @@ namespace RouteCardProcess.Repositories
         private readonly SqlConnectionFactory _connectionFactory;
         private readonly IEmailService _emailService;
         private readonly ISystemLoggerRepository _systemLogger;
-
-        public BreakDownRepository(SqlConnectionFactory connectionFactory, IEmailService emailService,ISystemLoggerRepository systemLogger)
+        private readonly IValidationRepository _sapBreakdownService;
+        public BreakDownRepository(SqlConnectionFactory connectionFactory, IEmailService emailService,ISystemLoggerRepository systemLogger, IValidationRepository sapBreakdownService)
         {
             _connectionFactory = connectionFactory;
             _emailService = emailService;
             _systemLogger = systemLogger;
+            _sapBreakdownService = sapBreakdownService;
         }
 
         private SqlConnection CreateConnection()
@@ -23,60 +27,115 @@ namespace RouteCardProcess.Repositories
             return _connectionFactory.CreateConnection();
         }
 
-        public async Task<bool> StartBreakDownAsync(string workCenterNo, string operatorId, string? breakDownReasonCode = null)
+        public async Task<BreakDownResponse> StartBreakDownAsync(BreakDownStartRequest request)
         {
             using var connection = CreateConnection();
-            var parameters = new
-            {
-                WorkCenterNo = workCenterNo,
-                OperatorId = operatorId,
-                BreakDownReasonCode = breakDownReasonCode
-            };
+
+            bool isDbSuccess = false, isMailSent = false, isSapPosted = false;
+            string equipmentNo = "";
+            string notifNum = "";
 
             try
             {
-                var rows = await connection.ExecuteAsync("usp_StartBreakDown", parameters, commandType: CommandType.StoredProcedure);
+                // Step 0: Find EquipmentNo
+                equipmentNo = await connection.ExecuteScalarAsync<string>(
+     "usp_GetEquipmentNoByWorkCenter",
+     new { request.WorkCenterNo },
+     commandType: CommandType.StoredProcedure
+ );
 
-                if (rows > 0)
+                // Step 1: SAP POST
+                try
                 {
-                    // Fetch mail template from MailMaster
+                    var sapPayload = new SAPBreakdownRequest
+                    {
+                        WORKCENTER = request.WorkCenterNo,
+                        EQUIPMENT = equipmentNo,
+                        CODE_GRP = request.BreakdownCodeGroup ?? "",
+                        CODE = request.BreakdownCode ?? "",
+                        BRKDWN_DATE = DateTime.Now.ToString("yyyy-MM-dd"),
+                        BRKDWN_TIME = DateTime.Now.ToString("HH:mm:ss")
+                    };
+
+                    var sapResponse = await _sapBreakdownService.PostBreakdownAsync(sapPayload);
+                    if (sapResponse != null)
+                    {
+                        isSapPosted = true;
+                        notifNum = sapResponse.NOTIF_NUM;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    await _systemLogger.LogAsync("BreakDownRepository", "SAP_PostError", ex.ToString());
+                }
+
+                // Step 2: DB Insert
+                try
+                {
+                    var dbParams = new
+                    {
+                        request.WorkCenterNo,
+                        request.OperatorId,
+                        request.BreakdownCodeGroup,
+                        request.BreakdownCode,
+                        EquipmentNo = equipmentNo,
+                        BreakNotificationNo = notifNum
+                    };
+
+                    var rows = await connection.ExecuteAsync("usp_StartBreakDown", dbParams, commandType: CommandType.StoredProcedure);
+                    isDbSuccess = rows > 0;
+                }
+                catch (Exception dbEx)
+                {
+                    await _systemLogger.LogAsync("BreakDownRepository", "DB_InsertError", dbEx.ToString());
+                }
+
+                // Step 3: Email
+                try
+                {
                     var mailTemplate = await connection.QueryFirstOrDefaultAsync<dynamic>(
-                     "usp_GetOnlineBreakdownMailTemplate",new { Group = "GP_BR" },commandType: CommandType.StoredProcedure);
+                        "usp_GetOnlineBreakdownMailTemplate",
+                        new { Group = "GP_BR" },
+                        commandType: CommandType.StoredProcedure);
 
                     if (mailTemplate != null)
                     {
-                        string reasonText = string.IsNullOrEmpty(breakDownReasonCode) ? "Unknown Reason" : breakDownReasonCode;
-
-                        // Replace tokens if present
-                        string subject = mailTemplate.MailSubject;
-                        subject = subject.Replace("{workCenterNo}", workCenterNo);
-                        string body = mailTemplate.MailBody
-                            .Replace("{workCenterNo}", workCenterNo)
-                            .Replace("{reasonText}", reasonText)
+                        string subject = (mailTemplate.MailSubject ?? "").Replace("{workCenterNo}", request.WorkCenterNo);
+                        string body = (mailTemplate.MailBody ?? "")
+                            .Replace("{workCenterNo}", request.WorkCenterNo)
+                            .Replace("{reasonText}", request.BreakdownCode ?? "Unknown Reason")
                             .Replace("{Time}", DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss"));
 
-                        await _emailService.SendEmailAsync(
-                            subject,
-                            body,
-                            mailTemplate.MailTo,
-                            mailTemplate.MailCC,
-                            mailTemplate.MailBCC,
-                            mailTemplate.MailFrom
-                        );
-
-                        return true;
+                        isMailSent = await _emailService.SendEmailAsync(subject, body, mailTemplate.MailTo, mailTemplate.MailCC, mailTemplate.MailBCC, mailTemplate.MailFrom);
                     }
-                    return false;
+                }
+                catch (Exception mailEx)
+                {
+                    await _systemLogger.LogAsync("BreakDownRepository", "Mail_SendError", mailEx.ToString());
                 }
 
-                return false;
+                return new BreakDownResponse
+                {
+                    IsDbSuccess = isDbSuccess,
+                    IsMailSent = isMailSent,
+                    IsSapPosted = isSapPosted,
+                    Message = $"SAP: {(isSapPosted ? "Success" : "Fail")}, DB: {(isDbSuccess ? "Success" : "Fail")}, Mail: {(isMailSent ? "Success" : "Fail")}"
+                };
             }
             catch (Exception ex)
             {
                 await _systemLogger.LogAsync("BreakDownRepository", "StartBreakDownAsync", ex.ToString());
-                throw;
+
+                return new BreakDownResponse
+                {
+                    IsDbSuccess = false,
+                    IsMailSent = false,
+                    IsSapPosted = false,
+                    Message = "Exception occurred while processing breakdown."
+                };
             }
         }
+
 
 
         public async Task<bool> EndBreakDownAsync(string workCenterNo, string? operatorId = null, string? breakDownReasonCode = null)

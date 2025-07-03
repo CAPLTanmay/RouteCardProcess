@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Xml.Linq;
 using RouteCardProcess.Interfaces;
+using RouteCardProcess.Model.DTOs.BreakDownDto;
 using RouteCardProcess.Model.DTOs.SapValidation;
 
 namespace RouteCardProcess.Repositories
@@ -11,8 +12,9 @@ namespace RouteCardProcess.Repositories
     {
         private readonly HttpClient _httpClient;
         private readonly string _baseUrl;
+        private readonly ISystemLoggerRepository _systemLogger;
 
-        public ValidationRepository(HttpClient httpClient, IConfiguration configuration)
+        public ValidationRepository(HttpClient httpClient, IConfiguration configuration, ISystemLoggerRepository systemLogger)
         {
             _httpClient = httpClient;
 
@@ -23,6 +25,7 @@ namespace RouteCardProcess.Repositories
             var byteArray = Encoding.ASCII.GetBytes($"{username}:{password}");
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
+            _systemLogger = systemLogger;
         }
 
         public async Task<string> ValidateWorkCenterAsync(string workCenter)
@@ -158,6 +161,42 @@ namespace RouteCardProcess.Repositories
 
             return await response.Content.ReadAsStringAsync();
         }
+
+        public async Task<SAPBreakdownRequest?> PostBreakdownAsync(SAPBreakdownRequest request)
+        {
+            string url = _baseUrl + "ZBREAKDOWN_NOTIFSet";
+            var (csrfToken, cookie) = await FetchCsrfTokenAsync(url);
+
+            var postRequest = new HttpRequestMessage(HttpMethod.Post, url);
+            postRequest.Headers.Add("X-CSRF-Token", csrfToken);
+            if (!string.IsNullOrEmpty(cookie))
+                postRequest.Headers.Add("Cookie", cookie);
+
+            postRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            // Serialize with exact casing
+            var json = JsonSerializer.Serialize(request, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = null
+            });
+
+            postRequest.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.SendAsync(postRequest);
+
+            // Log on 400 for debugging
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                await _systemLogger.LogAsync("SAP", "PostBreakdownAsync", $"SAP 400 Error: {error}");
+                return null;
+            }
+
+            var responseJson = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<SAPBreakdownRequest>(responseJson);
+        }
+
+
     }
 
 }

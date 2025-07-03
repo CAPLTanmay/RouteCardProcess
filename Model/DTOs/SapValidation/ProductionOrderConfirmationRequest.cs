@@ -46,4 +46,14 @@ namespace RouteCardProcess.Model.DTOs.SapValidation
         [JsonPropertyName("FULL_CONF_FLAG")]
         public string FULL_CONF_FLAG { get; set; }
     }
+    public class SAPBreakdownRequest
+    {
+        public string WORKCENTER { get; set; } = "";
+        public string EQUIPMENT { get; set; } = "";
+        public string CODE_GRP { get; set; } = "";
+        public string CODE { get; set; } = "";
+        public string BRKDWN_DATE { get; set; } = "";
+        public string BRKDWN_TIME { get; set; } = "";
+        public string NOTIF_NUM { get; set; } = "";
+    }
 }

@@ -166,7 +166,7 @@ public class MachiningRepository : IMachiningRepository
         );
     }
 
-    public async Task ProcessQuantitiesAsync(AddQuantity request)
+    public async Task<ProcessQuantityResponse> ProcessQuantitiesAsync(AddQuantity request)
     {
         using var connection = (SqlConnection)CreateConnection();
         await connection.OpenAsync();
@@ -187,10 +187,31 @@ public class MachiningRepository : IMachiningRepository
                     totalHandover += qty;
             }
 
-            // Decide status
+            int totalProcessed = totalCompleted + totalHandover;
+
+            //  Get PendingQty from DB
+            int pendingQty = await connection.QueryFirstOrDefaultAsync<int>(
+                "usp_GetPendingQty",
+                new { MachiningID = request.MachiningId },
+                transaction,
+                commandType: CommandType.StoredProcedure
+            );
+
+            // Validate before insert
+            if (totalProcessed > pendingQty)
+            {
+                transaction.Rollback(); // Still rollback transaction
+                return new ProcessQuantityResponse
+                {
+                    Success = false,
+                    Message = $"Processed quantity ({totalProcessed}) exceeds pending quantity ({pendingQty})."
+                };
+            }
+
+            //  Decide status
             string newStatus = totalHandover > 0 ? "Handover" : "Completed";
 
-            // Call SP once with everything
+            // Insert into DB
             await connection.ExecuteAsync(
                 "usp_AddQuantities",
                 new
@@ -205,11 +226,21 @@ public class MachiningRepository : IMachiningRepository
             );
 
             transaction.Commit();
+
+            return new ProcessQuantityResponse
+            {
+                Success = true,
+                Message = "Quantities processed successfully."
+            };
         }
-        catch
+        catch (Exception ex)
         {
             transaction.Rollback();
-            throw;
+            return new ProcessQuantityResponse
+            {
+                Success = false,
+                Message = "An error occurred: " + ex.Message
+            };
         }
     }
 

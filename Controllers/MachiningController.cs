@@ -144,7 +144,17 @@ namespace RouteCardProcess.Controllers
                 if (string.IsNullOrWhiteSpace(request.MachiningId))
                     return BadRequest(new { success = false, message = _userMessageService.GetMessage(1029) });
 
-                await _repo.ProcessQuantitiesAsync(request);
+                // 🛠️ Call the updated method and capture result
+                var result = await _repo.ProcessQuantitiesAsync(request);
+
+                if (!result.Success)
+                {
+                    return Ok(new
+                    {
+                        success = false,
+                        message = result.Message
+                    });
+                }
 
                 return Ok(new
                 {
@@ -156,9 +166,15 @@ namespace RouteCardProcess.Controllers
             catch (Exception ex)
             {
                 await _systemLogger.LogAsync("MachiningController", "add-quantity", ex.ToString());
-                return StatusCode(500, new { success = false, message = _userMessageService.GetMessage(1003), error = ex.Message });
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = _userMessageService.GetMessage(1003),
+                    error = ex.Message
+                });
             }
         }
+
 
         [HttpPost("add-delays")]
         public async Task<IActionResult> AddDelays([FromBody] MachiningDelayRequest request)

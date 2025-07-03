@@ -50,7 +50,7 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-        [HttpGet("alBreakdownCodel")]
+        [HttpGet("allBreakdownCode")]
         public async Task<IActionResult> GetAll()
         {
             try

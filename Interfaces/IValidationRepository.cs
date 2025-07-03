@@ -11,5 +11,6 @@ namespace RouteCardProcess.Interfaces
         Task<string> GetMaintenanceNotificationsAsync();
         Task<string> UpdateWorkCenterAsync(WorkCenterUpdateRequest request);
         Task<string> ConfirmProductionOrderAsync(ProductionOrderConfirmationRequest request);
+        Task<SAPBreakdownRequest?> PostBreakdownAsync(SAPBreakdownRequest request);
     }
 }
