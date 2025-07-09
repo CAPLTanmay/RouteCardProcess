@@ -241,6 +241,7 @@ namespace RouteCardProcess.Repositories
         {
             using var connection = CreateConnection();
 
+            // Step 1: Fetch initial breakdowns
             var breakDownList = (await connection.QueryAsync<BreakDownRecordDto>(
                 @"SELECT TOP (1000) 
             WorkCenterNo,
@@ -257,6 +258,7 @@ namespace RouteCardProcess.Repositories
         FROM TransBreakdown
         ORDER BY BreakdownStartTime DESC")).ToList();
 
+            // Step 2: Filter out records not yet completed in SAP
             var pendingNotifNums = breakDownList
                 .Where(b =>
                     !string.IsNullOrWhiteSpace(b.BreakNotificationNo) &&
@@ -268,6 +270,7 @@ namespace RouteCardProcess.Repositories
             if (!pendingNotifNums.Any())
                 return breakDownList;
 
+            // Step 3: Fetch SAP statuses in bulk
             var sapResults = await _sapBreakdownService.GetBulkBreakdownStatusesAsync(pendingNotifNums);
 
             foreach (var sap in sapResults)
@@ -282,24 +285,25 @@ namespace RouteCardProcess.Repositories
                 if (string.IsNullOrWhiteSpace(sapStatus)) continue;
 
                 var statusDescription = await connection.ExecuteScalarAsync<string>(
-                    @"SELECT BreakdownStatusDescription FROM MSTBreakdownStatus WHERE BreakdownStatus = @StatusCode",
+                    @"SELECT BreakdownStatusDescription 
+              FROM MSTBreakdownStatus 
+              WHERE BreakdownStatus = @StatusCode",
                     new { StatusCode = sapStatus });
 
                 string finalStatusToSave = !string.IsNullOrWhiteSpace(statusDescription) ? statusDescription : sapStatus;
 
+                // Parse SAP end datetime if both fields exist
                 DateTime? sapEndDateTime = null;
                 if (!string.IsNullOrWhiteSpace(sap.NOTIF_CLOSE_DATE) && !string.IsNullOrWhiteSpace(sap.NOTIF_CLOSE_TIME))
                 {
-                    if (DateTime.TryParse($"{sap.NOTIF_CLOSE_DATE} {sap.NOTIF_CLOSE_TIME}", out DateTime parsedEnd))
-                    {
+                    DateTime.TryParse($"{sap.NOTIF_CLOSE_DATE} {sap.NOTIF_CLOSE_TIME}", out var parsedEnd);
+                    if (parsedEnd != DateTime.MinValue)
                         sapEndDateTime = parsedEnd;
-                    }
                 }
 
                 foreach (var record in localRecords)
                 {
-                    if (string.IsNullOrWhiteSpace(record.BreakNotificationNo))
-                        continue;
+                    if (string.IsNullOrWhiteSpace(record.BreakNotificationNo)) continue;
 
                     bool statusChanged = !string.Equals(record.BreakdownNotificationStatus, finalStatusToSave, StringComparison.OrdinalIgnoreCase);
                     bool canUpdateEndTime = sapEndDateTime.HasValue && !record.BreakdownEndTime.HasValue;
@@ -308,8 +312,8 @@ namespace RouteCardProcess.Repositories
 
                     if (canUpdateEndTime && record.BreakdownStartTime.HasValue)
                     {
-                        // Get threshold
                         const int MinorCategoryId = 1;
+
                         var thresholdMinutes = await connection.ExecuteScalarAsync<int>(
                             @"SELECT DATEDIFF(MINUTE, '00:00:00', BrekdownTime) 
                       FROM MSTBreakdownTimeCategory 
@@ -323,10 +327,8 @@ namespace RouteCardProcess.Repositories
                     if (statusChanged || canUpdateEndTime)
                     {
                         var updateQuery = new StringBuilder("UPDATE TransBreakdown SET BreakdownNotificationStatus = @Status");
-                        if (canUpdateEndTime)
-                            updateQuery.Append(", BreakdownEndTime = @EndTime");
-                        if (!string.IsNullOrWhiteSpace(newCategory))
-                            updateQuery.Append(", BreakdownCategory = @Category");
+                        if (canUpdateEndTime) updateQuery.Append(", BreakdownEndTime = @EndTime");
+                        if (!string.IsNullOrWhiteSpace(newCategory)) updateQuery.Append(", BreakdownCategory = @Category");
 
                         updateQuery.Append(" WHERE BreakNotificationNo = @notifNum");
 
@@ -338,17 +340,32 @@ namespace RouteCardProcess.Repositories
                             notifNum = record.BreakNotificationNo
                         });
 
+                        // Update DTO
                         record.BreakdownNotificationStatus = finalStatusToSave;
-                        if (canUpdateEndTime)
-                            record.BreakdownEndTime = sapEndDateTime;
-                        if (!string.IsNullOrWhiteSpace(newCategory))
-                            record.BreakdownCategory = newCategory;
+                        if (canUpdateEndTime) record.BreakdownEndTime = sapEndDateTime;
+                        if (!string.IsNullOrWhiteSpace(newCategory)) record.BreakdownCategory = newCategory;
                     }
                 }
             }
 
+            // Step 4: Compute TotalBreakdownTime in DTO
+            foreach (var record in breakDownList)
+            {
+                if (record.BreakdownStartTime.HasValue && record.BreakdownEndTime.HasValue)
+                {
+                    record.TotalBreakdownTime =
+                        record.BreakdownEndTime.Value - record.BreakdownStartTime.Value;   // TimeSpan
+                }
+                else
+                {
+                    record.TotalBreakdownTime = null;
+                }
+            }
+
+
             return breakDownList;
         }
+
 
     }
 }
