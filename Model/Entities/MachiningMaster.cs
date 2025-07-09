@@ -17,6 +17,13 @@
         public string? TotalMachiningTime { get; set; }
         public string ActualMachiningTime { get; set; }
         public int TotalQty { get; set; }
-
+        public string OrderTypeDesc { get; set; }
     }
+
+    public class SapRoutingInfo
+    {
+        public int TotalQty { get; set; }
+        public string OrderTypeDesc { get; set; }
+    }
+
 }

@@ -5,6 +5,7 @@ using System.Data;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace RouteCardProcess.Repositories
 {
@@ -127,11 +128,9 @@ namespace RouteCardProcess.Repositories
 
             foreach (var item in data)
             {
-                item.MaterialTextLink = $"{_materialBaseUrl}{item.Material}";
+                item.MaterialTextLink = $"{_materialBaseUrl}{Regex.Replace(item.Material, @"\d{3}$", "")}";
             }
-
             return data;
-
         }
 
     }

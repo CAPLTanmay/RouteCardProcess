@@ -131,7 +131,7 @@ namespace RouteCardProcess.Repositories
                 };
             }
         }
-        // Repository Method for Breakdown End
+
         public async Task<BreakDownResponse> EndBreakDownAsync(string notifNum)
         {
             using var connection = CreateConnection();
@@ -155,44 +155,44 @@ namespace RouteCardProcess.Repositories
                     isSapPosted = true;
                     const int MinorBreakdownCategoryId = 1;
 
-
-                    // Step A: Get Start Time
+                    // Step A: Get StartTime & EndTime using SP
                     var breakdownTimestamps = await connection.QueryFirstOrDefaultAsync<(DateTime? StartTime, DateTime? EndTime)>(
-                        "SELECT BreakdownStartTime AS StartTime, GETDATE() AS EndTime FROM TransBreakdown WHERE BreakNotificationNo = @notifNum",
-                        new { notifNum });
+                        "usp_GetBreakdownTimestampsByNotifNo",
+                        new { notifNum },
+                        commandType: CommandType.StoredProcedure);
 
                     if (breakdownTimestamps.StartTime != null && breakdownTimestamps.EndTime != null)
                     {
                         // Step B: Calculate total duration in minutes
                         var totalMinutes = (breakdownTimestamps.EndTime.Value - breakdownTimestamps.StartTime.Value).TotalMinutes;
 
-                        // Step C: Get 30-minute threshold from MSTBreakdownTimeCategory (smallest one)
-                        var thresholdMinutes = await connection.ExecuteScalarAsync<int>(@"SELECT DATEDIFF(MINUTE, '00:00:00', BrekdownTime) FROM MSTBreakdownTimeCategory WHERE TimeCategoryId = @Id",
-     new { Id = MinorBreakdownCategoryId });
+                        // Step C: Get threshold using SP
+                        var thresholdMinutes = await connection.ExecuteScalarAsync<int>(
+                            "usp_GetBreakdownThresholdMinutes",
+                            new { TimeCategoryId = MinorBreakdownCategoryId },
+                            commandType: CommandType.StoredProcedure);
 
-
-                        // Step D: Decide category in C#
+                        // Step D: Decide Category
                         string category = totalMinutes <= thresholdMinutes ? "Minor Breakdown" : "Major Breakdown";
 
-                        // Step E: Get Description from MSTBreakdownStatus
+                        // Step E: Get Status Description from SP
                         var statusDescription = await connection.ExecuteScalarAsync<string>(
-                            @"SELECT BreakdownStatusDescription FROM MSTBreakdownStatus WHERE BreakdownStatus = @StatusCode",
-                            new { StatusCode = sapResponse.STATUS });
+                            "usp_GetBreakdownStatusDescription",
+                            new { StatusCode = sapResponse.STATUS },
+                            commandType: CommandType.StoredProcedure);
 
-                        //  Save as description if found, else fallback to raw STATUS code
                         string statusToSave = !string.IsNullOrWhiteSpace(statusDescription)
                             ? statusDescription
                             : sapResponse.STATUS;
 
-                        // Step F: Update TransBreakdown
+                        // Step F: Update TransBreakdown using SP
                         var rows = await connection.ExecuteAsync(
-                            @"UPDATE TransBreakdown SET BreakdownEndTime = GETDATE(), BreakdownNotificationStatus = @Status, BreakdownCategory = @Category WHERE BreakNotificationNo = @notifNum",
-                            new { notifNum, Status = statusToSave, Category = category });
-
+                            "usp_UpdateBreakdownOnEnd",
+                            new { notifNum, Status = statusToSave, Category = category },
+                            commandType: CommandType.StoredProcedure);
 
                         isDbSuccess = rows > 0;
                     }
-
                 }
 
                 // Step 3: Mail
@@ -206,7 +206,9 @@ namespace RouteCardProcess.Repositories
                     if (mailTemplate != null)
                     {
                         string subject = (mailTemplate.MailSubject ?? "").Replace("{notifNum}", notifNum);
-                        string body = (mailTemplate.MailBody ?? "").Replace("{notifNum}", notifNum).Replace("{Time}", DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss"));
+                        string body = (mailTemplate.MailBody ?? "")
+                            .Replace("{notifNum}", notifNum)
+                            .Replace("{Time}", DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss"));
 
                         isMailSent = await _emailService.SendEmailAsync(subject, body, mailTemplate.MailTo, mailTemplate.MailCC, mailTemplate.MailBCC, mailTemplate.MailFrom);
                     }
@@ -237,32 +239,19 @@ namespace RouteCardProcess.Repositories
                 };
             }
         }
+
         public async Task<IEnumerable<BreakDownRecordDto>> GetAllBreakDownsAsync()
         {
             using var connection = CreateConnection();
 
-            // Step 1: Fetch initial breakdowns
+            // Step 1: Fetch breakdowns via SP
             var breakDownList = (await connection.QueryAsync<BreakDownRecordDto>(
-                @"SELECT TOP (1000) 
-            WorkCenterNo,
-            OperatorId,
-            BreakdownCategory,
-            BreakdownCodeGroup,
-            BreakdownCode,
-            BreakNotificationNo,
-            BreakdownNotificationStatus,
-            BreakdownStartTime,
-            BreakdownEndTime,
-            TotalBreakdownTime,
-            EquipmentNo
-        FROM TransBreakdown
-        ORDER BY BreakdownStartTime DESC")).ToList();
+                "usp_GetAllBreakdowns", commandType: CommandType.StoredProcedure)).ToList();
 
-            // Step 2: Filter out records not yet completed in SAP
+            // Step 2: Filter incomplete SAP statuses
             var pendingNotifNums = breakDownList
-                .Where(b =>
-                    !string.IsNullOrWhiteSpace(b.BreakNotificationNo) &&
-                    !string.Equals(b.BreakdownNotificationStatus, "Notification completed", StringComparison.OrdinalIgnoreCase))
+                .Where(b => !string.IsNullOrWhiteSpace(b.BreakNotificationNo)
+                    && !string.Equals(b.BreakdownNotificationStatus, "Notification completed", StringComparison.OrdinalIgnoreCase))
                 .Select(b => b.BreakNotificationNo)
                 .Distinct()
                 .ToList();
@@ -270,29 +259,26 @@ namespace RouteCardProcess.Repositories
             if (!pendingNotifNums.Any())
                 return breakDownList;
 
-            // Step 3: Fetch SAP statuses in bulk
+            // Step 3: Call SAP and sync data
             var sapResults = await _sapBreakdownService.GetBulkBreakdownStatusesAsync(pendingNotifNums);
 
             foreach (var sap in sapResults)
             {
-                var notifNum = sap.NOTIF_NUM;
-                if (string.IsNullOrWhiteSpace(notifNum)) continue;
+                if (string.IsNullOrWhiteSpace(sap.NOTIF_NUM)) continue;
 
-                var localRecords = breakDownList.Where(b => b.BreakNotificationNo == notifNum).ToList();
+                var localRecords = breakDownList.Where(b => b.BreakNotificationNo == sap.NOTIF_NUM).ToList();
                 if (!localRecords.Any()) continue;
 
                 var sapStatus = sap.STATUS?.Trim();
                 if (string.IsNullOrWhiteSpace(sapStatus)) continue;
 
                 var statusDescription = await connection.ExecuteScalarAsync<string>(
-                    @"SELECT BreakdownStatusDescription 
-              FROM MSTBreakdownStatus 
-              WHERE BreakdownStatus = @StatusCode",
-                    new { StatusCode = sapStatus });
+                    "usp_GetBreakdownStatusDescription",
+                    new { StatusCode = sapStatus },
+                    commandType: CommandType.StoredProcedure);
 
                 string finalStatusToSave = !string.IsNullOrWhiteSpace(statusDescription) ? statusDescription : sapStatus;
 
-                // Parse SAP end datetime if both fields exist
                 DateTime? sapEndDateTime = null;
                 if (!string.IsNullOrWhiteSpace(sap.NOTIF_CLOSE_DATE) && !string.IsNullOrWhiteSpace(sap.NOTIF_CLOSE_TIME))
                 {
@@ -309,16 +295,14 @@ namespace RouteCardProcess.Repositories
                     bool canUpdateEndTime = sapEndDateTime.HasValue && !record.BreakdownEndTime.HasValue;
 
                     string? newCategory = null;
-
                     if (canUpdateEndTime && record.BreakdownStartTime.HasValue)
                     {
                         const int MinorCategoryId = 1;
 
                         var thresholdMinutes = await connection.ExecuteScalarAsync<int>(
-                            @"SELECT DATEDIFF(MINUTE, '00:00:00', BrekdownTime) 
-                      FROM MSTBreakdownTimeCategory 
-                      WHERE TimeCategoryId = @Id",
-                            new { Id = MinorCategoryId });
+                            "usp_GetBreakdownThresholdMinutes",
+                            new { TimeCategoryId = MinorCategoryId },
+                            commandType: CommandType.StoredProcedure);
 
                         var durationMinutes = (sapEndDateTime.Value - record.BreakdownStartTime.Value).TotalMinutes;
                         newCategory = durationMinutes <= thresholdMinutes ? "Minor Breakdown" : "Major Breakdown";
@@ -326,19 +310,17 @@ namespace RouteCardProcess.Repositories
 
                     if (statusChanged || canUpdateEndTime)
                     {
-                        var updateQuery = new StringBuilder("UPDATE TransBreakdown SET BreakdownNotificationStatus = @Status");
-                        if (canUpdateEndTime) updateQuery.Append(", BreakdownEndTime = @EndTime");
-                        if (!string.IsNullOrWhiteSpace(newCategory)) updateQuery.Append(", BreakdownCategory = @Category");
-
-                        updateQuery.Append(" WHERE BreakNotificationNo = @notifNum");
-
-                        await connection.ExecuteAsync(updateQuery.ToString(), new
-                        {
-                            Status = finalStatusToSave,
-                            EndTime = sapEndDateTime,
-                            Category = newCategory,
-                            notifNum = record.BreakNotificationNo
-                        });
+                        await connection.ExecuteAsync(
+                            "usp_UpdateBreakdownStatusAndTime",
+                            new
+                            {
+                                BreakNotificationNo = record.BreakNotificationNo,
+                                Status = finalStatusToSave,
+                                EndTime = sapEndDateTime,
+                                Category = newCategory
+                            },
+                            commandType: CommandType.StoredProcedure
+                        );
 
                         // Update DTO
                         record.BreakdownNotificationStatus = finalStatusToSave;
@@ -348,13 +330,12 @@ namespace RouteCardProcess.Repositories
                 }
             }
 
-            // Step 4: Compute TotalBreakdownTime in DTO
+            // Step 4: Compute total time
             foreach (var record in breakDownList)
             {
                 if (record.BreakdownStartTime.HasValue && record.BreakdownEndTime.HasValue)
                 {
-                    record.TotalBreakdownTime =
-                        record.BreakdownEndTime.Value - record.BreakdownStartTime.Value;   // TimeSpan
+                    record.TotalBreakdownTime = record.BreakdownEndTime.Value - record.BreakdownStartTime.Value;
                 }
                 else
                 {
@@ -362,10 +343,7 @@ namespace RouteCardProcess.Repositories
                 }
             }
 
-
             return breakDownList;
         }
-
-
     }
 }

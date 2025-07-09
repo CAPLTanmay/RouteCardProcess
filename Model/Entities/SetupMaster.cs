@@ -15,5 +15,7 @@
         public DateTime? SetupStartTime { get; set; }
         public DateTime? SetupEndTime { get; set; }
         public string? ActualSetupTime { get; set; }
-        public string? TotalSetupTime { get; set; }     }
+        public string? TotalSetupTime { get; set; }
+        public string OrderTypeDesc { get; set; }
+    }
 }
