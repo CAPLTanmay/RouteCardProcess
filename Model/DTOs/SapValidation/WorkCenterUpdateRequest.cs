@@ -23,4 +23,13 @@ namespace RouteCardProcess.Model.DTOs.SapValidation
         public string? QUANTITY { get; set; }
     }
 
+    public class SAPBreakdownStatusResponse
+    {
+        public string NOTIF_NUM { get; set; }
+        public string STATUS { get; set; }
+        public string NOTIF_CLOSE_DATE { get; set; }
+        public string NOTIF_CLOSE_TIME { get; set; }
+    }
+
+
 }

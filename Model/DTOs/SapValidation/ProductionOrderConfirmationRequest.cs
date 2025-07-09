@@ -56,4 +56,13 @@ namespace RouteCardProcess.Model.DTOs.SapValidation
         public string BRKDWN_TIME { get; set; } = "";
         public string NOTIF_NUM { get; set; } = "";
     }
+    public class SAPBreakdownEnvelope
+    {
+        public SAPBreakdownRequest d { get; set; }
+    }
+    public class SAPBreakdownCloseRequest
+    {
+        public string NOTIF_NUM { get; set; } = "";
+        public string STATUS { get; set; } = " ";
+    }
 }

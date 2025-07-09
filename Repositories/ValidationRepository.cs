@@ -1,9 +1,7 @@
 ﻿using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using System.Xml.Linq;
 using RouteCardProcess.Interfaces;
-using RouteCardProcess.Model.DTOs.BreakDownDto;
 using RouteCardProcess.Model.DTOs.SapValidation;
 
 namespace RouteCardProcess.Repositories
@@ -193,9 +191,73 @@ namespace RouteCardProcess.Repositories
             }
 
             var responseJson = await response.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<SAPBreakdownRequest>(responseJson);
+            var envelope = JsonSerializer.Deserialize<SAPBreakdownEnvelope>(responseJson);
+            return envelope?.d;
+        }
+        public async Task<SAPBreakdownCloseRequest?> PostBreakdownCloseAsync(SAPBreakdownCloseRequest request)
+        {
+            string url = _baseUrl + "ZNOTIF_CLOSESet";
+            var (csrfToken, cookie) = await FetchCsrfTokenAsync(url);
+
+            var postRequest = new HttpRequestMessage(HttpMethod.Post, url);
+            postRequest.Headers.Add("X-CSRF-Token", csrfToken);
+            if (!string.IsNullOrEmpty(cookie))
+                postRequest.Headers.Add("Cookie", cookie);
+
+            postRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            var json = JsonSerializer.Serialize(request, new JsonSerializerOptions { PropertyNamingPolicy = null });
+            postRequest.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.SendAsync(postRequest);
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                await _systemLogger.LogAsync("SAP", "PostBreakdownCloseAsync", $"SAP Close Error: {error}");
+                return null;
+            }
+
+            var responseJson = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(responseJson);
+            var root = doc.RootElement.GetProperty("d");
+            return JsonSerializer.Deserialize<SAPBreakdownCloseRequest>(root.GetRawText());
         }
 
+        public async Task<List<SAPBreakdownStatusResponse>> GetBulkBreakdownStatusesAsync(List<string> notifNums)
+        {
+            var validNotifNums = notifNums
+                .Where(n => !string.IsNullOrWhiteSpace(n))
+                .Select(n => n.PadLeft(12, '0'))
+                .ToList();
+
+            if (!validNotifNums.Any())
+                return new List<SAPBreakdownStatusResponse>();
+
+            string joinedNums = string.Join(",", validNotifNums);
+            string url = $"{_baseUrl}ZNOTIF_INFOSet?$filter=NOTIF_NUM eq '{joinedNums}'&$format=json";
+
+            var response = await _httpClient.GetAsync(url);
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(json);
+
+            var results = doc.RootElement.GetProperty("d").GetProperty("results");
+
+            var list = new List<SAPBreakdownStatusResponse>();
+            foreach (var item in results.EnumerateArray())
+            {
+                list.Add(new SAPBreakdownStatusResponse
+                {
+                    NOTIF_NUM = item.GetProperty("NOTIF_NUM").GetString(),
+                    STATUS = item.GetProperty("STATUS").GetString(),
+                    NOTIF_CLOSE_DATE = item.GetProperty("NOTIF_CLOSE_DATE").GetString(),
+                    NOTIF_CLOSE_TIME = item.GetProperty("NOTIF_CLOSE_TIME").GetString()
+                });
+            }
+
+            return list;
+        }
 
     }
 

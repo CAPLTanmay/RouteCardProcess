@@ -1,8 +1,6 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model.DTOs.BreakDownDto;
-using Microsoft.Extensions.Logging;
 using RouteCardProcess.Repositories;
 
 namespace RouteCardProcess.Controllers
@@ -41,23 +39,45 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-
         [HttpPost("end")]
-        public async Task<IActionResult> End([FromBody] BreakDownEndRequest request)
+        public async Task<IActionResult> EndBreakdown([FromBody] BreakDownEndRequest request)
         {
             try
             {
-                var success = await _repo.EndBreakDownAsync(request.WorkCenterNo, request.OperatorId, request.BreakDownReasonCode);
-                if (success)
-                    return Ok(new { message = _userMessageService.GetMessage(1013) });
-                else
-                    return NotFound(new { message = _userMessageService.GetMessage(1014) });
+                if (string.IsNullOrWhiteSpace(request.NOTIF_NUM))
+                    return BadRequest(new { success = false, message = "Notification number is required." });
+
+                var result = await _repo.EndBreakDownAsync(request.NOTIF_NUM);
+
+                return Ok(new
+                {
+                    message = result.Message,
+                    dbStatus = result.IsDbSuccess,
+                    mailStatus = result.IsMailSent,
+                    sapStatus = result.IsSapPosted
+                });
             }
             catch (Exception ex)
             {
-                await _systemLogger.LogAsync("BreakDownController", "end", ex.ToString());
-                return StatusCode(500, new { message = _userMessageService.GetMessage(5001) });
+                await _systemLogger.LogAsync("BreakDownController", "End", ex.ToString());
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5001), dbStatus = false, mailStatus = false, sapStatus = false });
             }
         }
+
+        [HttpGet("list")]
+        public async Task<IActionResult> GetAllBreakdowns()
+        {
+            try
+            {
+                var data = await _repo.GetAllBreakDownsAsync();
+                return Ok(new { success = true, data });
+            }
+            catch (Exception ex)
+            {
+                await _systemLogger.LogAsync("BreakDownController", "GetAllBreakdowns", ex.ToString());
+                return StatusCode(500, new { success = false, message = _userMessageService.GetMessage(5001) });
+            }
+        }
+
     }
 }
