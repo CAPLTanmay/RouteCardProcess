@@ -8,7 +8,7 @@ namespace RouteCardProcess.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+
     public class RouteCardReportController : ControllerBase
     {
         private readonly IRouteCardReportRepository _repo;
@@ -32,7 +32,7 @@ namespace RouteCardProcess.Controllers
 
                 var result = await _repo.GetRouteCardReportAsync(request.WorkOrderNo);
                 if (result == null || !result.Any())
-                    return NotFound(new { message =_userMessageService.GetMessage(1063) });
+                    return NotFound(new { message = _userMessageService.GetMessage(1063) });
 
                 return Ok(result);
             }
@@ -42,5 +42,45 @@ namespace RouteCardProcess.Controllers
                 return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
             }
         }
+
+        [HttpPost("get-report")]
+        public async Task<IActionResult> GetRouteCardReportFiltered([FromBody] RouteCardReportFilterRequest request)
+        {
+            try
+            {
+                var result = await _repo.GetRouteCardReportFilteredAsync(request);
+                if (result == null || !result.Any())
+                    return NotFound(new { message = _userMessageService.GetMessage(1063) });
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                await _systemLogger.LogAsync("RouteCardReportController", "get-filtered", ex.ToString());
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
+            }
+        }
+
+        [HttpPost("loss-order-report")]
+        public async Task<IActionResult> GetNavLossByIdPost([FromBody] LossOrderRequestDto request)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(request.SetupId) && string.IsNullOrWhiteSpace(request.MachiningId))
+                    return BadRequest(new { message = "Either SetupId or MachiningId must be provided." });
+
+                var result = await _repo.GetLossOrderByIdsAsync(request.SetupId, request.MachiningId);
+                if (result == null)
+                    return NotFound(new { message = "No NAV loss data found for the provided ID." });
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                await _systemLogger.LogAsync("RouteCardReportController", "nav-loss-post-id", ex.ToString());
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
+            }
+        }
+
     }
 }
