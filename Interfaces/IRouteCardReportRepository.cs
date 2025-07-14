@@ -8,8 +8,7 @@ namespace RouteCardProcess.Interfaces
         Task<IEnumerable<RouteCardReportDto>> GetRouteCardReportFilteredAsync(RouteCardReportFilterRequest request);
         Task<LossOrderResponseDto> GetLossOrderByIdsAsync(OrderReportRequestDto request);
         Task<ExceptionReportResponseDto?> GetExceptionReportAsync(OrderReportRequestDto request);
-
-
+        Task<TimingInfoDto?> GetTimingInfoAsync(OrderReportRequestDto request);
         Task UpdateSetupTimesAsync(SetupUpdateDto dto);
         Task UpdateIdleTimesAsync(string setupId, int operatorId, List<IdleTimeUpdateDto> idleTimes);
         Task UpdateExceptionTimesAsync(string setupId, int operatorId, List<ExceptionTimeUpdateDto> exceptionTimes);

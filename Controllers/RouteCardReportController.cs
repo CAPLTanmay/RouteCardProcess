@@ -102,6 +102,37 @@ namespace RouteCardProcess.Controllers
             }
         }
 
+        [HttpPost("combined-order-report")]
+        public async Task<IActionResult> GetCombinedOrderReport([FromBody] OrderReportRequestDto request)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(request.SetupId) && string.IsNullOrWhiteSpace(request.MachiningId))
+                    return BadRequest(new { message = "Either SetupId or MachiningId must be provided." });
+                var timingInfoTask = _repo.GetTimingInfoAsync(request);
+                var navLossTask = _repo.GetLossOrderByIdsAsync(request);
+                var exceptionReportTask = _repo.GetExceptionReportAsync(request);
+            
+
+                await Task.WhenAll(timingInfoTask,navLossTask, exceptionReportTask);
+
+                var response = new CombinedOrderReportResponseDto
+                {
+                    TimingInfo = timingInfoTask.Result,
+                    NavLossData = navLossTask.Result,
+                    ExceptionReportData = exceptionReportTask.Result                    
+                };
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                await _systemLogger.LogAsync("RouteCardReportController", "combined-order-report", ex.ToString());
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
+            }
+        }
+
+
 
         [HttpPost("update-all")]
         public async Task<IActionResult> UpdateAll([FromBody] FullUpdateDto dto)

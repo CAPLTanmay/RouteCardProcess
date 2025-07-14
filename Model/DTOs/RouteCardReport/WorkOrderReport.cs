@@ -150,5 +150,41 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
             writer.WriteStringValue(value.ToString(Format));
         }
     }
+    public class CombinedOrderReportResponseDto
+    {
+        public TimingInfoDto? TimingInfo { get; set; }
+        public LossOrderResponseDto? NavLossData { get; set; }
+        public ExceptionReportResponseDto? ExceptionReportData { get; set; }
+    }
+
+    public class TimingInfoDto
+    {
+        [JsonConverter(typeof(DateOnlyConverter))]
+        public DateTime? SetupStartDate { get; set; }
+
+        public TimeSpan? SetupStartTime { get; set; }
+
+        [JsonConverter(typeof(DateOnlyConverter))]
+        public DateTime? SetupEndDate { get; set; }
+
+        public TimeSpan? SetupEndTime { get; set; }
+
+        public TimeSpan? StandardSetupTime { get; set; }
+        public TimeSpan? TotalSetupTime { get; set; }
+
+        [JsonConverter(typeof(DateOnlyConverter))]
+        public DateTime? MachiningStartDate { get; set; }
+
+        public TimeSpan? MachiningStartTime { get; set; }
+
+        [JsonConverter(typeof(DateOnlyConverter))]
+        public DateTime? MachiningEndDate { get; set; }
+
+        public TimeSpan? MachiningEndTime { get; set; }
+
+        public TimeSpan? StandardMachiningTime { get; set; }
+        public TimeSpan? TotalMachiningTime { get; set; }
+    }
+
 
 }

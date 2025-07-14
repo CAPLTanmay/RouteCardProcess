@@ -50,9 +50,9 @@
 
     public class MachiningExceptionUpdateDto
     {
+        public TimeSpan NewExceptionsTime { get; set; }
         public string StdExceptionsReasonCode { get; set; }
         public string ExceptionsReasonCode { get; set; }
-        public TimeSpan NewExceptionsTime { get; set; }
     }
 
     public class MachiningOperatorQtyUpdateDto

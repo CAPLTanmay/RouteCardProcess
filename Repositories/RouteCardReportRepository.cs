@@ -224,6 +224,68 @@ namespace RouteCardProcess.Repositories
             };
         }
 
+        public async Task<TimingInfoDto?> GetTimingInfoAsync(OrderReportRequestDto request)
+        {
+            using var connection = _connectionFactory.CreateConnection();
+            await connection.OpenAsync();
+
+            var timingInfo = new TimingInfoDto();
+
+            if (!string.IsNullOrEmpty(request.MachiningId))
+            {
+                var machiningQuery = @"
+            SELECT 
+                StandardMachiningTime,
+                CONVERT(DATE, MachiningStartTime) AS MachiningStartDate,
+                CONVERT(TIME, MachiningStartTime) AS MachiningStartTime,
+                CONVERT(DATE, MachiningEndTime) AS MachiningEndDate,
+                CONVERT(TIME, MachiningEndTime) AS MachiningEndTime,
+                TotalMachiningTime
+            FROM Trans_Machining 
+            WHERE MachiningId = @MachiningId";
+
+                var machiningResult = await connection.QueryFirstOrDefaultAsync<TimingInfoDto>(machiningQuery, new { request.MachiningId });
+                if (machiningResult != null)
+                {
+                    timingInfo.StandardMachiningTime = machiningResult.StandardMachiningTime;
+                    timingInfo.MachiningStartDate = machiningResult.MachiningStartDate;
+                    timingInfo.MachiningStartTime = machiningResult.MachiningStartTime;
+                    timingInfo.MachiningEndDate = machiningResult.MachiningEndDate;
+                    timingInfo.MachiningEndTime = machiningResult.MachiningEndTime;
+                    timingInfo.TotalMachiningTime = machiningResult.TotalMachiningTime;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(request.SetupId))
+            {
+                var setupQuery = @"
+            SELECT 
+                StandardSetupTime,
+                CONVERT(DATE, SetupStartTime) AS SetupStartDate,
+                CONVERT(TIME, SetupStartTime) AS SetupStartTime,
+                CONVERT(DATE, SetupEndTime) AS SetupEndDate,
+                CONVERT(TIME, SetupEndTime) AS SetupEndTime,
+                TotalSetupTime
+            FROM Trans_Setup 
+            WHERE SetupId = @SetupId";
+
+                var setupResult = await connection.QueryFirstOrDefaultAsync<TimingInfoDto>(setupQuery, new { request.SetupId });
+                if (setupResult != null)
+                {
+                    timingInfo.StandardSetupTime = setupResult.StandardSetupTime;
+                    timingInfo.SetupStartDate = setupResult.SetupStartDate;
+                    timingInfo.SetupStartTime = setupResult.SetupStartTime;
+                    timingInfo.SetupEndDate = setupResult.SetupEndDate;
+                    timingInfo.SetupEndTime = setupResult.SetupEndTime;
+                    timingInfo.TotalSetupTime = setupResult.TotalSetupTime;
+                }
+            }
+
+            return timingInfo;
+        }
+
+
+
         public async Task UpdateSetupTimesAsync(SetupUpdateDto dto)
         {
             using var connection = _connectionFactory.CreateConnection();
