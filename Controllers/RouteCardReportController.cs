@@ -62,14 +62,14 @@ namespace RouteCardProcess.Controllers
         }
 
         [HttpPost("loss-order-report")]
-        public async Task<IActionResult> GetNavLossByIdPost([FromBody] LossOrderRequestDto request)
+        public async Task<IActionResult> GetNavLossByIdPost([FromBody] OrderReportRequestDto request)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(request.SetupId) && string.IsNullOrWhiteSpace(request.MachiningId))
                     return BadRequest(new { message = "Either SetupId or MachiningId must be provided." });
 
-                var result = await _repo.GetLossOrderByIdsAsync(request.SetupId, request.MachiningId);
+                var result = await _repo.GetLossOrderByIdsAsync(request);
                 if (result == null)
                     return NotFound(new { message = "No NAV loss data found for the provided ID." });
 
@@ -81,6 +81,69 @@ namespace RouteCardProcess.Controllers
                 return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
             }
         }
+        [HttpPost("get-exception-report")]
+        public async Task<IActionResult> GetExceptionReport([FromBody] OrderReportRequestDto request)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(request.SetupId) && string.IsNullOrWhiteSpace(request.MachiningId))
+                    return BadRequest(new { message = "Either SetupId or MachiningId must be provided." });
 
+                var result = await _repo.GetExceptionReportAsync(request);
+                if (result == null)
+                    return NotFound(new { message = "No exception data found for the provided ID(s)." });
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                await _systemLogger.LogAsync("RouteCardReportController", "get-exception-report", ex.ToString());
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
+            }
+        }
+
+
+        [HttpPost("update-all")]
+        public async Task<IActionResult> UpdateAll([FromBody] FullUpdateDto dto)
+        {
+            if (dto.Setup == null && dto.Machining == null)
+                return BadRequest(new { Message = "At least one of Setup or Machining must be provided." });
+
+            try
+            {
+                if (dto.Setup != null)
+                {
+                    if (dto.Setup.SetupStartTime.HasValue || dto.Setup.SetupEndTime.HasValue)
+                        await _repo.UpdateSetupTimesAsync(dto.Setup);
+
+                    if (dto.Setup.IdleTimes?.Any() == true)
+                        await _repo.UpdateIdleTimesAsync(dto.Setup.SetUpID, dto.Setup.UpdatedOperatorId, dto.Setup.IdleTimes);
+
+                    if (dto.Setup.ExceptionTimes?.Any() == true)
+                        await _repo.UpdateExceptionTimesAsync(dto.Setup.SetUpID, dto.Setup.UpdatedOperatorId, dto.Setup.ExceptionTimes);
+                }
+
+                if (dto.Machining != null)
+                {
+                    if (dto.Machining.MachiningStartTime.HasValue || dto.Machining.MachiningEndTime.HasValue)
+                        await _repo.UpdateMachiningTimesAsync(dto.Machining);
+
+                    if (dto.Machining.IdleTimes?.Any() == true)
+                        await _repo.UpdateMachiningIdleTimesAsync(dto.Machining.MachiningId, dto.Machining.UpdatedOperatorId, dto.Machining.IdleTimes);
+
+                    if (dto.Machining.ExceptionTimes?.Any() == true)
+                        await _repo.UpdateMachiningExceptionTimesAsync(dto.Machining.MachiningId, dto.Machining.UpdatedOperatorId, dto.Machining.ExceptionTimes);
+
+                    if (dto.Machining.OperatorQuantities?.Any() == true)
+                        await _repo.UpdateMachiningOperatorQuantitiesAsync(dto.Machining.MachiningId, dto.Machining.OperatorQuantities);
+                }
+
+                return Ok(new { Message = "All applicable updates applied successfully." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Error = ex.Message });
+            }
+        }
     }
 }

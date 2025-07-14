@@ -52,15 +52,17 @@ public class MachiningRepository : IMachiningRepository
 
         using var multi = await connection.QueryMultipleAsync("usp_CreateMachining", parameters, commandType: CommandType.StoredProcedure);
 
-        // ✅ FIRST result set: Trans_Machining + Operator
+        //  FIRST result set: Trans_Machining + Operator
         var machiningData = await multi.ReadFirstOrDefaultAsync<MachiningMaster>();
 
-        // ✅ SECOND result set: SAP Routing Info
+        //  SECOND result set: SAP Routing Info
         var sapInfo = await multi.ReadFirstOrDefaultAsync<SapRoutingInfo>();
 
         if (machiningData != null && sapInfo != null)
         {
             machiningData.TotalQty = sapInfo.TotalQty;
+            machiningData.S_ConfirmedQuantity = sapInfo.S_ConfirmedQuantity;
+            machiningData.L_CompletedQty = sapInfo.L_CompletedQty;
             machiningData.OrderTypeDesc = sapInfo.OrderTypeDesc;
         }
 

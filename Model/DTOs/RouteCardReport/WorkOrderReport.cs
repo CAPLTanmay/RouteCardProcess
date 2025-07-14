@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace RouteCardProcess.Model.DTOs.RouteCardReport
 {
@@ -8,7 +11,7 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
         public string WorkOrderNo { get; set; }
     }
 
-    public class LossOrderRequestDto
+    public class OrderReportRequestDto
     {
         public string? SetupId { get; set; }
         public string? MachiningId { get; set; }
@@ -46,8 +49,15 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
         public int Pending_qty { get; set; }
         public int CompletedQty { get; set; }
         public string SetupId { get; set; }
-        public DateTime SetupStartTime { get; set; }
-        public DateTime SetupEndTime { get; set; }
+        [JsonConverter(typeof(DateOnlyConverter))]
+        public DateTime SetupStartDate { get; set; }
+        public TimeSpan SetupStartTime { get; set; } // for the TIME part 
+
+        [JsonConverter(typeof(DateOnlyConverter))]
+        public DateTime SetupEndDate { get; set; }
+        public TimeSpan SetupEndTime { get; set; } // for the TIME part 
+
+        public TimeSpan StandardSetupTime { get; set; }
         public int ActualSetupTime { get; set; }
 
         public int TotalSetupIdleMinutes { get; set; }
@@ -59,8 +69,14 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
         public DateTime? SetupOperatorStartTime { get; set; }
         public DateTime? SetupOperatorEndTime { get; set; }
         public string MachiningId { get; set; }
-        public DateTime MachiningStartTime { get; set; }
-        public DateTime MachiningEndTime { get; set; }
+        [JsonConverter(typeof(DateOnlyConverter))]
+        public DateTime MachiningStartDate { get; set; }
+        public TimeSpan MachiningStartTime { get; set; } // for the TIME part 
+
+        [JsonConverter(typeof(DateOnlyConverter))]
+        public DateTime MachiningEndDate { get; set; }
+        public TimeSpan MachiningEndTime { get; set; } // for the TIME part 
+        public TimeSpan StandardMachiningTime { get; set; }
         public int ActualMachiningTime { get; set; }
         public int TotalMachiningIdleMinutes { get; set; }
         public string TotalMachiningIdle_HHMMSS { get; set; }
@@ -72,7 +88,8 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
         public DateTime? MachiningOperatorEndTime { get; set; }
         public int ActualOperationTime { get; set; }
         public int IdleOperationTime { get; set; }
-        public DateTime? FinishDate {get;set;}
+        public int ExceptionOperationTime { get; set; }
+        public DateTime? FinishDate { get; set; }
         public int ActualLaborTime { get; set; }
         public decimal ActualLaborTime_Hours { get; set; }
     }
@@ -102,5 +119,36 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
     }
 
 
+    public class ExceptionRecordDto
+    {
+        public string OperatorId { get; set; }
+        public string ExceptionsReasonCode { get; set; }
+        public string StdExceptionsReasonCode { get; set; }
+        public TimeSpan ExceptionsTime { get; set; }
+        public string StdExceptionsRemark { get; set; }
+    }
+
+    public class ExceptionReportResponseDto
+    {
+        public string? SetupId { get; set; }
+        public string? MachiningId { get; set; }
+        public List<ExceptionRecordDto> SetupExceptions { get; set; } = new();
+        public List<ExceptionRecordDto> MachiningExceptions { get; set; } = new();
+    }
+
+    public class DateOnlyConverter : JsonConverter<DateTime>
+    {
+        private const string Format = "yyyy-MM-dd";
+
+        public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            return DateTime.ParseExact(reader.GetString()!, Format, null);
+        }
+
+        public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
+        {
+            writer.WriteStringValue(value.ToString(Format));
+        }
+    }
 
 }

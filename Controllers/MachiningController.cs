@@ -144,7 +144,7 @@ namespace RouteCardProcess.Controllers
                 if (string.IsNullOrWhiteSpace(request.MachiningId))
                     return BadRequest(new { success = false, message = _userMessageService.GetMessage(1029) });
 
-                // 🛠️ Call the updated method and capture result
+                // Call the updated method and capture result
                 var result = await _repo.ProcessQuantitiesAsync(request);
 
                 if (!result.Success)
