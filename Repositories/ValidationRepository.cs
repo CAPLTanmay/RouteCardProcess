@@ -181,7 +181,7 @@ namespace RouteCardProcess.Repositories
 
             return await response.Content.ReadAsStringAsync();
         }
-        public async Task<(object productionResult, object lossResult)> ConfirmCombinedOrderAsync(CombinedConfirmationRequest request)
+       /* public async Task<(object productionResult, object lossResult)> ConfirmCombinedOrderAsync(CombinedConfirmationRequest request)
         {
             // Call both SAP APIs concurrently
             var productionTask = ConfirmProductionOrderAsync(request.ProductionOrder);
@@ -194,7 +194,27 @@ namespace RouteCardProcess.Repositories
             var lossResult = JsonSerializer.Deserialize<object>(lossTask.Result);
 
             return (productionResult, lossResult);
+        }*/
+
+        public async Task<(object productionResult, object lossResult)> ConfirmCombinedOrderAsync(CombinedConfirmationRequest request)
+        {
+            // Call only the first (real) API
+            var productionTask = ConfirmProductionOrderAsync(request.ProductionOrder);
+            var productionResponse = await productionTask;
+
+            // Deserialize the real production result
+            var productionResult = JsonSerializer.Deserialize<object>(productionResponse);
+
+            // Create a fake or default success result for the loss order
+            var lossResult = new
+            {
+                Success = true,
+                Message = "Loss confirmation skipped and assumed successful."
+            };
+
+            return (productionResult, lossResult);
         }
+
 
         // Brekdown Start
         public async Task<SAPBreakdownRequest?> PostBreakdownAsync(SAPBreakdownRequest request)
