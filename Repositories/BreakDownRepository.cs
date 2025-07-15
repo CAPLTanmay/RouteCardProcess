@@ -78,7 +78,7 @@ namespace RouteCardProcess.Repositories
                         request.BreakdownCode,
                         EquipmentNo = equipmentNo,
                         BreakNotificationNo = notifNum,
-                        BreakNotificationStatus = notifStatus
+                        BreakdownNotificationStatus = notifStatus
                     };
 
                     var rows = await connection.ExecuteAsync("usp_StartBreakDown", dbParams, commandType: CommandType.StoredProcedure);

@@ -132,8 +132,6 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-
-
         [HttpPost("update-all")]
         public async Task<IActionResult> UpdateAll([FromBody] FullUpdateDto dto)
         {

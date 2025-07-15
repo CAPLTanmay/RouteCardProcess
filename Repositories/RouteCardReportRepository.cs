@@ -82,6 +82,11 @@ namespace RouteCardProcess.Repositories
                 
                 ts.StandardSetupTime,
                 DATEDIFF(MINUTE, ts.SetupStartTime, ts.SetupEndTime) AS ActualSetupTime,
+            -- Convert total minutes to HH:MM:SS format
+                RIGHT('0' + CAST((DATEDIFF(MINUTE, ts.SetupStartTime, ts.SetupEndTime) / 60) AS VARCHAR), 2) + ':' +
+                RIGHT('0' + CAST((DATEDIFF(MINUTE, ts.SetupStartTime, ts.SetupEndTime) % 60) AS VARCHAR), 2) + ':00'
+                AS ActualSetupTime_HHMMSS,
+
                 ISNULL(tsi.TotalSetupIdleMinutes, 0) AS TotalSetupIdleMinutes,
                 RIGHT('0' + CAST(tsi.TotalSetupIdleMinutes / 60 AS VARCHAR), 2) + ':' +
                 RIGHT('0' + CAST(tsi.TotalSetupIdleMinutes % 60 AS VARCHAR), 2) + ':00' AS TotalSetupIdle_HHMMSS,
@@ -101,7 +106,12 @@ namespace RouteCardProcess.Repositories
                 CONVERT(TIME,  tm.MachiningEndTime) AS MachiningEndTime,
 
                 tm.StandardMachiningTime,
-                DATEDIFF(MINUTE, tm.MachiningStartTime,   tm.MachiningEndTime) AS ActualMachiningTime,
+               DATEDIFF(MINUTE, tm.MachiningStartTime, tm.MachiningEndTime) AS ActualMachiningTime,
+RIGHT('0' + CAST((DATEDIFF(MINUTE, tm.MachiningStartTime, tm.MachiningEndTime) / 60) AS VARCHAR), 2) + ':' +
+RIGHT('0' + CAST((DATEDIFF(MINUTE, tm.MachiningStartTime, tm.MachiningEndTime) % 60) AS VARCHAR), 2) + ':00'
+AS ActualMachiningTime_HHMMSS,
+
+
                 ISNULL(tmi.TotalMachiningIdleMinutes, 0) AS TotalMachiningIdleMinutes,
                 RIGHT('0' + CAST(tmi.TotalMachiningIdleMinutes / 60 AS VARCHAR), 2) + ':' +
                 RIGHT('0' + CAST(tmi.TotalMachiningIdleMinutes % 60 AS VARCHAR), 2) + ':00' AS TotalMachiningIdle_HHMMSS,

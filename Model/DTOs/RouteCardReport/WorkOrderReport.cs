@@ -59,7 +59,7 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
 
         public TimeSpan StandardSetupTime { get; set; }
         public int ActualSetupTime { get; set; }
-
+        public string ActualSetupTime_HHMMSS { get;set;}
         public int TotalSetupIdleMinutes { get; set; }
         public string TotalSetupIdle_HHMMSS { get; set; }
 
@@ -78,6 +78,7 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
         public TimeSpan MachiningEndTime { get; set; } // for the TIME part 
         public TimeSpan StandardMachiningTime { get; set; }
         public int ActualMachiningTime { get; set; }
+        public string ActualMachiningTime_HHMMSS { get; set; }
         public int TotalMachiningIdleMinutes { get; set; }
         public string TotalMachiningIdle_HHMMSS { get; set; }
 
