@@ -34,6 +34,7 @@ namespace RouteCardProcess.Repositories
             bool isDbSuccess = false, isMailSent = false, isSapPosted = false;
             string equipmentNo = "";
             string notifNum = "";
+            string notifStatus = "";
 
             try
             {
@@ -58,6 +59,7 @@ namespace RouteCardProcess.Repositories
                     {
                         isSapPosted = true;
                         notifNum = sapResponse.NOTIF_NUM;
+                        notifStatus = sapResponse.NOTIF_STATUS;
                     }
                 }
                 catch (Exception ex)
@@ -75,7 +77,8 @@ namespace RouteCardProcess.Repositories
                         request.BreakdownCodeGroup,
                         request.BreakdownCode,
                         EquipmentNo = equipmentNo,
-                        BreakNotificationNo = notifNum
+                        BreakNotificationNo = notifNum,
+                        BreakNotificationStatus = notifStatus
                     };
 
                     var rows = await connection.ExecuteAsync("usp_StartBreakDown", dbParams, commandType: CommandType.StoredProcedure);

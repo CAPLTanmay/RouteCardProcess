@@ -294,8 +294,8 @@ namespace RouteCardProcess.Repositories
             await connection.ExecuteAsync("dbo.usp_UpdateSetupTimes", new
             {
                 dto.SetUpID,
-                dto.SetupStartTime,
-                dto.SetupEndTime,
+                SetupStartTime = dto.SetupStartDateTime,   
+                SetupEndTime = dto.SetupEndDateTime,
                 dto.UpdatedOperatorId
             }, commandType: CommandType.StoredProcedure);
         }
@@ -343,8 +343,8 @@ namespace RouteCardProcess.Repositories
             await connection.ExecuteAsync("dbo.usp_UpdateMachiningTimes", new
             {
                 dto.MachiningId,
-                dto.MachiningStartTime,
-                dto.MachiningEndTime,
+                MachiningStartTime = dto.MachiningStartDateTime,
+                MachiningEndTime = dto.MachiningEndDateTime,     
                 dto.UpdatedOperatorId
             }, commandType: CommandType.StoredProcedure);
         }

@@ -159,7 +159,44 @@ namespace RouteCardProcess.Repositories
 
             return await response.Content.ReadAsStringAsync();
         }
+        // Confirm Loss  Order
+        public async Task<string> ConfirmLossOrderAsync(LossOrderSapRequest request)
+        {
+            string fetchUrl = $"{_baseUrl}ZLOSS_ORDER_CONFSet";
+            var (csrfToken, cookie) = await FetchCsrfTokenAsync(fetchUrl);
 
+            var postRequest = new HttpRequestMessage(HttpMethod.Post, fetchUrl);
+            postRequest.Headers.Add("X-CSRF-Token", csrfToken);
+
+            if (!string.IsNullOrEmpty(cookie))
+                postRequest.Headers.Add("Cookie", cookie);
+
+            postRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            var json = JsonSerializer.Serialize(request);
+            postRequest.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.SendAsync(postRequest);
+            response.EnsureSuccessStatusCode();
+
+            return await response.Content.ReadAsStringAsync();
+        }
+        public async Task<(object productionResult, object lossResult)> ConfirmCombinedOrderAsync(CombinedConfirmationRequest request)
+        {
+            // Call both SAP APIs concurrently
+            var productionTask = ConfirmProductionOrderAsync(request.ProductionOrder);
+            var lossTask = ConfirmLossOrderAsync(request.LossOrder);
+
+            await Task.WhenAll(productionTask, lossTask);
+
+            // Deserialize both responses
+            var productionResult = JsonSerializer.Deserialize<object>(productionTask.Result);
+            var lossResult = JsonSerializer.Deserialize<object>(lossTask.Result);
+
+            return (productionResult, lossResult);
+        }
+
+        // Brekdown Start
         public async Task<SAPBreakdownRequest?> PostBreakdownAsync(SAPBreakdownRequest request)
         {
             string url = _baseUrl + "ZBREAKDOWN_NOTIFSet";
@@ -194,6 +231,7 @@ namespace RouteCardProcess.Repositories
             var envelope = JsonSerializer.Deserialize<SAPBreakdownEnvelope>(responseJson);
             return envelope?.d;
         }
+        // Brekdown Stop
         public async Task<SAPBreakdownCloseRequest?> PostBreakdownCloseAsync(SAPBreakdownCloseRequest request)
         {
             string url = _baseUrl + "ZNOTIF_CLOSESet";
@@ -222,7 +260,7 @@ namespace RouteCardProcess.Repositories
             var root = doc.RootElement.GetProperty("d");
             return JsonSerializer.Deserialize<SAPBreakdownCloseRequest>(root.GetRawText());
         }
-
+        // Brekdown List
         public async Task<List<SAPBreakdownStatusResponse>> GetBulkBreakdownStatusesAsync(List<string> notifNums)
         {
             var validNotifNums = notifNums

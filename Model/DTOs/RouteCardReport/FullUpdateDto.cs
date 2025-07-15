@@ -1,4 +1,6 @@
-﻿namespace RouteCardProcess.Model.DTOs.RouteCardReport
+﻿using System.Text.Json.Serialization;
+
+namespace RouteCardProcess.Model.DTOs.RouteCardReport
 {
     public class FullUpdateDto
     {
@@ -9,12 +11,32 @@
     public class SetupUpdateDto
     {
         public string SetUpID { get; set; }
-        public DateTime? SetupStartTime { get; set; }
-        public DateTime? SetupEndTime { get; set; }
+        [JsonConverter(typeof(DateOnlyConverter))]
+        public DateTime? SetupStartDate { get; set; }
+
+        public TimeSpan? SetupStartTime { get; set; }
+
+        [JsonConverter(typeof(DateOnlyConverter))]
+        public DateTime? SetupEndDate { get; set; }
+
+        public TimeSpan? SetupEndTime { get; set; }
         public int UpdatedOperatorId { get; set; }
 
         public List<IdleTimeUpdateDto> IdleTimes { get; set; } = new();
         public List<ExceptionTimeUpdateDto> ExceptionTimes { get; set; } = new();
+
+        // Computed properties to combine Date + Time
+        [JsonIgnore]
+        public DateTime? SetupStartDateTime =>
+            (SetupStartDate.HasValue && SetupStartTime.HasValue)
+                ? SetupStartDate.Value.Date + SetupStartTime.Value
+                : null;
+
+        [JsonIgnore]
+        public DateTime? SetupEndDateTime =>
+            (SetupEndDate.HasValue && SetupEndTime.HasValue)
+                ? SetupEndDate.Value.Date + SetupEndTime.Value
+                : null;
     }
 
     public class IdleTimeUpdateDto
@@ -33,13 +55,33 @@
     public class MachiningUpdateDto
     {
         public string MachiningId { get; set; }
-        public DateTime? MachiningStartTime { get; set; }
-        public DateTime? MachiningEndTime { get; set; }
+        [JsonConverter(typeof(DateOnlyConverter))]
+        public DateTime? MachiningStartDate { get; set; }
+
+        public TimeSpan? MachiningStartTime { get; set; }
+
+        [JsonConverter(typeof(DateOnlyConverter))]
+        public DateTime? MachiningEndDate { get; set; }
+
+        public TimeSpan? MachiningEndTime { get; set; }
         public int UpdatedOperatorId { get; set; }
 
         public List<MachiningIdleTimeUpdateDto> IdleTimes { get; set; } = new();
         public List<MachiningExceptionUpdateDto> ExceptionTimes { get; set; } = new();
         public List<MachiningOperatorQtyUpdateDto> OperatorQuantities { get; set; } = new();
+
+        // Combine Date + Time for DB use
+        [JsonIgnore]
+        public DateTime? MachiningStartDateTime =>
+            (MachiningStartDate.HasValue && MachiningStartTime.HasValue)
+                ? MachiningStartDate.Value.Date + MachiningStartTime.Value
+                : null;
+
+        [JsonIgnore]
+        public DateTime? MachiningEndDateTime =>
+            (MachiningEndDate.HasValue && MachiningEndTime.HasValue)
+                ? MachiningEndDate.Value.Date + MachiningEndTime.Value
+                : null;
     }
 
     public class MachiningIdleTimeUpdateDto
