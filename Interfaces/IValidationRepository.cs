@@ -13,6 +13,7 @@ namespace RouteCardProcess.Interfaces
         Task<string> ConfirmProductionOrderAsync(ProductionOrderConfirmationRequest request);
         Task<string> ConfirmLossOrderAsync(LossOrderSapRequest request);
         Task<(object productionResult, object lossResult)> ConfirmCombinedOrderAsync(CombinedConfirmationRequest request);
+        Task<(object productionResult, object lossResult)> ConfirmProdAndLossOrderAsync(CombinedSAPConfirmationRequest request);
         Task<SAPBreakdownRequest?> PostBreakdownAsync(SAPBreakdownRequest request);
         Task<SAPBreakdownCloseRequest?> PostBreakdownCloseAsync(SAPBreakdownCloseRequest request);
         Task<List<SAPBreakdownStatusResponse>> GetBulkBreakdownStatusesAsync(List<string> notifNums);

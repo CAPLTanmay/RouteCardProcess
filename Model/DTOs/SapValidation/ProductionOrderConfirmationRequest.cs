@@ -160,5 +160,15 @@ namespace RouteCardProcess.Model.DTOs.SapValidation
         public ProductionOrderConfirmationRequest ProductionOrder { get; set; }
         public LossOrderSapRequest LossOrder { get; set; }
     }
+    public class CombinedSAPConfirmationRequest
+    {
+        public ProductionOrderConfirmationRequest ProductionOrder { get; set; }
+        public LossOrderSapExtendedRequest LossOrder { get; set; }
+    }
 
+    public class LossOrderSapExtendedRequest
+    {
+        public string SetupId { get; set; }
+        public string MachiningId { get; set; }
+    }
 }

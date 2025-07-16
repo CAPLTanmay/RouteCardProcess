@@ -412,5 +412,40 @@ namespace RouteCardProcess.Controllers
             }
         }
 
+        [HttpPost("confirmProdAndLossOrder")]
+        public async Task<IActionResult> ConfirmProdAndLossOrder([FromBody] CombinedSAPConfirmationRequest request)
+        {
+            try
+            {
+                var (productionResponse, lossResponse) = await _repo.ConfirmProdAndLossOrderAsync(request);
+
+                bool productionSuccess = productionResponse != null && !productionResponse.ToString().Contains("error", StringComparison.OrdinalIgnoreCase);
+                bool lossSuccess = lossResponse != null && !lossResponse.ToString().Contains("error", StringComparison.OrdinalIgnoreCase);
+
+                string message;
+
+                if (productionSuccess && lossSuccess)
+                    message = "Production and Loss Orders confirmed successfully.";
+                else if (productionSuccess)
+                    message = "Production confirmed. Loss not processed or failed.";
+                else
+                    message = "Production order confirmation failed.";
+
+                return Ok(new
+                {
+                    success = productionSuccess,
+                    message,
+                    production = productionResponse,
+                    loss = lossResponse
+                });
+            }
+            catch (Exception ex)
+            {
+                await _systemLogger.LogAsync("ValidationController", "confirmProdAndLossOrder", ex.ToString());
+                return StatusCode(500, new { success = false, message = "Internal server error", details = ex.Message });
+            }
+        }
+
+
     }
 }

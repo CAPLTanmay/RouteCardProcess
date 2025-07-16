@@ -1,8 +1,12 @@
-﻿using System.Net.Http.Headers;
+﻿using System.Data;
+using Dapper;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using RouteCardProcess.Interfaces;
+using RouteCardProcess.Model.DTOs.RouteCardReport;
 using RouteCardProcess.Model.DTOs.SapValidation;
+using System.Transactions;
 
 namespace RouteCardProcess.Repositories
 {
@@ -11,8 +15,9 @@ namespace RouteCardProcess.Repositories
         private readonly HttpClient _httpClient;
         private readonly string _baseUrl;
         private readonly ISystemLoggerRepository _systemLogger;
+        private readonly SqlConnectionFactory _connectionFactory;
 
-        public ValidationRepository(HttpClient httpClient, IConfiguration configuration, ISystemLoggerRepository systemLogger)
+        public ValidationRepository(HttpClient httpClient, IConfiguration configuration, ISystemLoggerRepository systemLogger, SqlConnectionFactory connectionFactory)
         {
             _httpClient = httpClient;
 
@@ -24,6 +29,7 @@ namespace RouteCardProcess.Repositories
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
             _systemLogger = systemLogger;
+            _connectionFactory = connectionFactory;
         }
 
         public async Task<string> ValidateWorkCenterAsync(string workCenter)
@@ -181,7 +187,7 @@ namespace RouteCardProcess.Repositories
 
             return await response.Content.ReadAsStringAsync();
         }
-       /* public async Task<(object productionResult, object lossResult)> ConfirmCombinedOrderAsync(CombinedConfirmationRequest request)
+        public async Task<(object productionResult, object lossResult)> ConfirmCombinedOrderAsync(CombinedConfirmationRequest request)
         {
             // Call both SAP APIs concurrently
             var productionTask = ConfirmProductionOrderAsync(request.ProductionOrder);
@@ -194,26 +200,112 @@ namespace RouteCardProcess.Repositories
             var lossResult = JsonSerializer.Deserialize<object>(lossTask.Result);
 
             return (productionResult, lossResult);
-        }*/
+        }
 
-        public async Task<(object productionResult, object lossResult)> ConfirmCombinedOrderAsync(CombinedConfirmationRequest request)
+        public async Task<(object productionResult, object lossResult)> ConfirmProdAndLossOrderAsync(CombinedSAPConfirmationRequest request)
         {
-            // Call only the first (real) API
-            var productionTask = ConfirmProductionOrderAsync(request.ProductionOrder);
-            var productionResponse = await productionTask;
+            object productionResult = null;
+            object lossResult = null;
 
-            // Deserialize the real production result
-            var productionResult = JsonSerializer.Deserialize<object>(productionResponse);
+            using var connection = _connectionFactory.CreateConnection();
+            await connection.OpenAsync();
+            using var transaction = connection.BeginTransaction();
 
-            // Create a fake or default success result for the loss order
-            var lossResult = new
+            try
             {
-                Success = true,
-                Message = "Loss confirmation skipped and assumed successful."
-            };
+                //// Step 1: Confirm Production Order in SAP
+                //var productionJson = await ConfirmProductionOrderAsync(request.ProductionOrder);
+                //productionResult = JsonSerializer.Deserialize<object>(productionJson);
+
+                //bool isProductionSuccess = productionResult != null &&
+                //                           !productionResult.ToString().Contains("error", StringComparison.OrdinalIgnoreCase);
+
+                //if (!isProductionSuccess)
+                //{
+                //    return (productionResult, null);
+                //}
+
+                //  Step 1: Skipped for testing
+                bool isProductionSuccess = true;
+                productionResult = new { message = "Test mode: production step skipped" };
+
+                // Step 2: Fetch setup + machining data from SP
+                var parameters = new
+                {
+                    SetupId = request.LossOrder.SetupId,
+                    MachiningId = request.LossOrder.MachiningId
+                };
+
+                using var multi = await connection.QueryMultipleAsync(
+                    "dbo.usp_GetLossOrderByIds", parameters, transaction, commandType: CommandType.StoredProcedure);
+
+                var setupData = (await multi.ReadAsync<SetupIdleDto>()).ToList();
+                var machData = (await multi.ReadAsync<MachiningIdleDto>()).ToList();
+
+                if (!setupData.Any() && !machData.Any())
+                {
+                    // Step 3: No data case
+                    lossResult = new { message = "No loss data found for provided SetupId and MachiningId." };
+                    return (productionResult, lossResult);
+                }
+
+                // Step 4: Prepare SAP payload
+                var orderNo = setupData.FirstOrDefault()?.ORDER ?? machData.FirstOrDefault()?.ORDER;
+
+                var sapLossItems = new List<LossOrderItem>();
+
+                sapLossItems.AddRange(setupData.Select(s => new LossOrderItem
+                {
+                    ORDER = orderNo,
+                    OPR_NUM = s.MSTIdleCode,
+                    SETUP_IDEAL_TIME = s.SetupIdleTime.ToString(@"hh\:mm\:ss"),
+                    MACH_IDEAL_TIME = "00:00:00",
+                    WORKCENTER = s.WorkCenterNo
+                }));
+
+                sapLossItems.AddRange(machData.Select(m => new LossOrderItem
+                {
+                    ORDER = orderNo,
+                    OPR_NUM = m.MSTIdleCode,
+                    SETUP_IDEAL_TIME = "00:00:00",
+                    MACH_IDEAL_TIME = m.MachiningIdleTime.ToString(@"hh\:mm\:ss"),
+                    WORKCENTER = m.WorkCenterNo
+                }));
+
+                var lossSapRequest = new LossOrderSapRequest
+                {
+                    ORDER = orderNo,
+                    NAV_LOSS = new LossOrderContainer
+                    {
+                        Results = sapLossItems
+                    }
+                };
+
+                // Step 5: Call SAP Loss Order API
+                var lossJson = await ConfirmLossOrderAsync(lossSapRequest);
+                lossResult = JsonSerializer.Deserialize<object>(lossJson);
+
+                // Step 6: Update IsUploadToSAP to 1 in all related tables
+                var updateSql = @"
+            UPDATE Trans_Setup SET IsUploadToSAP = 1 WHERE SetupId = @SetupId;
+            UPDATE Trans_Setup_IdelTime SET IsUploadToSAP = 1 WHERE SetupId = @SetupId;
+            UPDATE Trans_Machining SET IsUploadToSAP = 1 WHERE MachiningId = @MachiningId;
+            UPDATE Trans_Machining_IdelTime SET IsUploadToSAP = 1 WHERE MachiningId = @MachiningId;
+        "
+                ;
+
+                await connection.ExecuteAsync(updateSql, parameters, transaction);
+                transaction.Commit(); // commit only if everything goes fine
+            }
+            catch (Exception ex)
+            {
+                transaction.Rollback(); 
+               throw new Exception("Error in ConfirmProdAndLossOrderAsync", ex);
+            }
 
             return (productionResult, lossResult);
         }
+
 
 
         // Brekdown Start

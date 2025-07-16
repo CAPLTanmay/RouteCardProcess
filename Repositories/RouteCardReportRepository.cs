@@ -1,8 +1,5 @@
 ﻿using System.Data;
-using System.Text.Json.Serialization;
-using System.Text.Json;
 using Dapper;
-using Microsoft.Data.SqlClient;
 using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model.DTOs.RouteCardReport;
 
