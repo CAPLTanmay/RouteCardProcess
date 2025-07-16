@@ -18,7 +18,8 @@
         public string ActualMachiningTime { get; set; }
         public int TotalQty { get; set; }
         public int S_ConfirmedQuantity { get; set; }
-        public int L_CompletedQty { get;set; }
+        public int L_CompletedQty { get; set; }
+        public int PendingQty { get; set; }
         public string OrderTypeDesc { get; set; }
         public string SetupId { get; set; }
     }
@@ -28,6 +29,7 @@
         public int TotalQty { get; set; }
         public int S_ConfirmedQuantity { get; set; }
         public int L_CompletedQty { get; set; }
+        public int PendingQty { get; set; }
         public string OrderTypeDesc { get; set; }
     }
 

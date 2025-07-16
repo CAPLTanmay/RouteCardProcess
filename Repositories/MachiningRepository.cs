@@ -63,14 +63,13 @@ public class MachiningRepository : IMachiningRepository
             machiningData.TotalQty = sapInfo.TotalQty;
             machiningData.S_ConfirmedQuantity = sapInfo.S_ConfirmedQuantity;
             machiningData.L_CompletedQty = sapInfo.L_CompletedQty;
+            machiningData.PendingQty = sapInfo.PendingQty;
             machiningData.OrderTypeDesc = sapInfo.OrderTypeDesc;
         }
 
         return machiningData;
 
     }
-
-
 
     public async Task<string> StartMachiningAsync(string machiningId)
     {

@@ -108,6 +108,7 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
         public string ORDER { get; set; }
         public string MSTIdleCode { get; set; }
         public TimeSpan SetupIdleTime { get; set; }
+        public string? WorkCenterNo { get; set; } 
     }
 
     public class MachiningIdleDto
@@ -117,6 +118,7 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
         public string ORDER { get; set; }
         public string MSTIdleCode { get; set; }
         public TimeSpan MachiningIdleTime { get; set; }
+        public string? WorkCenterNo { get; set; }
     }
 
 
