@@ -6,6 +6,7 @@ namespace RouteCardProcess.Interfaces
     public interface IMachiningRepository
     {
         Task<MachiningMaster> CreateAsync(MachiningDto obj);
+        Task InsertMachiningOperatorStartAsync(string machiningId, string operatorId, DateTime operatorStartTime);
         Task<string> StartMachiningAsync(string machiningId);
         Task TogglePauseAsync(string machiningId, string pauseCode);
         Task<bool> EndMachiningAsync(string machiningId);
@@ -14,6 +15,5 @@ namespace RouteCardProcess.Interfaces
         Task<bool> AddDelaysAsync(MachiningDelayRequest request);
         Task<MachiningMaster> GetByCompositeKeyAsync(string workCenterNo, string workOrderNo, string operationNo);
         Task UpdateMachiningStatusAsync(string machiningId);
-
     }
 }

@@ -37,7 +37,7 @@ namespace RouteCardProcess.Controllers
                     if (isOperatorEnded || isDifferentOperator)
                     {
                         // Insert into Trans_Machining_Operator only
-                       // await _repo.InsertMachiningOperatorStartAsync(existing.MachiningId, request.OperatorId, DateTime.Now);
+                       await _repo.InsertMachiningOperatorStartAsync(existing.MachiningId, request.OperatorId, DateTime.Now);
 
                         return Ok(new
                         {

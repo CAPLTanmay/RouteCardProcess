@@ -71,6 +71,22 @@ public class MachiningRepository : IMachiningRepository
 
     }
 
+    public async Task InsertMachiningOperatorStartAsync(string machiningId, string operatorId, DateTime operatorStartTime)
+    {
+        var query = "EXEC Insert_MachiningOperatorStart @MachiningId, @OperatorId, @OperatorStartTime";
+
+        var parameters = new
+        {
+            MachiningId = machiningId,
+            OperatorId = operatorId,
+            OperatorStartTime = operatorStartTime
+        };
+
+        using var connection = CreateConnection();
+        await connection.ExecuteAsync(query, parameters);
+    }
+
+
     public async Task<string> StartMachiningAsync(string machiningId)
     {
         using var connection = CreateConnection(); 
@@ -213,8 +229,12 @@ public class MachiningRepository : IMachiningRepository
                 };
             }
 
-            //  Decide status
-            string newStatus = totalHandover > 0 ? "Handover" : "Completed";
+            string newStatus = "Completed";
+
+            if (totalCompleted < pendingQty)
+            {
+                newStatus = "Handover";
+            }
 
             // Insert into DB
             await connection.ExecuteAsync(
