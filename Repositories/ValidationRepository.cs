@@ -144,7 +144,7 @@ namespace RouteCardProcess.Repositories
 
 
         // Confirm Production Order
-        public async Task<string> ConfirmProductionOrderAsync(ProductionOrderConfirmationRequest request)
+        public async Task<string> ConfirmProductionOrderAsync(CombinedSAPConfirmationRequest request)
         {
             string fetchUrl = $"{_baseUrl}ZCONFIRMSet";
             var (csrfToken, cookie) = await FetchCsrfTokenAsync(fetchUrl);
@@ -163,7 +163,23 @@ namespace RouteCardProcess.Repositories
             var response = await _httpClient.SendAsync(postRequest);
             response.EnsureSuccessStatusCode();
 
-            return await response.Content.ReadAsStringAsync();
+            var responseData = await response.Content.ReadAsStringAsync();
+
+            //  Update DB flags only if success
+            using var connection = _connectionFactory.CreateConnection();
+            await connection.OpenAsync();
+
+            var sql = @"
+        UPDATE Trans_Setup SET IsUploadToSAP = 1 WHERE SetupId = @SetupId;
+        UPDATE Trans_Machining SET IsUploadToSAP = 1 WHERE MachiningId = @MachiningId;
+    ";
+            await connection.ExecuteAsync(sql, new
+            {
+                SetupId = request.LossOrder.SetupId,
+                MachiningId = request.LossOrder.MachiningId
+            });
+
+            return responseData;
         }
         // Confirm Loss  Order
         public async Task<string> ConfirmLossOrderAsync(LossOrderSapRequest request)
@@ -190,7 +206,7 @@ namespace RouteCardProcess.Repositories
         public async Task<(object productionResult, object lossResult)> ConfirmCombinedOrderAsync(CombinedConfirmationRequest request)
         {
             // Call both SAP APIs concurrently
-            var productionTask = ConfirmProductionOrderAsync(request.ProductionOrder);
+            var productionTask = ConfirmLossOrderAsync(request.LossOrder);
             var lossTask = ConfirmLossOrderAsync(request.LossOrder);
 
             await Task.WhenAll(productionTask, lossTask);
@@ -290,9 +306,7 @@ namespace RouteCardProcess.Repositories
             UPDATE Trans_Setup SET IsUploadToSAP = 1 WHERE SetupId = @SetupId;
             UPDATE Trans_Setup_IdelTime SET IsUploadToSAP = 1 WHERE SetupId = @SetupId;
             UPDATE Trans_Machining SET IsUploadToSAP = 1 WHERE MachiningId = @MachiningId;
-            UPDATE Trans_Machining_IdelTime SET IsUploadToSAP = 1 WHERE MachiningId = @MachiningId;
-        "
-                ;
+            UPDATE Trans_Machining_IdelTime SET IsUploadToSAP = 1 WHERE MachiningId = @MachiningId; " ;
 
                 await connection.ExecuteAsync(updateSql, parameters, transaction);
                 transaction.Commit(); // commit only if everything goes fine

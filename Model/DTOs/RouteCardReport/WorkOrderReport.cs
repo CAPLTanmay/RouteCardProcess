@@ -187,6 +187,7 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
 
         public TimeSpan? StandardMachiningTime { get; set; }
         public TimeSpan? TotalMachiningTime { get; set; }
+        public int? CompletedQty { get; set; }
     }
 
 

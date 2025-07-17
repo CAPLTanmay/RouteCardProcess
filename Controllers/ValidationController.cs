@@ -305,7 +305,7 @@ namespace RouteCardProcess.Controllers
         }
 
         [HttpPost("confirmProductionOrder")]
-        public async Task<IActionResult> ConfirmProductionOrder([FromBody] ProductionOrderConfirmationRequest request)
+        public async Task<IActionResult> ConfirmProductionOrder([FromBody] CombinedSAPConfirmationRequest request)
         {
             try
             {

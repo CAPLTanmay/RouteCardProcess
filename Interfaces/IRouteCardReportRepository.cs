@@ -12,7 +12,6 @@ namespace RouteCardProcess.Interfaces
         Task UpdateSetupTimesAsync(SetupUpdateDto dto);
         Task UpdateIdleTimesAsync(string setupId, int operatorId, List<IdleTimeUpdateDto> idleTimes);
         Task UpdateExceptionTimesAsync(string setupId, int operatorId, List<ExceptionTimeUpdateDto> exceptionTimes);
-
         Task UpdateMachiningTimesAsync(MachiningUpdateDto dto);
         Task UpdateMachiningIdleTimesAsync(string machiningId, int operatorId, List<MachiningIdleTimeUpdateDto> idleTimes);
         Task UpdateMachiningExceptionTimesAsync(string machiningId, int operatorId, List<MachiningExceptionUpdateDto> exceptionTimes);

@@ -10,7 +10,7 @@ namespace RouteCardProcess.Interfaces
         Task<string> GetLossDataAsync();
         Task<string> GetMaintenanceNotificationsAsync();
         Task<string> UpdateWorkCenterAsync(WorkCenterUpdateRequest request);
-        Task<string> ConfirmProductionOrderAsync(ProductionOrderConfirmationRequest request);
+        Task<string> ConfirmProductionOrderAsync(CombinedSAPConfirmationRequest request);
         Task<string> ConfirmLossOrderAsync(LossOrderSapRequest request);
         Task<(object productionResult, object lossResult)> ConfirmCombinedOrderAsync(CombinedConfirmationRequest request);
         Task<(object productionResult, object lossResult)> ConfirmProdAndLossOrderAsync(CombinedSAPConfirmationRequest request);

@@ -241,15 +241,17 @@ AS ActualMachiningTime_HHMMSS,
             if (!string.IsNullOrEmpty(request.MachiningId))
             {
                 var machiningQuery = @"
-            SELECT 
-                StandardMachiningTime,
-                CONVERT(DATE, MachiningStartTime) AS MachiningStartDate,
-                CONVERT(TIME, MachiningStartTime) AS MachiningStartTime,
-                CONVERT(DATE, MachiningEndTime) AS MachiningEndDate,
-                CONVERT(TIME, MachiningEndTime) AS MachiningEndTime,
-                TotalMachiningTime
-            FROM Trans_Machining 
-            WHERE MachiningId = @MachiningId";
+                    SELECT 
+                        m.StandardMachiningTime,
+                        CONVERT(DATE, m.MachiningStartTime) AS MachiningStartDate,
+                        CONVERT(TIME, m.MachiningStartTime) AS MachiningStartTime,
+                        CONVERT(DATE, m.MachiningEndTime) AS MachiningEndDate,
+                        CONVERT(TIME, m.MachiningEndTime) AS MachiningEndTime,
+                        m.TotalMachiningTime,
+                        mo.CompletedQty
+                    FROM Trans_Machining m
+                    LEFT JOIN Trans_Machining_Operator mo ON m.MachiningId = mo.MachiningId
+                    WHERE m.MachiningId = @MachiningId";
 
                 var machiningResult = await connection.QueryFirstOrDefaultAsync<TimingInfoDto>(machiningQuery, new { request.MachiningId });
                 if (machiningResult != null)
@@ -260,6 +262,7 @@ AS ActualMachiningTime_HHMMSS,
                     timingInfo.MachiningEndDate = machiningResult.MachiningEndDate;
                     timingInfo.MachiningEndTime = machiningResult.MachiningEndTime;
                     timingInfo.TotalMachiningTime = machiningResult.TotalMachiningTime;
+                    timingInfo.CompletedQty = machiningResult.CompletedQty;
                 }
             }
 
