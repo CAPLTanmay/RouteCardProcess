@@ -162,7 +162,8 @@ AS ActualMachiningTime_HHMMSS,
             INNER JOIN SapRoutingData srd ON ts.ProductionOrderNo = srd.WorkOrder AND ts.OperationNo = srd.OperationNo
 
             WHERE 
-                (@OperatorId IS NULL OR tso.OperatorId = @OperatorId)
+                (tmo.CompletedQty>0 AND tmo.IsUploadToSAP=0 AND ts.SetupStatus='Completed' AND ts.IsUploadToSAP=0 AND
+                @OperatorId IS NULL OR tso.OperatorId = @OperatorId)
                 AND (@ConfirmationDate IS NULL OR CAST(tm.MachiningEndTime AS DATE) = @ConfirmationDate)
                 AND (@ProductionOrderNo IS NULL OR ts.ProductionOrderNo = @ProductionOrderNo)
     

@@ -146,6 +146,10 @@ namespace RouteCardProcess.Repositories
         // Confirm Production Order
         public async Task<string> ConfirmProductionOrderAsync(CombinedSAPConfirmationRequest request)
         {
+            using var connection = _connectionFactory.CreateConnection();
+            await connection.OpenAsync();
+
+
             string fetchUrl = $"{_baseUrl}ZCONFIRMSet";
             var (csrfToken, cookie) = await FetchCsrfTokenAsync(fetchUrl);
 
@@ -166,13 +170,8 @@ namespace RouteCardProcess.Repositories
             var responseData = await response.Content.ReadAsStringAsync();
 
             //  Update DB flags only if success
-            using var connection = _connectionFactory.CreateConnection();
-            await connection.OpenAsync();
-
-            var sql = @"
-        UPDATE Trans_Setup SET IsUploadToSAP = 1 WHERE SetupId = @SetupId;
-        UPDATE Trans_Machining SET IsUploadToSAP = 1 WHERE MachiningId = @MachiningId;
-    ";
+            var sql = @"UPDATE Trans_Setup SET IsUploadToSAP = 1 WHERE SetupId = @SetupId;
+            UPDATE Trans_Machining_Operator SET IsUploadToSAP = 1 WHERE MachiningId = @MachiningId; ";
             await connection.ExecuteAsync(sql, new
             {
                 SetupId = request.LossOrder.SetupId,
