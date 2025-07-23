@@ -9,7 +9,7 @@ namespace RouteCardProcess.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-   
+
     public class ValidationController : ControllerBase
     {
         private readonly IValidationRepository _repo;

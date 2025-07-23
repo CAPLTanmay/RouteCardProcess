@@ -15,8 +15,9 @@ namespace RouteCardProcess.Repositories
         private readonly KblAuthConfig _authConfig;
         private readonly ISystemLoggerRepository _systemLogger;
         private readonly IUserMessageService _userMessageService;
+        private readonly IPasswordSecurityService _passwordService;
 
-        public LogInRepository(SqlConnectionFactory connectionFactory, ISetUpTransRepository setUpTransRepository, IKblAuthService kblService, KblAuthConfig authConfig, ISystemLoggerRepository systemLogger, IUserMessageService userMessageService)
+        public LogInRepository(SqlConnectionFactory connectionFactory, ISetUpTransRepository setUpTransRepository, IKblAuthService kblService, KblAuthConfig authConfig, ISystemLoggerRepository systemLogger, IUserMessageService userMessageService, IPasswordSecurityService passwordService)
         {
             _connectionFactory = connectionFactory;
             _setUpTransRepository = setUpTransRepository;
@@ -24,6 +25,7 @@ namespace RouteCardProcess.Repositories
             _authConfig = authConfig;
             _systemLogger = systemLogger;
             _userMessageService = userMessageService;
+            _passwordService = passwordService;
         }
 
         public async Task<IEnumerable<LogInMaster>> GetAllAsync()
@@ -74,7 +76,6 @@ namespace RouteCardProcess.Repositories
                 throw new Exception(msg, ex);
             }
         }
-
         public async Task<LogInMaster?> ValidateLoginAsync(string operatorId, string password)
         {
             try
@@ -143,8 +144,6 @@ namespace RouteCardProcess.Repositories
             {
                 await _systemLogger.LogAsync("LogInRepository", "ValidateLogin", ex.ToString());
             }
-
-
             // Fallback: Validate from local database
             using var connection = _connectionFactory.CreateConnection();
             await connection.OpenAsync();
@@ -155,7 +154,6 @@ namespace RouteCardProcess.Repositories
                  commandType: CommandType.StoredProcedure
             );
 
-
             if (user != null)
             {
                 user.Shift = await GetCurrentShiftAsync();
@@ -163,6 +161,164 @@ namespace RouteCardProcess.Repositories
             }
 
             return user;
+        }
+
+        public async Task<LoginResult> LoginEmployeeAsync(string operatorId, string password)
+        {
+            try
+            {
+                using var connection = _connectionFactory.CreateConnection();
+                await connection.OpenAsync();
+
+                // Step 0: Get employee details by EmployeeCode
+                var employee = await connection.QueryFirstOrDefaultAsync<dynamic>("usp_GetEmployeeLoginInfo",new { OperatorId = operatorId },commandType: CommandType.StoredProcedure);
+
+                if (employee == null)
+                {
+                    return new LoginResult
+                    {
+                        IsSuccess = false,
+                        FailureReason = "Invalid operator ID. Not for DRC app"
+                    };
+                }
+
+                // Fetch all mapped department names for the user
+                var departmentNames = (await connection.QueryAsync<string>("usp_GetMappedDepartmentNames",new { UserId = employee.EmployeeId },commandType: CommandType.StoredProcedure)).ToList();
+
+                bool isContract = employee.IsContractEmployee;
+
+                if (isContract)
+                {
+                    bool isTempPassword = employee.IsTempPassword;
+
+                    // Encrypt input password
+                    var encryptedInputPassword = await _passwordService.EncryptPassword(password);
+                    if (encryptedInputPassword != employee.EmployeePassword)
+                    {
+                        return new LoginResult
+                        {
+                            IsSuccess = false,
+                            FailureReason = "Invalid password."
+                        };
+                    }
+
+                    if (isTempPassword)
+                    {
+                        return new LoginResult
+                        {
+                            IsSuccess = true,
+                            IsTempPassword = true,
+                            User = new LoginUserDto
+                            {
+                                SrNo=employee.EmployeeId,
+                                OperatorId = employee.EmployeeCode.ToString(),
+                                OperatorName = employee.FirstName + " " + employee.LastName,
+                                OperatorRole = employee.UserRole,
+                                DepartmentId = 0, // You can map department from mapping table
+                                DepartmentName = employee.UserDepartment,
+                                Shift = await GetCurrentShiftAsync(),
+                                IsFromKBL = false                        
+                            }
+                        };
+                    }
+
+                    // Success login
+                    return new LoginResult
+                    {
+                        IsSuccess = true,
+                        IsTempPassword = false,
+                        User = new LoginUserDto
+                        {
+                            SrNo = employee.EmployeeId,
+                            OperatorId = employee.EmployeeCode.ToString(),
+                            OperatorName = employee.FirstName + " " + employee.LastName,
+                            OperatorRole = employee.UserRole,
+                            DepartmentId = 0,
+                            DepartmentName = employee.UserDepartment,
+                            RBACDepartmentName = departmentNames,
+                            Shift = await GetCurrentShiftAsync(),
+                            IsFromKBL = false
+                        }
+                    };
+                }
+
+                // Non-contract employee → use KBL auth logic
+                var useKblAuth = _authConfig.UseKblAuthAPI;
+                if (useKblAuth)
+                {
+                    var encryptedPassword = await _kblService.EncryptPasswordAsync(password);
+                    if (!string.IsNullOrEmpty(encryptedPassword))
+                    {
+                        var kblLogin = new KblLoginRequest
+                        {
+                            StrLoginId = operatorId,
+                            StrPassword = encryptedPassword
+                        };
+
+                        var kblAuthResponse = await _kblService.AuthenticateLoginAsync(kblLogin);
+                        if (kblAuthResponse == "success")
+                        {
+                            var token = await _kblService.GetTokenAsync();
+                            var empInfoResponse = await _kblService.GetEmployeeInfoAsync(token, operatorId);
+                            var emp = empInfoResponse?.EmpInfo?.FirstOrDefault();
+
+                            if (emp != null)
+                            {
+                                return new LoginResult
+                                {
+                                    IsSuccess = true,
+                                    User = new LoginUserDto
+                                    {
+                                        OperatorId = emp.Tktno,
+                                        OperatorName = emp.Name,
+                                        OperatorRole = emp.Designation,
+                                        DepartmentId = 3,
+                                        DepartmentName = emp.Deptnm,
+                                        Shift = await GetCurrentShiftAsync(),
+                                        IsFromKBL = true
+                                    }
+                                };
+                            }
+                        }
+                    }
+
+                    return new LoginResult
+                    {
+                        IsSuccess = false,
+                        FailureReason = "KBL authentication failed."
+                    };
+                }
+                else
+                {
+                    // fallback to non-contract fallback method
+                    return new LoginResult
+                    {
+                        IsSuccess = true,
+                        IsTempPassword = false,
+                        User = new LoginUserDto
+                        {
+                            SrNo = employee.EmployeeId,
+                            OperatorId = employee.EmployeeCode.ToString(),
+                            OperatorName = employee.FirstName + " " + employee.LastName,
+                            OperatorRole = employee.UserRole,
+                            DepartmentId = 0,
+                            DepartmentName = employee.UserDepartment,
+                            RBACDepartmentName = departmentNames,
+                            Shift = await GetCurrentShiftAsync(),
+                            IsFromKBL = true
+                        }
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                await _systemLogger.LogAsync("LogInRepository", "LoginEmployeeAsync", ex.ToString());
+                return new LoginResult
+                {
+                    IsSuccess = false,
+                    FailureReason = "Internal server error"
+                };
+            }
         }
 
 

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model.Entities;
@@ -8,6 +9,7 @@ namespace RouteCardProcess.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class BreakdownGroupCodeController : ControllerBase
     {
         private readonly IBreakdownGroupCodeRepository _repository;

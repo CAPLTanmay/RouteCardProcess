@@ -46,7 +46,47 @@ namespace RouteCardProcess.Repositories
                 "usp_GetMachiningByCompositeKey", MachiningParameters, commandType: CommandType.StoredProcedure);
 
             if (setup == null && machining == null)
-                return (0, null, null, _userMessageService.GetMessage(1036), null, null);
+            {
+                var sapRoutingData = await connection.QueryFirstOrDefaultAsync<dynamic>("usp_GetConfirmedVsTotalQty",
+                new
+                {
+                    ProductionOrderNo = workOrderNo,
+                    WorkCenterNo = workCenterNo,
+                    OperationNo = operationNo
+                },commandType: CommandType.StoredProcedure);
+
+                if (sapRoutingData != null)
+                {
+                    // Convert to int with null fallback to avoid nullable comparison issues
+                    int confirmedQty = sapRoutingData.S_ConfirmedQuantity ?? 0;
+                    int totalQty = sapRoutingData.TotalQty ?? 0;
+
+                    if (confirmedQty == totalQty && totalQty != 0)
+                    {
+                        var SAPMachiningStatus = "Completed"; // or _userMessageService.GetMessage(1084)
+                        var SAPMessage = _userMessageService.GetMessage(1053); // Machining completed
+
+                        return (
+                            Flag: 1,
+                            SetupStatus: "",
+                            MachiningStatus: SAPMachiningStatus,
+                            Message: SAPMessage,
+                            SetUpID: "",
+                            MachiningID: ""
+                        );
+                    }
+                }
+                var message1036 = _userMessageService.GetMessage(1036) ?? "Message not configured";
+
+                return (
+                    Flag: 0,
+                    SetupStatus: "",
+                    MachiningStatus: "",
+                    Message: message1036,
+                    SetUpID: "",
+                    MachiningID: ""
+                );
+            }
 
             string setupMessage = string.Empty, machiningMessage = string.Empty;
 

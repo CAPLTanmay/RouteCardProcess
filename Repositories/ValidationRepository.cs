@@ -149,7 +149,7 @@ namespace RouteCardProcess.Repositories
             using var connection = _connectionFactory.CreateConnection();
             await connection.OpenAsync();
 
-
+            // Step 1: Confirm Production Order in SAP
             string fetchUrl = $"{_baseUrl}ZCONFIRMSet";
             var (csrfToken, cookie) = await FetchCsrfTokenAsync(fetchUrl);
 
@@ -161,7 +161,7 @@ namespace RouteCardProcess.Repositories
 
             postRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-            var json = JsonSerializer.Serialize(request);
+            var json = JsonSerializer.Serialize(request.ProductionOrder);
             postRequest.Content = new StringContent(json, Encoding.UTF8, "application/json");
 
             var response = await _httpClient.SendAsync(postRequest);
@@ -177,6 +177,8 @@ namespace RouteCardProcess.Repositories
                 SetupId = request.LossOrder.SetupId,
                 MachiningId = request.LossOrder.MachiningId
             });
+
+
 
             return responseData;
         }
@@ -229,20 +231,20 @@ namespace RouteCardProcess.Repositories
             try
             {
                 //// Step 1: Confirm Production Order in SAP
-                //var productionJson = await ConfirmProductionOrderAsync(request.ProductionOrder);
-                //productionResult = JsonSerializer.Deserialize<object>(productionJson);
+                var productionJson = await ConfirmProductionOrderAsync(request);
+                productionResult = JsonSerializer.Deserialize<object>(productionJson);
 
-                //bool isProductionSuccess = productionResult != null &&
-                //                           !productionResult.ToString().Contains("error", StringComparison.OrdinalIgnoreCase);
+                bool isProductionSuccess = productionResult != null &&
+                                           !productionResult.ToString().Contains("error", StringComparison.OrdinalIgnoreCase);
 
-                //if (!isProductionSuccess)
-                //{
-                //    return (productionResult, null);
-                //}
+                if (!isProductionSuccess)
+                {
+                   return (productionResult, null);
+                }
 
                 //  Step 1: Skipped for testing
-                bool isProductionSuccess = true;
-                productionResult = new { message = "Test mode: production step skipped" };
+                //bool isProductionSuccess = true;
+                //productionResult = new { message = "Test mode: production step skipped" };
 
                 // Step 2: Fetch setup + machining data from SP
                 var parameters = new

@@ -8,6 +8,7 @@ namespace RouteCardProcess.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class MachiningController : ControllerBase
     {
         private readonly IMachiningRepository _repo;
@@ -28,8 +29,11 @@ namespace RouteCardProcess.Controllers
             {
                 var existing = await _repo.GetByCompositeKeyAsync(request.WorkCenterNo, request.ProductionOrderNo, request.OperationNo);
 
-                if (existing != null && !string.Equals(existing.MachiningStatus, "Completed", StringComparison.OrdinalIgnoreCase))
-                {
+                //if (existing != null && !string.Equals(existing.MachiningStatus, "Completed", StringComparison.OrdinalIgnoreCase))
+                    if (existing != null &&
+    !string.Equals(existing.MachiningStatus, "Completed", StringComparison.OrdinalIgnoreCase) &&
+    !string.Equals(existing.MachiningStatus, "Partially Completed", StringComparison.OrdinalIgnoreCase))
+                    {
                     bool isOperatorEnded = existing.OperatorEndTime != DateTime.MinValue;
                     bool isDifferentOperator = !string.IsNullOrEmpty(request.OperatorId) &&
                                                !string.Equals(existing.OperatorId, request.OperatorId, StringComparison.OrdinalIgnoreCase);

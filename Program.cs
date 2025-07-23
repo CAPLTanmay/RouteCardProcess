@@ -6,6 +6,7 @@ using RouteCardProcess.Interfaces;
 using RouteCardProcess.Middleware;
 using RouteCardProcess.Model.Configurations;
 using RouteCardProcess.Model.DTOs.Login;
+using RouteCardProcess.Model.DTOs.PasswordEncryption;
 using RouteCardProcess.Repositories;
 using RouteCardProcess.Services;
 
@@ -19,6 +20,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddSingleton(new SqlConnectionFactory(connectionString));
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 builder.Services.Configure<KblApiConfig>(builder.Configuration.GetSection("KblApi"));
+builder.Services.Configure<EncryptionSettings>(builder.Configuration.GetSection("EncryptionSettings"));
 builder.Services.AddHttpClient<ISapSyncService, SapSyncService>();
 builder.Services.AddHttpClient();
 
@@ -61,7 +63,7 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-builder.Services.AddCors(options =>
+/*builder.Services.AddCors(options =>
 {
     options.AddPolicy("DefaultCorsPolicy", policy =>
     {
@@ -69,7 +71,23 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
+});*/
+
+
+//  Read multiple origins from configuration
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigin").Get<string[]>();
+
+//  Register CORS with multiple origins
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("DefaultCorsPolicy", policy =>
+    {
+        policy.WithOrigins(allowedOrigins)
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
 });
+
 
 // Repositories
 builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
@@ -90,8 +108,9 @@ builder.Services.AddScoped<IOrderTypeRepository, OrderTypeRepository>();
 builder.Services.AddScoped<ILossOrderRepository, LossOrderRepository>();
 builder.Services.AddScoped<IBreakdownGroupCodeRepository, BreakdownGroupCodeRepository>();
 builder.Services.AddScoped<IBreakdownCodeRepository, BreakdownCodeRepository>();
-
+builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 // Services
+builder.Services.AddScoped<IPasswordSecurityService, PasswordSecurityService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IKblAuthService, KblAuthService>();

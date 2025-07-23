@@ -83,7 +83,7 @@ namespace RouteCardProcess.Controllers
                     return Unauthorized(new { message });
                 }
 
-                var token = await _jwtService.GenerateTokenAsync(request.OperatorId); 
+                var token = await _jwtService.GenerateTokenAsync(request.OperatorId);
                 var successMessage = _userMessageService.GetMessage(2001); // Login successful
 
                 return Ok(new { message = successMessage, token, user });
@@ -95,6 +95,45 @@ namespace RouteCardProcess.Controllers
                 return StatusCode(500, new { message = errMsg });
             }
         }
+
+        [AllowAnonymous]
+        [HttpPost("loginEmployee")]
+        public async Task<IActionResult> LoginEmployee([FromBody] LoginRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                var loginResult = await _repo.LoginEmployeeAsync(request.OperatorId, request.Password);
+
+                if (!loginResult.IsSuccess)
+                {
+                    return Unauthorized(new
+                    {
+                        message = loginResult.FailureReason ?? _userMessageService.GetMessage(1001)
+                    });
+                }
+
+                var token = await _jwtService.GenerateTokenAsync(request.OperatorId);
+                var successMessage = _userMessageService.GetMessage(2001); // Login successful
+
+                return Ok(new
+                {
+                    message = successMessage,
+                    token,
+                    isTempPassword = loginResult.IsTempPassword,
+                    user = loginResult.User
+                });
+            }
+            catch (Exception ex)
+            {
+                await _systemLogger.LogAsync("LogInController", "LoginEmployee", ex.ToString());
+                var errMsg = _userMessageService.GetMessage(5001); // Internal error
+                return StatusCode(500, new { message = errMsg });
+            }
+        }
+
 
         [HttpPost("TryLogout")]
         public async Task<IActionResult> TryLogout([FromBody] LogoutRequest request)

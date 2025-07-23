@@ -8,7 +8,7 @@ namespace RouteCardProcess.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-
+    [Authorize]
     public class RouteCardReportController : ControllerBase
     {
         private readonly IRouteCardReportRepository _repo;
@@ -50,9 +50,13 @@ namespace RouteCardProcess.Controllers
             {
                 var result = await _repo.GetRouteCardReportFilteredAsync(request);
                 if (result == null || !result.Any())
-                    return NotFound(new { message = _userMessageService.GetMessage(1063) });
+                {
+                    var message = _userMessageService.GetMessage(1063) ?? "No data found";
+                    await _systemLogger.LogAsync("RouteCardReportController", "get-filtered", "No data found for given filters.");
+                    return Ok(new { success = false, message, data = new List<object>() });
+                }
 
-                return Ok(result);
+                return Ok(new { success = true, message = "Data fetched successfully", data = result });
             }
             catch (Exception ex)
             {

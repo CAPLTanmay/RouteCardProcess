@@ -229,12 +229,17 @@ public class MachiningRepository : IMachiningRepository
                 };
             }
 
-            string newStatus = "Completed";
+            // string newStatus = "Completed";
 
-            if (totalCompleted < pendingQty)
-            {
-                newStatus = "Handover";
-            }
+            //if (totalCompleted < pendingQty)
+            //{
+            //   newStatus = "Handover";
+            //}
+
+            //string newStatus = totalHandover > 0 ? "Handover" : "Partially Completed";
+
+            string newStatus = (pendingQty == totalCompleted)? "Completed": (totalHandover > 0 ? "Handover" : "Partially Completed");
+
 
             // Insert into DB
             await connection.ExecuteAsync(

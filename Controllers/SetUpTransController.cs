@@ -8,7 +8,7 @@ namespace RouteCardProcess.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-
+    [Authorize]
     public class SetUpTransController : ControllerBase
     {
         private readonly ISetUpTransRepository _repo;

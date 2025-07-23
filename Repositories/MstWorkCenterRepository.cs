@@ -138,12 +138,13 @@ namespace RouteCardProcess.Repositories
                 using var connection = _connectionFactory.CreateConnection();
                 await connection.OpenAsync();
 
-                var query = @"
-                    UPDATE MstWorkCenter 
-                    SET IsActive = 0 
-                    WHERE Plant = @Plant AND WorkCenter = @WorkCenter";
+                var parameters = new { Plant = plant, WorkCenter = workCenter };
 
-                return await connection.ExecuteAsync(query, new { Plant = plant, WorkCenter = workCenter });
+                return await connection.ExecuteAsync(
+                    "usp_SoftDeleteMstWorkCenter",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
             }
             catch (Exception ex)
             {
