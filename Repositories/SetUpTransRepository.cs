@@ -11,10 +11,12 @@ namespace RouteCardProcess.Repositories
     {
         private readonly SqlConnectionFactory _connectionFactory;
         private readonly IUserMessageService _userMessageService;
-        public SetUpTransRepository(SqlConnectionFactory connectionFactory, IUserMessageService userMessageService)
+        private readonly IBreakDownRepository _repo;
+        public SetUpTransRepository(SqlConnectionFactory connectionFactory, IUserMessageService userMessageService, IBreakDownRepository repo)
         {
             _connectionFactory = connectionFactory;
             _userMessageService = userMessageService;
+            _repo = repo;
         }
 
         private IDbConnection CreateConnection() => _connectionFactory.CreateConnection();
@@ -26,7 +28,7 @@ namespace RouteCardProcess.Repositories
             return await connection.QueryFirstOrDefaultAsync<SetupMaster>("usp_GetSetUpByCompositeKey", parameters, commandType: CommandType.StoredProcedure);
         }
 
-        public async Task<(int Flag, string SetupStatus, string MachiningStatus, string Message, string SetUpID, string MachiningID)>
+        public async Task<(int Flag, string SetupStatus, string MachiningStatus, string Message, string SetUpID, string MachiningID, bool Breakdown)>
         CheckSetupNotificationStatusAsync(string workCenterNo, string workOrderNo, string operationNo)
         {
             using var connection = CreateConnection();
@@ -38,12 +40,33 @@ namespace RouteCardProcess.Repositories
             var MachiningParameters = new
             {
                 WorkCenterNo = workCenterNo,
-                ProductionOrderNo = workOrderNo, 
+                ProductionOrderNo = workOrderNo,
                 OperationNo = operationNo
             };
 
             var machining = await connection.QueryFirstOrDefaultAsync<MachiningMaster>(
                 "usp_GetMachiningByCompositeKey", MachiningParameters, commandType: CommandType.StoredProcedure);
+
+            // Step 0: Sync breakdown status from SAP
+                var data = await _repo.GetAllBreakDownsAsync();
+
+
+            // New breakdown flag logic
+            var breakdownRow = await connection.QueryFirstOrDefaultAsync<string>(
+                @"SELECT TOP 1 BreakdownNotificationStatus 
+          FROM TransBreakdown 
+          WHERE WorkCenterNo = @WorkCenterNo 
+          ORDER BY BreakdownStartTime DESC",
+                new { WorkCenterNo = workCenterNo });
+
+            bool isBreakdownActive = false;
+            if (breakdownRow != null)
+            {
+                if (breakdownRow == "" || !breakdownRow.Equals("Notification completed", StringComparison.OrdinalIgnoreCase))
+                {
+                    isBreakdownActive = true;
+                }
+            }
 
             if (setup == null && machining == null)
             {
@@ -53,7 +76,7 @@ namespace RouteCardProcess.Repositories
                     ProductionOrderNo = workOrderNo,
                     WorkCenterNo = workCenterNo,
                     OperationNo = operationNo
-                },commandType: CommandType.StoredProcedure);
+                }, commandType: CommandType.StoredProcedure);
 
                 if (sapRoutingData != null)
                 {
@@ -72,7 +95,8 @@ namespace RouteCardProcess.Repositories
                             MachiningStatus: SAPMachiningStatus,
                             Message: SAPMessage,
                             SetUpID: "",
-                            MachiningID: ""
+                            MachiningID: "",
+                             Breakdown: isBreakdownActive
                         );
                     }
                 }
@@ -84,7 +108,8 @@ namespace RouteCardProcess.Repositories
                     MachiningStatus: "",
                     Message: message1036,
                     SetUpID: "",
-                    MachiningID: ""
+                    MachiningID: "",
+                     Breakdown: isBreakdownActive
                 );
             }
 
@@ -124,12 +149,13 @@ namespace RouteCardProcess.Repositories
 
             string combinedMessage = string.Join(" | ", new[] { setupMessage, machiningMessage }.Where(msg => !string.IsNullOrWhiteSpace(msg)));
             return (
-                Flag: 1,
-                SetupStatus: setup?.SetupStatus,
-                MachiningStatus: machining?.MachiningStatus,
-                Message: combinedMessage,
-                SetUpID: setup?.SetUpID,
-                MachiningID: machining?.MachiningId
+                 Flag: 1,
+                 SetupStatus: setup?.SetupStatus ?? "",
+                 MachiningStatus: machining?.MachiningStatus ?? "",
+                 Message: combinedMessage,
+                 SetUpID: setup?.SetUpID ?? "",
+                 MachiningID: machining?.MachiningId ?? "",
+                Breakdown: isBreakdownActive
             );
         }
 

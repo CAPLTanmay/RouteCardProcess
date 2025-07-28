@@ -216,6 +216,7 @@ namespace RouteCardProcess.Repositories
                                 OperatorRole = employee.UserRole,
                                 DepartmentId = 0, // You can map department from mapping table
                                 DepartmentName = employee.UserDepartment,
+                                RBACDepartmentName = departmentNames,
                                 Shift = await GetCurrentShiftAsync(),
                                 IsFromKBL = false                        
                             }
@@ -326,7 +327,7 @@ namespace RouteCardProcess.Repositories
         {
             try
             {
-                var (flag, setupStatus, machiningStatus, message, _, _) = await _setUpTransRepository
+                var (flag, setupStatus, machiningStatus, message, _, _,_) = await _setUpTransRepository
                     .CheckSetupNotificationStatusAsync(workCenterNo, workOrderNo, operationNo);
 
                 if (flag == 0)

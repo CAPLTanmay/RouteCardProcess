@@ -16,6 +16,7 @@ namespace RouteCardProcess.Model.DTOs.Helper
 
         [Required]
         public string MainOperatorId { get; set; }
+        public string? MSTIdleCode { get; set; }
     }
 
     public class EndHelperRequest

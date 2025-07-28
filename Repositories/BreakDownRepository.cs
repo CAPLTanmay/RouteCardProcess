@@ -32,14 +32,25 @@ namespace RouteCardProcess.Repositories
             using var connection = CreateConnection();
 
             bool isDbSuccess = false, isMailSent = false, isSapPosted = false;
-            string equipmentNo = "";
+
             string notifNum = "";
             string notifStatus = "";
 
             try
             {
                 // Step 0: Find EquipmentNo
-                equipmentNo = await connection.ExecuteScalarAsync<string>("usp_GetEquipmentNoByWorkCenter", new { request.WorkCenterNo }, commandType: CommandType.StoredProcedure);
+                string? equipmentNo = await connection.ExecuteScalarAsync<string>("usp_GetEquipmentNoByWorkCenter", new { request.WorkCenterNo }, commandType: CommandType.StoredProcedure);
+
+                if (string.IsNullOrWhiteSpace(equipmentNo))
+                {
+                    return new BreakDownResponse
+                    {
+                        IsDbSuccess = false,
+                        IsMailSent = false,
+                        IsSapPosted = false,
+                        Message = "Unable to find Equipment Number for the given Work Center."
+                    };
+                }
 
                 // Step 1: SAP POST
                 try
@@ -67,6 +78,18 @@ namespace RouteCardProcess.Repositories
                     await _systemLogger.LogAsync("BreakDownRepository", "SAP_PostError", ex.ToString());
                 }
 
+                // If SAP failed, skip DB and mail
+                if (!isSapPosted)
+                {
+                    return new BreakDownResponse
+                    {
+                        IsDbSuccess = false,
+                        IsMailSent = false,
+                        IsSapPosted = false,
+                        Message = GetBreakdownStatusMessage(false, false, false)
+                    };
+                }
+
                 // Step 2: DB Insert
                 try
                 {
@@ -92,9 +115,9 @@ namespace RouteCardProcess.Repositories
                 // Step 3: Email
                 try
                 {
-                    var mailTemplate = await connection.QueryFirstOrDefaultAsync<dynamic>(
+                    var mailTemplate = await connection.QueryFirstOrDefaultAsync<MailTemplateDto>(
                         "usp_GetOnlineBreakdownMailTemplate",
-                        new { Group = "GP_BR" },
+                        new { Group = "GP_BR2" },
                         commandType: CommandType.StoredProcedure);
 
                     if (mailTemplate != null)
@@ -105,20 +128,24 @@ namespace RouteCardProcess.Repositories
                             .Replace("{reasonText}", request.BreakdownCode ?? "Unknown Reason")
                             .Replace("{Time}", DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss"));
 
-                        isMailSent = await _emailService.SendEmailAsync(subject, body, mailTemplate.MailTo, mailTemplate.MailCC, mailTemplate.MailBCC, mailTemplate.MailFrom);
+                        await _emailService.SendEmailAsync(subject, body, mailTemplate.MailTo, mailTemplate.MailCC, mailTemplate.MailBCC, mailTemplate.MailFrom);
+                        isMailSent = true;
                     }
                 }
                 catch (Exception mailEx)
                 {
+                    isMailSent = false;
                     await _systemLogger.LogAsync("BreakDownRepository", "Mail_SendError", mailEx.ToString());
                 }
+
+
 
                 return new BreakDownResponse
                 {
                     IsDbSuccess = isDbSuccess,
                     IsMailSent = isMailSent,
                     IsSapPosted = isSapPosted,
-                    Message = $"SAP: {(isSapPosted ? "Success" : "Fail")}, DB: {(isDbSuccess ? "Success" : "Fail")}, Mail: {(isMailSent ? "Success" : "Fail")}"
+                    Message = GetBreakdownStatusMessage(isSapPosted, isDbSuccess, isMailSent)
                 };
             }
             catch (Exception ex)
@@ -130,10 +157,72 @@ namespace RouteCardProcess.Repositories
                     IsDbSuccess = false,
                     IsMailSent = false,
                     IsSapPosted = false,
-                    Message = "Exception occurred while processing breakdown."
+                    Message = "An unexpected error occurred while processing the breakdown request."
                 };
             }
         }
+
+
+        //public async Task<BreakDownResponse> StartBreakDownAsync(BreakDownStartRequest request)
+        //{
+        //    using var connection = CreateConnection();
+
+        //    bool isMailSent = false;
+
+        //    try
+        //    {
+        //        // For testing: Hardcoded or dummy values for testing email
+        //        string equipmentNo = "TEST_EQUIP";
+        //        string notifNum = "TEST_NOTIF";
+        //        string notifStatus = "TEST_STATUS";
+
+        //        // Step 3: Email only
+        //        try
+        //        {
+        //            var mailTemplate = await connection.QueryFirstOrDefaultAsync<MailTemplateDto>(
+        //                "usp_GetOnlineBreakdownMailTemplate",
+        //                new { Group = "GP_BR" },
+        //                commandType: CommandType.StoredProcedure);
+
+        //            if (mailTemplate != null)
+        //            {
+        //                string subject = (mailTemplate.MailSubject ?? "").Replace("{workCenterNo}", request.WorkCenterNo);
+        //                string body = (mailTemplate.MailBody ?? "")
+        //                    .Replace("{workCenterNo}", request.WorkCenterNo)
+        //                    .Replace("{reasonText}", request.BreakdownCode ?? "Unknown Reason")
+        //                    .Replace("{Time}", DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss"));
+
+        //                await _emailService.SendEmailAsync(subject, body, mailTemplate.MailTo, mailTemplate.MailCC, mailTemplate.MailBCC, mailTemplate.MailFrom);
+        //                isMailSent = true;
+        //            }
+        //        }
+        //        catch (Exception mailEx)
+        //        {
+        //            await _systemLogger.LogAsync("BreakDownRepository", "Mail_SendError", mailEx.ToString());
+        //        }
+
+        //        return new BreakDownResponse
+        //        {
+        //            IsDbSuccess = false,
+        //            IsSapPosted = false,
+        //            IsMailSent = isMailSent,
+        //            Message = isMailSent ? "Test Mail sent successfully." : "Test Mail failed to send."
+        //        };
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        await _systemLogger.LogAsync("BreakDownRepository", "General_TestMail_Error", ex.ToString());
+
+        //        return new BreakDownResponse
+        //        {
+        //            IsDbSuccess = false,
+        //            IsSapPosted = false,
+        //            IsMailSent = false,
+        //            Message = "Unexpected error during test mail."
+        //        };
+        //    }
+        //}
+
 
         public async Task<BreakDownResponse> EndBreakDownAsync(string notifNum)
         {
@@ -198,6 +287,18 @@ namespace RouteCardProcess.Repositories
                     }
                 }
 
+                // If SAP failed, skip DB update and mail
+                if (!isSapPosted)
+                {
+                    return new BreakDownResponse
+                    {
+                        IsSapPosted = false,
+                        IsDbSuccess = false,
+                        IsMailSent = false,
+                        Message = GetBreakdownStatusMessage(false, false, false)
+                    };
+                }
+
                 // Step 3: Mail
                 try
                 {
@@ -226,7 +327,7 @@ namespace RouteCardProcess.Repositories
                     IsSapPosted = isSapPosted,
                     IsDbSuccess = isDbSuccess,
                     IsMailSent = isMailSent,
-                    Message = $"SAP: {(isSapPosted ? "Success" : "Fail")}, DB: {(isDbSuccess ? "Success" : "Fail")}, Mail: {(isMailSent ? "Success" : "Fail")}"
+                    Message = GetBreakdownStatusMessage(isSapPosted, isDbSuccess, isMailSent)
                 };
             }
             catch (Exception ex)
@@ -238,10 +339,11 @@ namespace RouteCardProcess.Repositories
                     IsSapPosted = false,
                     IsDbSuccess = false,
                     IsMailSent = false,
-                    Message = "Exception occurred while ending breakdown."
+                    Message = "An unexpected error occurred while ending the breakdown."
                 };
             }
         }
+
 
         public async Task<IEnumerable<BreakDownRecordDto>> GetAllBreakDownsAsync()
         {
@@ -348,5 +450,27 @@ namespace RouteCardProcess.Repositories
 
             return breakDownList;
         }
+
+        private string GetBreakdownStatusMessage(bool isSapPosted, bool isDbSuccess, bool isMailSent)
+        {
+            if (!isSapPosted && !isDbSuccess && !isMailSent)
+                return "Breakdown failed. SAP, database, and email steps all unsuccessful.";
+
+            if (isSapPosted && !isDbSuccess && !isMailSent)
+                return "SAP posted. Database save and email failed.";
+
+            if (isSapPosted && isDbSuccess && !isMailSent)
+                return "SAP and database saved. Email failed.";
+
+            if (isSapPosted && !isDbSuccess && isMailSent)
+                return "SAP and email sent. Database save failed.";
+
+            if (isSapPosted && isDbSuccess && isMailSent)
+                return "Breakdown started. All steps successful.";
+
+            return "Invalid state. Contact admin.";
+        }
+
+
     }
 }

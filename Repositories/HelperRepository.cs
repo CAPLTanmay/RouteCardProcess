@@ -11,12 +11,13 @@ namespace RouteCardProcess.Repositories
     {
         private readonly SqlConnectionFactory _connectionFactory;
         private readonly IUserMessageService _userMessageService;
-        public HelperRepository(SqlConnectionFactory connectionFactory, IUserMessageService userMessageService)
+        private readonly ILogInRepository _repo;
+        public HelperRepository(SqlConnectionFactory connectionFactory, IUserMessageService userMessageService, ILogInRepository repo)
         {
             _connectionFactory = connectionFactory;
             _userMessageService = userMessageService;
+            _repo = repo;
         }
-
         private SqlConnection CreateConnection()
         {
             return _connectionFactory.CreateConnection();
@@ -27,14 +28,15 @@ namespace RouteCardProcess.Repositories
             await connection.OpenAsync();
 
             // Fetch all users from the login table
-            var allUsers = await connection.QueryAsync<LogInMaster>(
-                "usp_GetAllLogins",
-                commandType: CommandType.StoredProcedure
-            );
+            //var allUsers = await connection.QueryAsync<LogInMaster>(
+            //    "usp_GetAllLogins",
+            //    commandType: CommandType.StoredProcedure
+            //);
 
-            var validUser = allUsers.FirstOrDefault(u =>
-                u.OperatorId == request.OperatorId && u.OperatorPassword == request.Password
-            );
+            //var validUser = allUsers.FirstOrDefault(u =>
+            //    u.OperatorId == request.OperatorId && u.OperatorPassword == request.Password
+            //);
+            var validUser = await _repo.LoginEmployeeAsync(request.OperatorId, request.Password);
 
             if (validUser == null)
                 return _userMessageService.GetMessage(1001);
@@ -46,7 +48,7 @@ namespace RouteCardProcess.Repositories
             parameters.Add("MachiningID", request.MachiningId);
             parameters.Add("OperatorStartTime", DateTime.Now);
             parameters.Add("MainOperatorId", request.MainOperatorId);
-
+            //parameters.Add("MSTIdleCode", request.MSTIdleCode);
             // Set optional times depending on SetupID or MachiningID
             if (!string.IsNullOrEmpty(request.SetupId))
             {

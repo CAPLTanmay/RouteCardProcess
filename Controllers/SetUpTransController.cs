@@ -39,7 +39,8 @@ namespace RouteCardProcess.Controllers
                     machiningStatus = result.MachiningStatus,
                     setupId = result.SetUpID,
                     machiningId = result.MachiningID,
-                    message = result.Message
+                    message = result.Message,
+                    breakdown = result.Breakdown
                 });
             }
             catch (Exception ex)

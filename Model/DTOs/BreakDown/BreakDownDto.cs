@@ -43,5 +43,14 @@ namespace RouteCardProcess.Model.DTOs.BreakDownDto
         public TimeSpan? TotalBreakdownTime { get; set; }
         public string BreakdownCategory { get; set; }
     }
+    public class MailTemplateDto
+    {
+        public string MailSubject { get; set; }
+        public string MailBody { get; set; }
+        public string MailTo { get; set; }
+        public string MailCC { get; set; }
+        public string MailBCC { get; set; }
+        public string MailFrom { get; set; }
+    }
 
 }

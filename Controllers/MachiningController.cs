@@ -31,8 +31,8 @@ namespace RouteCardProcess.Controllers
 
                 //if (existing != null && !string.Equals(existing.MachiningStatus, "Completed", StringComparison.OrdinalIgnoreCase))
                     if (existing != null &&
-    !string.Equals(existing.MachiningStatus, "Completed", StringComparison.OrdinalIgnoreCase) &&
-    !string.Equals(existing.MachiningStatus, "Partially Completed", StringComparison.OrdinalIgnoreCase))
+                    !string.Equals(existing.MachiningStatus, "Completed", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(existing.MachiningStatus, "Partially Completed", StringComparison.OrdinalIgnoreCase))
                     {
                     bool isOperatorEnded = existing.OperatorEndTime != DateTime.MinValue;
                     bool isDifferentOperator = !string.IsNullOrEmpty(request.OperatorId) &&

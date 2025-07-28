@@ -28,15 +28,31 @@ namespace RouteCardProcess.Controllers
             {
                 var result = await _repo.StartBreakDownAsync(request);
 
-                if (!result.IsDbSuccess)
-                    return BadRequest(new { message = _userMessageService.GetMessage(1015), dbStatus = false, mailStatus = result.IsMailSent, sapStatus = result.IsSapPosted });
+                var response = new
+                {
+                    success = result.IsDbSuccess,
+                    message = result.Message, // Already set via helper in repo
+                    dbStatus = result.IsDbSuccess,
+                    mailStatus = result.IsMailSent,
+                    sapStatus = result.IsSapPosted
+                };
 
-                return Ok(new { message = result.Message, dbStatus = result.IsDbSuccess, mailStatus = result.IsMailSent, sapStatus = result.IsSapPosted });
+                if (!result.IsDbSuccess)
+                    return BadRequest(response);
+
+                return Ok(response);
             }
             catch (Exception ex)
             {
                 await _systemLogger.LogAsync("BreakDownController", "Start", ex.ToString());
-                return StatusCode(500, new { message = _userMessageService.GetMessage(5001), dbStatus = false, mailStatus = false, sapStatus = false });
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = _userMessageService.GetMessage(5001),
+                    dbStatus = false,
+                    mailStatus = false,
+                    sapStatus = false
+                });
             }
         }
 
@@ -46,12 +62,20 @@ namespace RouteCardProcess.Controllers
             try
             {
                 if (string.IsNullOrWhiteSpace(request.NOTIF_NUM))
-                    return BadRequest(new { success = false, message = "Notification number is required." });
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Notification number is required.",
+                        dbStatus = false,
+                        mailStatus = false,
+                        sapStatus = false
+                    });
 
                 var result = await _repo.EndBreakDownAsync(request.NOTIF_NUM);
 
                 return Ok(new
                 {
+                    success = result.IsDbSuccess,
                     message = result.Message,
                     dbStatus = result.IsDbSuccess,
                     mailStatus = result.IsMailSent,
@@ -61,9 +85,17 @@ namespace RouteCardProcess.Controllers
             catch (Exception ex)
             {
                 await _systemLogger.LogAsync("BreakDownController", "End", ex.ToString());
-                return StatusCode(500, new { message = _userMessageService.GetMessage(5001), dbStatus = false, mailStatus = false, sapStatus = false });
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = _userMessageService.GetMessage(5001),
+                    dbStatus = false,
+                    mailStatus = false,
+                    sapStatus = false
+                });
             }
         }
+
 
         [HttpGet("list")]
         public async Task<IActionResult> GetAllBreakdowns()
