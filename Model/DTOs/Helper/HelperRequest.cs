@@ -9,14 +9,12 @@ namespace RouteCardProcess.Model.DTOs.Helper
 
         [Required]
         public string Password { get; set; }
-
-        public string? SetupId { get; set; }
-
-        public string? MachiningId { get; set; }
-
         [Required]
         public string MainOperatorId { get; set; }
+        public string? SetupId { get; set; }
+        public string? MachiningId { get; set; }
         public string? MSTIdleCode { get; set; }
+        public string? WorkCenter { get; set; }
     }
 
     public class EndHelperRequest

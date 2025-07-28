@@ -48,7 +48,9 @@ namespace RouteCardProcess.Repositories
             parameters.Add("MachiningID", request.MachiningId);
             parameters.Add("OperatorStartTime", DateTime.Now);
             parameters.Add("MainOperatorId", request.MainOperatorId);
-            //parameters.Add("MSTIdleCode", request.MSTIdleCode);
+            parameters.Add("MSTIdleCode", request.MSTIdleCode);
+            parameters.Add("WorkCenter", request.WorkCenter);
+
             // Set optional times depending on SetupID or MachiningID
             if (!string.IsNullOrEmpty(request.SetupId))
             {
