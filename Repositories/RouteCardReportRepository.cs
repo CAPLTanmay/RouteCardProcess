@@ -48,18 +48,23 @@ namespace RouteCardProcess.Repositories
             using var connection = _connectionFactory.CreateConnection();
             await connection.OpenAsync();
 
+            //  Pad ProductionOrderNo before using it in the query
+            var paddedOrderNo = request.ProductionOrderNo?.PadLeft(12, '0');
+
             var result = await connection.QueryAsync<RouteCardReportDto>(
-                "usp_GetRouteCardReportFiltered", new
+                "usp_GetRouteCardReportFiltered",
+                new
                 {
                     request.OperatorId,
                     request.ConfirmationDate,
-                    request.ProductionOrderNo,
-                    request.WorkCenterNo
+                    ProductionOrderNo = paddedOrderNo,
+                    request.WorkCenterNo,
+                    Dept = request.Department
                 },
                 commandType: CommandType.StoredProcedure);
 
-                    return result;
-                }
+            return result;
+        }
 
         public async Task<LossOrderResponseDto> GetLossOrderByIdsAsync(OrderReportRequestDto request)
         {
