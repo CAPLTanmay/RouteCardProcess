@@ -168,8 +168,34 @@ namespace RouteCardProcess.Repositories
 
             var responseData = await response.Content.ReadAsStringAsync();
 
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(responseData);
+                    var root = doc.RootElement;
 
+                    var errorDetails = root
+                        .GetProperty("error")
+                        .GetProperty("innererror")
+                        .GetProperty("errordetails");
+
+                    var messages = new List<string>();
+
+                    foreach (var detail in errorDetails.EnumerateArray())
+                    {
+                        if (detail.TryGetProperty("message", out var msg))
+                            messages.Add(msg.GetString());
+                    }
+
+                    var combinedMessage = string.Join(" | ", messages);
+                    return $"SAP Error: {combinedMessage}";
+                }
+                catch
+                {
+                    return $"SAP Error: {responseData}";
+                }
+            }
 
             //  Update DB flags only if success
             //var sql = @"UPDATE Trans_Setup SET IsUploadToSAP = 1 WHERE SetupId = @SetupId;
@@ -333,9 +359,6 @@ namespace RouteCardProcess.Repositories
 
             return (productionResult, lossResult);
         }
-
-
-
         // Brekdown Start
         public async Task<SAPBreakdownRequest?> PostBreakdownAsync(SAPBreakdownRequest request)
         {
