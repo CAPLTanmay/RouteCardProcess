@@ -137,9 +137,6 @@ namespace RouteCardProcess.Repositories
                     isMailSent = false;
                     await _systemLogger.LogAsync("BreakDownRepository", "Mail_SendError", mailEx.ToString());
                 }
-
-
-
                 return new BreakDownResponse
                 {
                     IsDbSuccess = isDbSuccess,
