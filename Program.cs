@@ -51,12 +51,30 @@ builder.Services.AddSwaggerGen(c =>
         In = ParameterLocation.Header,
         Description = "Enter 'Bearer' [space] and then your valid JWT token"
     });
+
+    //  API Key Auth
+    c.AddSecurityDefinition("ApiKey", new OpenApiSecurityScheme
+    {
+        Description = "API Key required to access this endpoint",
+        Name = "X-API-KEY",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "ApiKeyScheme"
+    });
+
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
             new OpenApiSecurityScheme
             {
                 Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+            },
+            Array.Empty<string>()
+        },
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "ApiKey" }
             },
             Array.Empty<string>()
         }
@@ -109,6 +127,8 @@ builder.Services.AddScoped<ILossOrderRepository, LossOrderRepository>();
 builder.Services.AddScoped<IBreakdownGroupCodeRepository, BreakdownGroupCodeRepository>();
 builder.Services.AddScoped<IBreakdownCodeRepository, BreakdownCodeRepository>();
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
+builder.Services.AddScoped<IModuleRepository, ModuleRepository>();
+
 // Services
 builder.Services.AddScoped<IPasswordSecurityService, PasswordSecurityService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
