@@ -9,7 +9,6 @@ namespace RouteCardProcess.Repositories
     {
         private readonly SqlConnectionFactory _connectionFactory;
         private readonly ISystemLoggerRepository _systemLogger;
-
         public BreakdownGroupCodeRepository(SqlConnectionFactory connectionFactory, ISystemLoggerRepository systemLogger)
         {
             _connectionFactory = connectionFactory;
@@ -22,14 +21,12 @@ namespace RouteCardProcess.Repositories
             {
                 using var connection = _connectionFactory.CreateConnection();
                 await connection.OpenAsync();
-
                 var parameters = new
                 {
                     request.BreakdownCodeGroup,
                     request.GroupDescription,
                     IsActive = request.IsActive ?? true
                 };
-
                 return await connection.ExecuteAsync("usp_AddBreakdownGroupCode", parameters, commandType: CommandType.StoredProcedure);
             }
             catch (Exception ex)
@@ -52,7 +49,6 @@ namespace RouteCardProcess.Repositories
                     request.GroupDescription,
                     IsActive = request.IsActive
                 };
-
                 return await connection.ExecuteAsync("usp_UpdateBreakdownGroupCode", parameters, commandType: CommandType.StoredProcedure);
             }
             catch (Exception ex)
@@ -80,7 +76,6 @@ namespace RouteCardProcess.Repositories
                 return Enumerable.Empty<BreakdownGroupCodeRequest>();
             }
         }
-
         public async Task<int> DeleteAsync(string breakdownCodeGroup)
         {
             try
@@ -112,7 +107,6 @@ namespace RouteCardProcess.Repositories
                     parameters,
                     commandType: CommandType.StoredProcedure
                 );
-
                 return result;
             }
             catch (Exception ex)

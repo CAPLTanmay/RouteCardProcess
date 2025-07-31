@@ -9,6 +9,5 @@ namespace RouteCardProcess.Interfaces
         Task<string> EndHelperAsync(EndHelperRequest request);
         Task<string> ToggleHelperPauseAsync(EndHelperRequest request);
         Task<IEnumerable<OperatorHelperLog>> GetHelpersByMainOperatorIdAsync(string mainOperatorId);
-
     }
 }

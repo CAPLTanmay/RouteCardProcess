@@ -18,16 +18,13 @@ namespace RouteCardProcess.Repositories
             _userMessageService = userMessageService;
             _repo = repo;
         }
-
         private IDbConnection CreateConnection() => _connectionFactory.CreateConnection();
-
-        public async Task<SetupMaster> GetByCompositeKeyAsync(string workCenterNo, string workOrderNo, string operationNo)
+        public async Task<SetupMaster> GetByCompositeKeyAsync(SetupCompositeKeyRequest  request)
         {
             using var connection = CreateConnection();
-            var parameters = new { WorkCenterNo = workCenterNo, WorkOrderNo = workOrderNo, OperationNo = operationNo };
+            var parameters = new { WorkCenterNo = request.WorkCenterNo, WorkOrderNo = request.WorkOrderNo, OperationNo = request.OperationNo };
             return await connection.QueryFirstOrDefaultAsync<SetupMaster>("usp_GetSetUpByCompositeKey", parameters, commandType: CommandType.StoredProcedure);
         }
-
         public async Task<(int Flag, string SetupStatus, string MachiningStatus, string Message, string SetUpID, string MachiningID, bool Breakdown)>
         CheckSetupNotificationStatusAsync(string workCenterNo, string workOrderNo, string operationNo)
         {
@@ -52,12 +49,10 @@ namespace RouteCardProcess.Repositories
 
 
             // New breakdown flag logic
-            var breakdownRow = await connection.QueryFirstOrDefaultAsync<string>(
-                @"SELECT TOP 1 BreakdownNotificationStatus 
-          FROM TransBreakdown 
-          WHERE WorkCenterNo = @WorkCenterNo 
-          ORDER BY BreakdownStartTime DESC",
-                new { WorkCenterNo = workCenterNo });
+            var breakdownRow = await connection.QueryFirstOrDefaultAsync<string>("usp_GetLatestBreakdownStatusByWorkCenter",
+                new { 
+                    WorkCenterNo = workCenterNo 
+                   }, commandType: CommandType.StoredProcedure);
 
             bool isBreakdownActive = false;
             if (breakdownRow != null)
@@ -158,7 +153,6 @@ namespace RouteCardProcess.Repositories
                 Breakdown: isBreakdownActive
             );
         }
-
         public async Task<SetupMaster> CreateSetupAsync(SetupMasterDto request)
         {
             // TimeSpan StandardSetupTime = ConvertMinutesToTimeSpan(request.StandardSetupTime);
@@ -208,11 +202,10 @@ namespace RouteCardProcess.Repositories
                 throw;
             }
         }
-
-        public async Task<string> StartSetupAsync(string setUpId)
+        public async Task<string> StartSetupAsync(SetupIdentifierRequest request)
         {
             using var connection = CreateConnection();
-            var parameters = new { SetUpID = setUpId };
+            var parameters = new { SetUpID = request.SetUpID };
 
             try
             {
@@ -228,7 +221,7 @@ namespace RouteCardProcess.Repositories
                     // If the setup does not exist, create a new setup
                     var setupMasterDto = new SetupMasterDto
                     {
-                        SetUpID = setUpId,
+                        SetUpID = request.SetUpID,
                         // Add other properties like OperatorId, WorkCenterNo, etc.
                     };
 
@@ -293,7 +286,7 @@ namespace RouteCardProcess.Repositories
             }
         }
 
-        public async Task<bool> EndSetupTimeAsync(string setUpId)
+        public async Task<bool> EndSetupTimeAsync(SetupIdentifierRequest setUpId)
         {
             using var connection = CreateConnection();
             var parameters = new { SetUpID = setUpId };
@@ -402,7 +395,6 @@ namespace RouteCardProcess.Repositories
                 throw;
             }
         }
-
         private TimeSpan ConvertMinutesToTimeSpan(string minutes)
         {
             if (double.TryParse(minutes.Trim(), out double parsedMinutes))
@@ -433,6 +425,5 @@ namespace RouteCardProcess.Repositories
                 parameters,
                 commandType: CommandType.StoredProcedure);
         }
-
     }
 }

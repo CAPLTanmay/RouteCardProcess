@@ -27,7 +27,15 @@ namespace RouteCardProcess.Controllers
         {
             try
             {
-                var existing = await _repo.GetByCompositeKeyAsync(request.WorkCenterNo, request.ProductionOrderNo, request.OperationNo);
+                var compositeKey = new CompositeKeyRequest
+                {
+                    WorkCenterNo = request.WorkCenterNo,
+                    ProductionOrderNo = request.ProductionOrderNo, 
+                    OperationNo = request.OperationNo
+                };
+
+                var existing = await _repo.GetByCompositeKeyAsync(compositeKey);
+
 
                 //if (existing != null && !string.Equals(existing.MachiningStatus, "Completed", StringComparison.OrdinalIgnoreCase))
                     if (existing != null &&
@@ -40,8 +48,14 @@ namespace RouteCardProcess.Controllers
 
                     if (isOperatorEnded || isDifferentOperator)
                     {
+                        var operatorStartRequest = new MachiningOperatorStartRequest
+                        {
+                            MachiningId = existing.MachiningId,
+                            OperatorId = request.OperatorId,
+                            OperatorStartTime = DateTime.Now
+                        };
                         // Insert into Trans_Machining_Operator only
-                       await _repo.InsertMachiningOperatorStartAsync(existing.MachiningId, request.OperatorId, DateTime.Now);
+                        await _repo.InsertMachiningOperatorStartAsync(operatorStartRequest);
 
                         return Ok(new
                         {
@@ -90,7 +104,7 @@ namespace RouteCardProcess.Controllers
                 if (string.IsNullOrWhiteSpace(request.MachiningId))
                     return BadRequest(new { message = _userMessageService.GetMessage(1024) });
 
-                await _repo.StartMachiningAsync(request.MachiningId);
+                await _repo.StartMachiningAsync(request);
                 return Ok(new { message = _userMessageService.GetMessage(1025) });
             }
             catch (Exception ex)
@@ -108,7 +122,7 @@ namespace RouteCardProcess.Controllers
                 if (string.IsNullOrWhiteSpace(request.MachiningId))
                     return BadRequest(new { message = _userMessageService.GetMessage(1024) });
 
-                await _repo.TogglePauseAsync(request.MachiningId, request.PauseCode); // PauseCode can be null or empty
+                await _repo.TogglePauseAsync(request); // PauseCode can be null or empty
                 return Ok(new { message = _userMessageService.GetMessage(1026) });
             }
             catch (Exception ex)
@@ -127,7 +141,7 @@ namespace RouteCardProcess.Controllers
                 if (string.IsNullOrWhiteSpace(request.MachiningId))
                     return BadRequest(new { message = _userMessageService.GetMessage(1024) });
 
-                await _repo.EndMachiningAsync(request.MachiningId);
+                await _repo.EndMachiningAsync(request);
                 return Ok(new { message =  _userMessageService.GetMessage(1027) });
             }
             catch (Exception ex)
@@ -204,7 +218,13 @@ namespace RouteCardProcess.Controllers
         {
             try
             {
-                var machining = await _repo.GetByCompositeKeyAsync(machiningId, string.Empty, string.Empty);
+                var machining = await _repo.GetByCompositeKeyAsync(new CompositeKeyRequest
+                {
+                    WorkCenterNo = machiningId,
+                    ProductionOrderNo = string.Empty,
+                    OperationNo = string.Empty
+                });
+
                 return machining == null
                     ? NotFound(new { message = _userMessageService.GetMessage(1033) })
                     : Ok(machining);

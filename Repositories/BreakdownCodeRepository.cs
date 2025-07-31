@@ -15,7 +15,6 @@ namespace RouteCardProcess.Repositories
             _connectionFactory = connectionFactory;
             _systemLogger = systemLogger;
         }
-
         public async Task<int> AddAsync(BreakdownCodeRequest request)
         {
             try
@@ -39,7 +38,6 @@ namespace RouteCardProcess.Repositories
                 return 0;
             }
         }
-
         public async Task<int> UpdateAsync(BreakdownCodeRequest request)
         {
             try
@@ -63,7 +61,6 @@ namespace RouteCardProcess.Repositories
                 return 0;
             }
         }
-
         public async Task<IEnumerable<BreakdownCodeRequest>> GetAllAsync()
         {
             try
@@ -79,7 +76,6 @@ namespace RouteCardProcess.Repositories
                 return Enumerable.Empty<BreakdownCodeRequest>();
             }
         }
-
         public async Task<int> DeleteAsync(string breakdownCodeGroup, string breakdownCode)
         {
             try

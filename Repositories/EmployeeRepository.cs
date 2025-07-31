@@ -34,7 +34,11 @@ namespace RouteCardProcess.Repositories
 
             try
             {
-                string encryptedPassword = await _passwordService.EncryptPassword(request.EmployeePassword);
+                string plainPassword = request.EmployeePassword ?? string.Empty;
+
+                string encryptedPassword = request.IsContractEmployee
+                    ? await _passwordService.EncryptPassword(plainPassword)
+                    : plainPassword;
 
                 var parameters = new DynamicParameters();
                 parameters.Add("EmployeeId", request.EmployeeId);
@@ -162,6 +166,44 @@ namespace RouteCardProcess.Repositories
             {
                 await _systemLogger.LogAsync("EmployeeRepository", "GetAllEmployeesAsync", ex.ToString());
                 return Enumerable.Empty<EmployeeResponse>();
+            }
+        }
+        public async Task<EmployeeResponse?> GetEmployeeByIdAsync(GetEmployeeRequest request)
+        {
+            using var connection = CreateConnection();
+            await connection.OpenAsync();
+
+            var employeeDictionary = new Dictionary<int, EmployeeResponse>();
+
+            try
+            {
+                var result = await connection.QueryAsync<EmployeeResponse, DepartmentDto, EmployeeResponse>(
+                    "usp_GetEmployeeById",
+                    (employee, department) =>
+                    {
+                        if (!employeeDictionary.TryGetValue(employee.EmployeeId, out var empEntry))
+                        {
+                            empEntry = employee;
+                            empEntry.Departments = new List<DepartmentDto>();
+                            employeeDictionary.Add(empEntry.EmployeeId, empEntry);
+                        }
+
+                        if (department != null && department.DepartmentId > 0)
+                            empEntry.Departments.Add(department);
+
+                        return empEntry;
+                    },
+                    new { EmployeeId = request.EmployeeId },
+                    splitOn: "DepartmentId",
+                    commandType: CommandType.StoredProcedure
+                );
+
+                return employeeDictionary.Values.FirstOrDefault();
+            }
+            catch (Exception ex)
+            {
+                await _systemLogger.LogAsync("EmployeeRepository", "GetEmployeeByIdAsync", ex.ToString());
+                return null;
             }
         }
         public async Task<string> SoftDeleteEmployeeAsync(int employeeCode, int updatedBy)

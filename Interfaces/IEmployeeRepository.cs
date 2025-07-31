@@ -8,6 +8,7 @@ namespace RouteCardProcess.Interfaces
         Task<string> AddEmployeeAsync(EmployeeRequest request);
         Task<string> UpdateEmployeeAsync(UpdateEmployeeRequest request);
         Task<IEnumerable<EmployeeResponse>> GetAllEmployeesAsync();
+        Task<EmployeeResponse?> GetEmployeeByIdAsync(GetEmployeeRequest request);
         Task<string> SoftDeleteEmployeeAsync(int employeeId, int updatedBy);
         Task<bool> ResetTempPasswordAsync(ResetPasswordDto request);
     }

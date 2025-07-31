@@ -265,7 +265,7 @@ namespace RouteCardProcess.Repositories
                             commandType: CommandType.StoredProcedure);
 
                         // Step D: Decide Category
-                        string category = totalMinutes <= thresholdMinutes ? "Minor Breakdown" : "Major Breakdown";
+                        string category = totalMinutes <= thresholdMinutes ? "Minor Breakdown" : "Standard Breakdown";
 
                         // Step E: Get Status Description from SP
                         var statusDescription = await connection.ExecuteScalarAsync<string>(

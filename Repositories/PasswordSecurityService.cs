@@ -15,7 +15,6 @@ public class PasswordSecurityService : IPasswordSecurityService
         _encryptionKey = configuration["EncryptionSettings:Key"];
         _systemLogger = systemLogger;
     }
-
     public async Task<string> EncryptPassword(string plainPasswordText)
     {
         try
@@ -37,7 +36,6 @@ public class PasswordSecurityService : IPasswordSecurityService
             return "Encryption failed. Please try again.";
         }
     }
-
     public async Task<string> DecryptPassword(string encryptedPasswordText)
     {
         try
@@ -60,5 +58,4 @@ public class PasswordSecurityService : IPasswordSecurityService
             return "Invalid or corrupted encrypted password.";
         }
     }
-
 }

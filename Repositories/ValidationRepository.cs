@@ -7,6 +7,7 @@ using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model.DTOs.RouteCardReport;
 using RouteCardProcess.Model.DTOs.SapValidation;
 using System.Transactions;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace RouteCardProcess.Repositories
 {
@@ -163,21 +164,31 @@ namespace RouteCardProcess.Repositories
 
             var json = JsonSerializer.Serialize(request.ProductionOrder);
             postRequest.Content = new StringContent(json, Encoding.UTF8, "application/json");
-
             var response = await _httpClient.SendAsync(postRequest);
-            response.EnsureSuccessStatusCode();
 
             var responseData = await response.Content.ReadAsStringAsync();
 
-            //  Update DB flags only if success
-            var sql = @"UPDATE Trans_Setup SET IsUploadToSAP = 1 WHERE SetupId = @SetupId;
-            UPDATE Trans_Machining_Operator SET IsUploadToSAP = 1 WHERE MachiningId = @MachiningId; ";
-            await connection.ExecuteAsync(sql, new
-            {
-                SetupId = request.LossOrder.SetupId,
-                MachiningId = request.LossOrder.MachiningId
-            });
+            response.EnsureSuccessStatusCode();
 
+
+            //  Update DB flags only if success
+            //var sql = @"UPDATE Trans_Setup SET IsUploadToSAP = 1 WHERE SetupId = @SetupId;
+            //UPDATE Trans_Machining_Operator SET IsUploadToSAP = 1 WHERE MachiningId = @MachiningId; ";
+            //await connection.ExecuteAsync(sql, new
+            //{
+            //    SetupId = request.LossOrder.SetupId,
+            //    MachiningId = request.LossOrder.MachiningId
+            //});
+            // Step 2: Update DB flags using SP
+            await connection.ExecuteAsync(
+                "usp_UpdateUploadToSAP_ProductionOrder",
+                new
+                {
+                    SetupId = request.LossOrder.SetupId,
+                    MachiningId = request.LossOrder.MachiningId
+                },
+                commandType: CommandType.StoredProcedure
+            );
 
 
             return responseData;
@@ -302,14 +313,16 @@ namespace RouteCardProcess.Repositories
                 var lossJson = await ConfirmLossOrderAsync(lossSapRequest);
                 lossResult = JsonSerializer.Deserialize<object>(lossJson);
 
-                // Step 6: Update IsUploadToSAP to 1 in all related tables
-                var updateSql = @"
-            UPDATE Trans_Setup SET IsUploadToSAP = 1 WHERE SetupId = @SetupId;
-            UPDATE Trans_Setup_IdelTime SET IsUploadToSAP = 1 WHERE SetupId = @SetupId;
-            UPDATE Trans_Machining SET IsUploadToSAP = 1 WHERE MachiningId = @MachiningId;
-            UPDATE Trans_Machining_IdelTime SET IsUploadToSAP = 1 WHERE MachiningId = @MachiningId; " ;
-
-                await connection.ExecuteAsync(updateSql, parameters, transaction);
+                // Step 6: Call SP to update IsUploadToSAP
+                await connection.ExecuteAsync("usp_UpdateUploadToSAP_LossOrder",
+                    new
+                    {
+                        SetupId = parameters.SetupId,
+                        MachiningId = parameters.MachiningId
+                    },
+                    transaction: transaction,
+                    commandType: CommandType.StoredProcedure
+                );
                 transaction.Commit(); // commit only if everything goes fine
             }
             catch (Exception ex)

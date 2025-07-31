@@ -5,18 +5,18 @@ namespace RouteCardProcess.Interfaces
 {
     public interface ISetUpTransRepository
     {
-        Task<SetupMaster> GetByCompositeKeyAsync(string workCenterNo, string workOrderNo, string operationNo);
+        Task<SetupMaster> GetByCompositeKeyAsync(SetupCompositeKeyRequest request);
 
         Task<(int Flag, string SetupStatus, string MachiningStatus, string Message, string SetUpID, string MachiningID, bool Breakdown)>
         CheckSetupNotificationStatusAsync(string workCenterNo, string workOrderNo, string operationNo);
 
         Task<SetupMaster> CreateSetupAsync(SetupMasterDto request);
 
-        Task<string> StartSetupAsync(string setUpId);
+        Task<string> StartSetupAsync(SetupIdentifierRequest request);
 
         Task<string> TogglePauseAsync(SetupPauseRequest request);
 
-        Task<bool> EndSetupTimeAsync(string setUpId);
+        Task<bool> EndSetupTimeAsync(SetupIdentifierRequest request);
 
         Task<bool> InsertDelaysAsync(SetupDelayRequest request);
         Task InsertSetupOperatorStartAsync(string setupId, string operatorId, DateTime startTime);

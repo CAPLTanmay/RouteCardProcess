@@ -55,7 +55,14 @@ namespace RouteCardProcess.Controllers
         {
             try
             {
-                var existing = await _repo.GetByCompositeKeyAsync(request.WorkCenterNo, request.ProductionOrderNo, request.OperationNo);
+                var compositeKey = new SetupCompositeKeyRequest
+                {
+                    WorkCenterNo = request.WorkCenterNo,
+                    WorkOrderNo = request.ProductionOrderNo,
+                    OperationNo = request.OperationNo
+                };
+
+                var existing = await _repo.GetByCompositeKeyAsync(compositeKey);
 
                 if (existing != null && !string.Equals(existing.SetupStatus, "Completed", StringComparison.OrdinalIgnoreCase))
                 {
@@ -113,7 +120,7 @@ namespace RouteCardProcess.Controllers
         {
             try
             {
-                var result = await _repo.StartSetupAsync(request.SetUpID);
+                var result = await _repo.StartSetupAsync(request);
 
                 return result == _userMessageService.GetMessage(1056)
                     ? Ok(new { message = result })
@@ -149,7 +156,7 @@ namespace RouteCardProcess.Controllers
         {
             try
             {
-                var success = await _repo.EndSetupTimeAsync(request.SetUpID);
+                var success = await _repo.EndSetupTimeAsync(request);
 
                 return success
                     ? Ok(new { message = _userMessageService.GetMessage(1027) })

@@ -88,6 +88,44 @@ namespace RouteCardProcess.Controllers
             }
         }
 
+        [HttpPost("getById")]
+        public async Task<IActionResult> GetById([FromBody] GetEmployeeRequest request)
+        {
+            try
+            {
+                var employee = await _employeeRepository.GetEmployeeByIdAsync(request);
+
+                if (employee == null)
+                {
+                    return NotFound(new
+                    {
+                        IsSuccess = false,
+                        Message = _userMessageService.GetMessage(1115),
+                        Data = (object)null
+                    });
+                }
+
+                return Ok(new
+                {
+                    IsSuccess = true,
+                    Message = "Employee fetched successfully",
+                    Data = employee
+                });
+            }
+            catch (Exception ex)
+            {
+                await _systemLogger.LogAsync("EmployeeController", "get-by-id", ex.ToString());
+                return StatusCode(500, new
+                {
+                    IsSuccess = false,
+                    Message = _userMessageService.GetMessage(5001),
+                    Data = (object)null
+                });
+            }
+        }
+
+
+
         [HttpPost("deleteEmployee")]
         public async Task<IActionResult> SoftDelete([FromBody] DeleteEmployeeRequest request)
         {

@@ -108,16 +108,18 @@ public class EmailService : IEmailService
             using var client = new SmtpClient
             {
                 Host = _settings.SmtpServer,
-                Port = _settings.SmtpPort,
-                EnableSsl = false,
+                //Port = _settings.SmtpPort,
+                //EnableSsl = false,
                 DeliveryMethod = SmtpDeliveryMethod.Network,
                 UseDefaultCredentials = true,
                 //Credentials = new NetworkCredential(_settings.Username, _settings.Password)
             };
 
-            //client.Send(mail);
+            client.Send(mail);
 
-            await client.SendMailAsync(mail);
+
+            //await client.SendMailAsync(mail);
+
         }
         catch (Exception ex)
         {
