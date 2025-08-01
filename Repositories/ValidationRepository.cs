@@ -145,67 +145,55 @@ namespace RouteCardProcess.Repositories
 
 
         // Confirm Production Order
-        public async Task<string> ConfirmProductionOrderAsync(CombinedSAPConfirmationRequest request)
+        public async Task<SapResponseDto> ConfirmProductionOrderAsync(CombinedSAPConfirmationRequest request)
         {
+            var result = new SapResponseDto();
+
             using var connection = _connectionFactory.CreateConnection();
             await connection.OpenAsync();
 
-            // Step 1: Confirm Production Order in SAP
             string fetchUrl = $"{_baseUrl}ZCONFIRMSet";
             var (csrfToken, cookie) = await FetchCsrfTokenAsync(fetchUrl);
 
             var postRequest = new HttpRequestMessage(HttpMethod.Post, fetchUrl);
             postRequest.Headers.Add("X-CSRF-Token", csrfToken);
-
-            if (!string.IsNullOrEmpty(cookie))
-                postRequest.Headers.Add("Cookie", cookie);
-
+            if (!string.IsNullOrEmpty(cookie)) postRequest.Headers.Add("Cookie", cookie);
             postRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
             var json = JsonSerializer.Serialize(request.ProductionOrder);
             postRequest.Content = new StringContent(json, Encoding.UTF8, "application/json");
-            var response = await _httpClient.SendAsync(postRequest);
 
+            var response = await _httpClient.SendAsync(postRequest);
             var responseData = await response.Content.ReadAsStringAsync();
+
+            result.RawResponse = responseData;
 
             if (!response.IsSuccessStatusCode)
             {
+                result.IsError = true;
                 try
                 {
                     using var doc = JsonDocument.Parse(responseData);
-                    var root = doc.RootElement;
+                    var errDetails = doc.RootElement
+                                        .GetProperty("error")
+                                        .GetProperty("innererror")
+                                        .GetProperty("errordetails");
 
-                    var errorDetails = root
-                        .GetProperty("error")
-                        .GetProperty("innererror")
-                        .GetProperty("errordetails");
-
-                    var messages = new List<string>();
-
-                    foreach (var detail in errorDetails.EnumerateArray())
+                    foreach (var detail in errDetails.EnumerateArray())
                     {
                         if (detail.TryGetProperty("message", out var msg))
-                            messages.Add(msg.GetString());
+                            result.Messages.Add(msg.GetString());
                     }
-
-                    var combinedMessage = string.Join(" | ", messages);
-                    return $"SAP Error: {combinedMessage}";
                 }
                 catch
                 {
-                    return $"SAP Error: {responseData}";
+                    result.Messages.Add("SAP Error but unable to parse error details.");
                 }
+
+                return result;
             }
 
-            //  Update DB flags only if success
-            //var sql = @"UPDATE Trans_Setup SET IsUploadToSAP = 1 WHERE SetupId = @SetupId;
-            //UPDATE Trans_Machining_Operator SET IsUploadToSAP = 1 WHERE MachiningId = @MachiningId; ";
-            //await connection.ExecuteAsync(sql, new
-            //{
-            //    SetupId = request.LossOrder.SetupId,
-            //    MachiningId = request.LossOrder.MachiningId
-            //});
-            // Step 2: Update DB flags using SP
+            // Only update DB if success
             await connection.ExecuteAsync(
                 "usp_UpdateUploadToSAP_ProductionOrder",
                 new
@@ -216,9 +204,9 @@ namespace RouteCardProcess.Repositories
                 commandType: CommandType.StoredProcedure
             );
 
-
-            return responseData;
+            return result;
         }
+
         // Confirm Loss  Order
         public async Task<string> ConfirmLossOrderAsync(LossOrderSapRequest request)
         {
@@ -267,21 +255,16 @@ namespace RouteCardProcess.Repositories
 
             try
             {
-                //// Step 1: Confirm Production Order in SAP
-                var productionJson = await ConfirmProductionOrderAsync(request);
-                productionResult = JsonSerializer.Deserialize<object>(productionJson);
+                // Step 1: Confirm Production Order in SAP
+                var productionResponse = await ConfirmProductionOrderAsync(request);
+                productionResult = productionResponse;
 
-                bool isProductionSuccess = productionResult != null &&
-                                           !productionResult.ToString().Contains("error", StringComparison.OrdinalIgnoreCase);
+                bool isProductionSuccess = productionResponse is SapResponseDto prodDto && !prodDto.IsError;
 
                 if (!isProductionSuccess)
                 {
-                   return (productionResult, null);
+                    return (productionResult, null);
                 }
-
-                //  Step 1: Skipped for testing
-                //bool isProductionSuccess = true;
-                //productionResult = new { message = "Test mode: production step skipped" };
 
                 // Step 2: Fetch setup + machining data from SP
                 var parameters = new
@@ -298,7 +281,6 @@ namespace RouteCardProcess.Repositories
 
                 if (!setupData.Any() && !machData.Any())
                 {
-                    // Step 3: No data case
                     lossResult = new { message = "No loss data found for provided SetupId and MachiningId." };
                     return (productionResult, lossResult);
                 }
@@ -336,10 +318,10 @@ namespace RouteCardProcess.Repositories
                 };
 
                 // Step 5: Call SAP Loss Order API
-                var lossJson = await ConfirmLossOrderAsync(lossSapRequest);
-                lossResult = JsonSerializer.Deserialize<object>(lossJson);
+                var lossResponse = await ConfirmLossOrderAsync(lossSapRequest);
+                lossResult = lossResponse;
 
-                // Step 6: Call SP to update IsUploadToSAP
+                // Step 6: Update DB flags if all successful
                 await connection.ExecuteAsync("usp_UpdateUploadToSAP_LossOrder",
                     new
                     {
@@ -349,16 +331,18 @@ namespace RouteCardProcess.Repositories
                     transaction: transaction,
                     commandType: CommandType.StoredProcedure
                 );
-                transaction.Commit(); // commit only if everything goes fine
+
+                transaction.Commit(); // only commit if all success
             }
             catch (Exception ex)
             {
-                transaction.Rollback(); 
-               throw new Exception("Error in ConfirmProdAndLossOrderAsync", ex);
+                transaction.Rollback();
+                throw new Exception("Error in ConfirmProdAndLossOrderAsync", ex);
             }
 
             return (productionResult, lossResult);
         }
+
         // Brekdown Start
         public async Task<SAPBreakdownRequest?> PostBreakdownAsync(SAPBreakdownRequest request)
         {

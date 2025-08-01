@@ -309,13 +309,15 @@ namespace RouteCardProcess.Controllers
         {
             try
             {
-                var response = await _repo.ConfirmProductionOrderAsync(request);
+                var response = await _repo.ConfirmProductionOrderAsync(request); // returns SapResponseDto
 
                 return Ok(new
                 {
-                    success = true,
-                    message = _userMessageService.GetMessage(1070),
-                    data = JsonSerializer.Deserialize<object>(response)
+                    success = !response.IsError,
+                    message = response.IsError
+                                ? string.Join(" | ", response.Messages)
+                                : _userMessageService.GetMessage(1070),
+                    data = response // already object, no need to deserialize
                 });
             }
             catch (HttpRequestException ex) when (ex.Message.Contains("400"))
@@ -338,6 +340,8 @@ namespace RouteCardProcess.Controllers
                 await _systemLogger.LogAsync("ValidationController", "confirmProductionOrder", ex.ToString());
                 return StatusCode(500, new { success = false, message = _userMessageService.GetMessage(5001), details = ex.Message });
             }
+       
+
         }
 
         [HttpPost("confirmLossOrder")]
@@ -417,27 +421,24 @@ namespace RouteCardProcess.Controllers
         {
             try
             {
-                var (productionResponse, lossResponse) = await _repo.ConfirmProdAndLossOrderAsync(request);
+                var (prodResponse, lossResponse) = await _repo.ConfirmProdAndLossOrderAsync(request);
 
-                bool productionSuccess = productionResponse != null && !productionResponse.ToString().Contains("error", StringComparison.OrdinalIgnoreCase);
-                bool lossSuccess = lossResponse != null && !lossResponse.ToString().Contains("error", StringComparison.OrdinalIgnoreCase);
+                bool prodSuccess = prodResponse is SapResponseDto p && !p.IsError;
+                bool lossSuccess = lossResponse is SapResponseDto l && !l.IsError;
 
-                string message;
-
-                if (productionSuccess && lossSuccess)
-                    message = "Production and Loss Orders confirmed successfully.";
-                else if (productionSuccess)
-                    message = "Production confirmed. Loss not processed or failed.";
-                else
-                    message = "Production order confirmation failed.";
+                string message = prodSuccess && lossSuccess
+                    ? "Production and Loss Orders confirmed successfully."
+                    : prodSuccess ? "Production confirmed. Loss not processed or failed."
+                    : "Production order confirmation failed.";
 
                 return Ok(new
                 {
-                    success = productionSuccess,
+                    success = prodSuccess,
                     message,
-                    production = productionResponse,
+                    production = prodResponse,
                     loss = lossResponse
                 });
+
             }
             catch (Exception ex)
             {
