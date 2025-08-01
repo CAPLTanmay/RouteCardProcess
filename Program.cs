@@ -9,11 +9,16 @@ using RouteCardProcess.Model.DTOs.Login;
 using RouteCardProcess.Model.DTOs.PasswordEncryption;
 using RouteCardProcess.Repositories;
 using RouteCardProcess.Services;
+using static RouteCardProcess.Repositories.SetUpTransRepository;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add controllers
-builder.Services.AddControllers();
+// Add controllers with custom JSON DateTime converter
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonDateTimeConverter());
+    });
 
 // Connection string setup
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");

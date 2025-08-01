@@ -96,7 +96,6 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-
         [HttpGet("list")]
         public async Task<IActionResult> GetAllBreakdowns()
         {

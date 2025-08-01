@@ -162,68 +162,6 @@ namespace RouteCardProcess.Repositories
             }
         }
 
-
-        //public async Task<BreakDownResponse> StartBreakDownAsync(BreakDownStartRequest request)
-        //{
-        //    using var connection = CreateConnection();
-
-        //    bool isMailSent = false;
-
-        //    try
-        //    {
-        //        // For testing: Hardcoded or dummy values for testing email
-        //        string equipmentNo = "TEST_EQUIP";
-        //        string notifNum = "TEST_NOTIF";
-        //        string notifStatus = "TEST_STATUS";
-
-        //        // Step 3: Email only
-        //        try
-        //        {
-        //            var mailTemplate = await connection.QueryFirstOrDefaultAsync<MailTemplateDto>(
-        //                "usp_GetOnlineBreakdownMailTemplate",
-        //                new { Group = "GP_BR" },
-        //                commandType: CommandType.StoredProcedure);
-
-        //            if (mailTemplate != null)
-        //            {
-        //                string subject = (mailTemplate.MailSubject ?? "").Replace("{workCenterNo}", request.WorkCenterNo);
-        //                string body = (mailTemplate.MailBody ?? "")
-        //                    .Replace("{workCenterNo}", request.WorkCenterNo)
-        //                    .Replace("{reasonText}", request.BreakdownCode ?? "Unknown Reason")
-        //                    .Replace("{Time}", DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss"));
-
-        //                await _emailService.SendEmailAsync(subject, body, mailTemplate.MailTo, mailTemplate.MailCC, mailTemplate.MailBCC, mailTemplate.MailFrom);
-        //                isMailSent = true;
-        //            }
-        //        }
-        //        catch (Exception mailEx)
-        //        {
-        //            await _systemLogger.LogAsync("BreakDownRepository", "Mail_SendError", mailEx.ToString());
-        //        }
-
-        //        return new BreakDownResponse
-        //        {
-        //            IsDbSuccess = false,
-        //            IsSapPosted = false,
-        //            IsMailSent = isMailSent,
-        //            Message = isMailSent ? "Test Mail sent successfully." : "Test Mail failed to send."
-        //        };
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        await _systemLogger.LogAsync("BreakDownRepository", "General_TestMail_Error", ex.ToString());
-
-        //        return new BreakDownResponse
-        //        {
-        //            IsDbSuccess = false,
-        //            IsSapPosted = false,
-        //            IsMailSent = false,
-        //            Message = "Unexpected error during test mail."
-        //        };
-        //    }
-        //}
-
-
         public async Task<BreakDownResponse> EndBreakDownAsync(string notifNum)
         {
             using var connection = CreateConnection();
@@ -304,7 +242,7 @@ namespace RouteCardProcess.Repositories
                 {
                     var mailTemplate = await connection.QueryFirstOrDefaultAsync<dynamic>(
                         "usp_GetOnlineBreakdownMailTemplate",
-                        new { Group = "GP_BR_END" },
+                        new { Group = "GP_BR2" },
                         commandType: CommandType.StoredProcedure);
 
                     if (mailTemplate != null)
@@ -343,7 +281,6 @@ namespace RouteCardProcess.Repositories
                 };
             }
         }
-
 
         public async Task<IEnumerable<BreakDownRecordDto>> GetAllBreakDownsAsync()
         {

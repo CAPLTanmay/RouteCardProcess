@@ -1,4 +1,6 @@
 ﻿using System.Data;
+using System.Text.Json.Serialization;
+using System.Text.Json;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using RouteCardProcess.Interfaces;
@@ -19,7 +21,7 @@ namespace RouteCardProcess.Repositories
             _repo = repo;
         }
         private IDbConnection CreateConnection() => _connectionFactory.CreateConnection();
-        public async Task<SetupMaster> GetByCompositeKeyAsync(SetupCompositeKeyRequest  request)
+        public async Task<SetupMaster> GetByCompositeKeyAsync(SetupCompositeKeyRequest request)
         {
             using var connection = CreateConnection();
             var parameters = new { WorkCenterNo = request.WorkCenterNo, WorkOrderNo = request.WorkOrderNo, OperationNo = request.OperationNo };
@@ -45,14 +47,15 @@ namespace RouteCardProcess.Repositories
                 "usp_GetMachiningByCompositeKey", MachiningParameters, commandType: CommandType.StoredProcedure);
 
             // Step 0: Sync breakdown status from SAP
-                var data = await _repo.GetAllBreakDownsAsync();
+            var data = await _repo.GetAllBreakDownsAsync();
 
 
             // New breakdown flag logic
             var breakdownRow = await connection.QueryFirstOrDefaultAsync<string>("usp_GetLatestBreakdownStatusByWorkCenter",
-                new { 
-                    WorkCenterNo = workCenterNo 
-                   }, commandType: CommandType.StoredProcedure);
+                new
+                {
+                    WorkCenterNo = workCenterNo
+                }, commandType: CommandType.StoredProcedure);
 
             bool isBreakdownActive = false;
             if (breakdownRow != null)
@@ -286,21 +289,21 @@ namespace RouteCardProcess.Repositories
             }
         }
 
-        public async Task<bool> EndSetupTimeAsync(SetupIdentifierRequest setUpId)
+        public async Task<bool> EndSetupTimeAsync(SetupIdentifierRequest request)
         {
             using var connection = CreateConnection();
-            var parameters = new { SetUpID = setUpId };
+            var parameters = new { SetUpID = request.SetUpID };
 
             var setupInfo = await connection.QueryFirstOrDefaultAsync<dynamic>(
                 "usp_GetSetupStatusAndOperator",
-                new { SetUpID = setUpId },
+                new { SetUpID = request.SetUpID },
                 commandType: CommandType.StoredProcedure);
 
             string status = setupInfo?.SetupStatus;
 
             if (status == _userMessageService.GetMessage(1075))
             {
-                await connection.ExecuteAsync("usp_TogglePause_Resume", new { SetUpID = setUpId }, commandType: CommandType.StoredProcedure);
+                await connection.ExecuteAsync("usp_TogglePause_Resume", new { SetUpID = request.SetUpID }, commandType: CommandType.StoredProcedure);
             }
 
             var rowsAffected = await connection.ExecuteAsync("usp_EndSetupTime", parameters, commandType: CommandType.StoredProcedure);
@@ -308,7 +311,7 @@ namespace RouteCardProcess.Repositories
             if (rowsAffected > 0)
             {
                 await connection.ExecuteAsync("usp_UpdateSetupEndTime",
-                    new { EndTime = DateTime.Now, SetUpID = setUpId },
+                    new { EndTime = DateTime.Now, SetUpID = request.SetUpID },
                     commandType: CommandType.StoredProcedure);
                 return true;
             }
@@ -424,6 +427,22 @@ namespace RouteCardProcess.Repositories
                 "usp_InsertSetupOperatorStart",
                 parameters,
                 commandType: CommandType.StoredProcedure);
+        }
+
+        public class JsonDateTimeConverter : JsonConverter<DateTime?>
+        {
+            public override DateTime? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            {
+                return DateTime.TryParse(reader.GetString(), out var date) ? date : (DateTime?)null;
+            }
+
+            public override void Write(Utf8JsonWriter writer, DateTime? value, JsonSerializerOptions options)
+            {
+                if (value.HasValue)
+                    writer.WriteStringValue(value.Value.ToString("yyyy-MM-dd HH:mm:ss"));
+                else
+                    writer.WriteNullValue();
+            }
         }
     }
 }
