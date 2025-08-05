@@ -23,9 +23,7 @@ namespace RouteCardProcess.Repositories
             _systemLogger = systemLogger;
             _passwordService = passwordSecurityService;
         }
-
         private SqlConnection CreateConnection() => _connectionFactory.CreateConnection();
-
         public async Task<string> AddEmployeeAsync(EmployeeRequest request)
         {
             using var connection = CreateConnection();

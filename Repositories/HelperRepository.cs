@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Text.RegularExpressions;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using RouteCardProcess.Interfaces;
@@ -38,7 +39,7 @@ namespace RouteCardProcess.Repositories
             //);
             var validUser = await _repo.LoginEmployeeAsync(request.OperatorId, request.Password);
 
-            if (validUser == null)
+            if (validUser.User == null)
                 return _userMessageService.GetMessage(1001);
 
             // Prepare the parameters for adding a helper record
@@ -65,12 +66,33 @@ namespace RouteCardProcess.Repositories
             }
 
             // Execute stored procedure to insert the helper record
-            await connection.ExecuteAsync(
-                "usp_AddHelper",
-                parameters,
-                commandType: CommandType.StoredProcedure
-            );
-            return _userMessageService.GetMessage(1007);
+            try
+            {
+                await connection.ExecuteAsync(
+                    "usp_AddHelper",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+
+                return _userMessageService.GetMessage(1007); // Successfully added
+            }
+            catch (SqlException ex)
+            {
+                if (ex.Message.Contains("Helper already assigned and not released"))
+                {
+                    // Extract WorkCenter from error message
+                    var match = Regex.Match(ex.Message, @"WorkCenter: (?<wc>\w+)");
+                    var workCenter = match.Success ? match.Groups["wc"].Value : "Unknown";
+
+                    // Optional: return full message
+                    return $"Helper already engaged for WorkCenter: {workCenter}";
+
+                    // OR if you want to fetch from DB message system
+                    // return _userMessageService.GetMessage(1100).Replace("{WorkCenter}", workCenter);
+                }
+
+                return _userMessageService.GetMessage(5001); // Generic error
+            }
         }
         public async Task<string> EndHelperAsync(EndHelperRequest request)
         {

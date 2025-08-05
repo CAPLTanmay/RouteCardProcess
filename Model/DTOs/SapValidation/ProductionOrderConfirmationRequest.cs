@@ -53,10 +53,10 @@ namespace RouteCardProcess.Model.DTOs.SapValidation
         public string ORDER_TYPE { get; set; }
 
         [JsonPropertyName("MATERIAL")]
-        public string MATERIAL { get; set; }
+        public string? MATERIAL { get; set; }
 
         [JsonPropertyName("MATERIAL_DESC")]
-        public string MATERIAL_DESC { get; set; }
+        public string? MATERIAL_DESC { get; set; }
 
         [JsonPropertyName("OPR_TXT")]
         public string OPR_TXT { get; set; }
