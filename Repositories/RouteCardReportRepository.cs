@@ -146,6 +146,7 @@ namespace RouteCardProcess.Repositories
                     timingInfo.MachiningEndTime = machiningResult.MachiningEndTime;
                     timingInfo.TotalMachiningTime = machiningResult.TotalMachiningTime;
                     timingInfo.CompletedQty = machiningResult.CompletedQty;
+                    timingInfo.MachiningId = request.MachiningId;
                 }
             }
 
@@ -161,6 +162,7 @@ namespace RouteCardProcess.Repositories
                     timingInfo.SetupEndDate = setupResult.SetupEndDate;
                     timingInfo.SetupEndTime = setupResult.SetupEndTime;
                     timingInfo.TotalSetupTime = setupResult.TotalSetupTime;
+                    timingInfo.SetupId = request.SetupId;
                 }
             }
 
