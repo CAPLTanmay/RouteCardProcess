@@ -28,15 +28,10 @@ namespace RouteCardProcess.Repositories
             using var connection = CreateConnection();
             await connection.OpenAsync();
 
-            // Fetch all users from the login table
-            //var allUsers = await connection.QueryAsync<LogInMaster>(
-            //    "usp_GetAllLogins",
-            //    commandType: CommandType.StoredProcedure
-            //);
+            // Step 0: Prevent assigning self as helper
+            if (request.MainOperatorId == request.OperatorId)
+                return _userMessageService.GetMessage(1116); 
 
-            //var validUser = allUsers.FirstOrDefault(u =>
-            //    u.OperatorId == request.OperatorId && u.OperatorPassword == request.Password
-            //);
             var validUser = await _repo.LoginEmployeeAsync(request.OperatorId, request.Password);
 
             if (validUser.User == null)

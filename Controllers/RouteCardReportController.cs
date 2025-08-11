@@ -65,6 +65,28 @@ namespace RouteCardProcess.Controllers
             }
         }
 
+        [HttpPost("get-all-report")]
+        public async Task<IActionResult> GetRouteCardAllReport([FromBody] RouteCardReportFilterRequest request)
+        {
+            try
+            {
+                var result = await _repo.GetRouteCardReportAllAsync(request);
+                if (result == null || !result.Any())
+                {
+                    var message = _userMessageService.GetMessage(1063) ?? "No data found";
+                    await _systemLogger.LogAsync("RouteCardReportController", "get-filtered", "No data found for given filters.");
+                    return Ok(new { success = false, message, data = new List<object>() });
+                }
+
+                return Ok(new { success = true, message = "Data fetched successfully", data = result });
+            }
+            catch (Exception ex)
+            {
+                await _systemLogger.LogAsync("RouteCardReportController", "get-filtered", ex.ToString());
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
+            }
+        }
+
         [HttpPost("loss-order-report")]
         public async Task<IActionResult> GetNavLossByIdPost([FromBody] OrderReportRequestDto request)
         {

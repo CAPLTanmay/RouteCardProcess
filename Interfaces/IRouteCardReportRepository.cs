@@ -6,6 +6,7 @@ namespace RouteCardProcess.Interfaces
     {
         Task<IEnumerable<RouteCardReportModel>> GetRouteCardReportAsync(string workOrderNo);
         Task<IEnumerable<RouteCardReportDto>> GetRouteCardReportFilteredAsync(RouteCardReportFilterRequest request);
+        Task<IEnumerable<RouteCardReportDto>> GetRouteCardReportAllAsync(RouteCardReportFilterRequest request);
         Task<LossOrderResponseDto> GetLossOrderByIdsAsync(OrderReportRequestDto request);
         Task<ExceptionReportResponseDto?> GetExceptionReportAsync(OrderReportRequestDto request);
         Task<TimingInfoDto?> GetTimingInfoAsync(OrderReportRequestDto request);

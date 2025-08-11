@@ -212,6 +212,7 @@ namespace RouteCardProcess.Repositories
                             {
                                 SrNo=employee.EmployeeId,
                                 OperatorId = employee.EmployeeCode.ToString(),
+                                ContractEmpId=employee.ContractEmpId.ToString(),
                                 OperatorName = employee.FirstName + " " + employee.LastName,
                                 OperatorRole = employee.UserRole,
                                 DepartmentId = 0, // You can map department from mapping table
@@ -232,6 +233,7 @@ namespace RouteCardProcess.Repositories
                         {
                             SrNo = employee.EmployeeId,
                             OperatorId = employee.EmployeeCode.ToString(),
+                            ContractEmpId = employee.ContractEmpId.ToString(),
                             OperatorName = employee.FirstName + " " + employee.LastName,
                             OperatorRole = employee.UserRole,
                             DepartmentId = 0,
@@ -300,8 +302,10 @@ namespace RouteCardProcess.Repositories
                         {
                             SrNo = employee.EmployeeId,
                             OperatorId = employee.EmployeeCode.ToString(),
+                            ContractEmpId = employee.ContractEmpId.ToString(),
                             OperatorName = employee.FirstName + " " + employee.LastName,
                             OperatorRole = employee.UserRole,
+
                             DepartmentId = 0,
                             DepartmentName = employee.UserDepartment,
                             RBACDepartmentName = departmentNames,

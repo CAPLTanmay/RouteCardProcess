@@ -21,6 +21,7 @@
         public string UNIT { get; set; }
         public string MRP_CONTROLLER { get; set; }
         public string PRODUCTION_SCHEDULER { get; set; }
+        public string CONTROL_KEY {  get; set; }
 
     }
 
@@ -51,5 +52,6 @@
         public string MaterialText { get; set; }
         public string? MaterialTextLink { get; set; }
         public string OrderTypeDesc { get; set; }
+        public string ControlKey { get; set; }
     }
 }

@@ -99,7 +99,8 @@ namespace RouteCardProcess.Repositories
                         ProductionPlant = item.PRODUCTION_PLANT,
                         ProductionUnit = item.UNIT,
                         MrpController = item.MRP_CONTROLLER,
-                        ProductionScheduler = item.PRODUCTION_SCHEDULER
+                        ProductionScheduler = item.PRODUCTION_SCHEDULER,
+                        ControlKey=item.CONTROL_KEY
                     };
 
                     await connection.ExecuteAsync(
@@ -122,14 +123,14 @@ namespace RouteCardProcess.Repositories
             using var connection = _connectionFactory.CreateConnection();
 
             var data = (await connection.QueryAsync<RoutingDataResponse>(
-     "usp_GetRoutingDataByOrder",
-     new { OrderNumber = orderNumber },
-     commandType: CommandType.StoredProcedure)).ToList();
+                     "usp_GetRoutingDataByOrder",
+                     new { OrderNumber = orderNumber },
+                     commandType: CommandType.StoredProcedure)).ToList();
 
-            foreach (var item in data)
-            {
-                item.MaterialTextLink = $"{_materialBaseUrl}{Regex.Replace(item.Material, @"\d{3}$", "")}";
-            }
+                    foreach (var item in data)
+                    {
+                        item.MaterialTextLink = $"{_materialBaseUrl}{Regex.Replace(item.Material, @"\d{3}$", "")}";
+                    }
             return data;
         }
 

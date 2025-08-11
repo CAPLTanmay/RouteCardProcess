@@ -66,6 +66,29 @@ namespace RouteCardProcess.Repositories
             return result;
         }
 
+        public async Task<IEnumerable<RouteCardReportDto>> GetRouteCardReportAllAsync(RouteCardReportFilterRequest request)
+        {
+            using var connection = _connectionFactory.CreateConnection();
+            await connection.OpenAsync();
+
+            //  Pad ProductionOrderNo before using it in the query
+            var paddedOrderNo = request.ProductionOrderNo?.PadLeft(12, '0');
+
+            var result = await connection.QueryAsync<RouteCardReportDto>(
+                "usp_GetRouteCardReportAll",
+                new
+                {
+                    request.OperatorId,
+                    request.ConfirmationDate,
+                    ProductionOrderNo = paddedOrderNo,
+                    request.WorkCenterNo,
+                    Dept = request.Department
+                },
+                commandType: CommandType.StoredProcedure);
+
+            return result;
+        }
+
         public async Task<LossOrderResponseDto> GetLossOrderByIdsAsync(OrderReportRequestDto request)
         {
             using var connection = _connectionFactory.CreateConnection();
