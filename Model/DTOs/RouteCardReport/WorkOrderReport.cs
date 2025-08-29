@@ -176,6 +176,14 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
         public TimeSpan? SetupEndTime { get; set; }
         public TimeSpan? StandardSetupTime { get; set; }
         public TimeSpan? TotalSetupTime { get; set; }
+        // Operator level
+        public string? SetupOperatorId { get; set; }
+        [JsonConverter(typeof(DateOnlyConverter))]
+        public DateTime? SetupOperatorStartDate { get; set; }
+        public TimeSpan? SetupOperatorStartTime { get; set; }
+        public DateTime? SetupOperatorEndDate { get; set; }
+        public TimeSpan? SetupOperatorEndTime { get; set; }
+        public TimeSpan? SetupTotalOperatorTime { get; set; }
 
         // Machining fields...
         [JsonConverter(typeof(DateOnlyConverter))]
@@ -192,13 +200,13 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
         public string? MachiningId { get; set; }
 
         // Operator level
-        public string? OperatorId { get; set; }
+        public string? MachiningOperatorId { get; set; }
         [JsonConverter(typeof(DateOnlyConverter))]
-        public DateTime? OperatorStartDate { get; set; }
-        public TimeSpan? OperatorStartTime { get; set; }
-        public DateTime? OperatorEndDate { get; set; }
-        public TimeSpan? OperatorEndTime { get; set; }
-        public TimeSpan? TotalOperatorTime { get; set; }
+        public DateTime? MachiningOperatorStartDate { get; set; }
+        public TimeSpan? MachiningOperatorStartTime { get; set; }
+        public DateTime? MachiningOperatorEndDate { get; set; }
+        public TimeSpan? MachiningOperatorEndTime { get; set; }
+        public TimeSpan? MachiningTotalOperatorTime { get; set; }
 
         // Newly added
         public Guid? OperatorTransactionId { get; set; }

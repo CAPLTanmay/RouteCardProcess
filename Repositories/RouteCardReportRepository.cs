@@ -179,11 +179,11 @@ namespace RouteCardProcess.Repositories
                     timingInfo.CompletedQty = machiningResult.CompletedQty;
                     timingInfo.MachiningId = request.MachiningId;
 
-                    timingInfo.OperatorId = machiningResult.OperatorId;
-                    timingInfo.OperatorStartDate = machiningResult.OperatorStartDate;
-                    timingInfo.OperatorStartTime = machiningResult.OperatorStartTime;
-                    timingInfo.OperatorEndTime = machiningResult.OperatorEndTime;
-                    timingInfo.TotalOperatorTime = machiningResult.TotalOperatorTime;
+                    timingInfo.MachiningOperatorId = machiningResult.MachiningOperatorId;
+                    timingInfo.MachiningOperatorStartDate = machiningResult.MachiningOperatorStartDate;
+                    timingInfo.MachiningOperatorStartTime = machiningResult.MachiningOperatorStartTime;
+                    timingInfo.MachiningOperatorEndDate = machiningResult.MachiningOperatorEndDate;
+                    timingInfo.MachiningTotalOperatorTime = machiningResult.MachiningTotalOperatorTime;
 
                     timingInfo.MachiningOperatorTransactionId = request.MachiningOperatorTransactionId;
                 }
@@ -213,12 +213,12 @@ namespace RouteCardProcess.Repositories
                     timingInfo.SetupId = request.SetupId;
 
                     timingInfo.OperatorTransactionId = setupResult.OperatorTransactionId;
-                    timingInfo.OperatorId = setupResult.OperatorId;
-                    timingInfo.OperatorStartDate = setupResult.OperatorStartDate;
-                    timingInfo.OperatorStartTime = setupResult.OperatorStartTime;
-                    timingInfo.OperatorEndDate = setupResult.OperatorEndDate;
-                    timingInfo.OperatorEndTime = setupResult.OperatorEndTime;
-                    timingInfo.TotalOperatorTime = setupResult.TotalOperatorTime;
+                    timingInfo.SetupOperatorId = setupResult.SetupOperatorId;
+                    timingInfo.SetupOperatorStartDate = setupResult.SetupOperatorStartDate;
+                    timingInfo.SetupOperatorStartTime = setupResult.SetupOperatorStartTime;
+                    timingInfo.SetupOperatorEndDate = setupResult.SetupOperatorEndDate;
+                    timingInfo.SetupOperatorEndTime = setupResult.SetupOperatorEndTime;
+                    timingInfo.SetupTotalOperatorTime = setupResult.SetupTotalOperatorTime;
                 }
             }
 

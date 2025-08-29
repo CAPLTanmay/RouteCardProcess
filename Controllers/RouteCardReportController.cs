@@ -147,7 +147,8 @@ namespace RouteCardProcess.Controllers
                 var timingInfoTask = _repo.GetTimingInfoAsync(request);
                 if (timingInfoTask != null)
                 {
-                    request.OperatorId = timingInfoTask.Result.OperatorId;
+                    request.OperatorId = timingInfoTask.Result.SetupOperatorId
+                      ?? timingInfoTask.Result.MachiningOperatorId;
                 }
                 var navLossTask = _repo.GetLossOrderByIdsAsync(request);
                 var exceptionReportTask = _repo.GetExceptionReportAsync(request);
