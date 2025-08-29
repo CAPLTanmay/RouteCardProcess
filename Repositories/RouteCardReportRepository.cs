@@ -183,6 +183,7 @@ namespace RouteCardProcess.Repositories
                     timingInfo.MachiningOperatorStartDate = machiningResult.MachiningOperatorStartDate;
                     timingInfo.MachiningOperatorStartTime = machiningResult.MachiningOperatorStartTime;
                     timingInfo.MachiningOperatorEndDate = machiningResult.MachiningOperatorEndDate;
+                    timingInfo.MachiningOperatorEndTime = machiningResult.MachiningOperatorEndTime;
                     timingInfo.MachiningTotalOperatorTime = machiningResult.MachiningTotalOperatorTime;
 
                     timingInfo.MachiningOperatorTransactionId = request.MachiningOperatorTransactionId;
@@ -225,7 +226,6 @@ namespace RouteCardProcess.Repositories
             return timingInfo;
         }
 
-
         public async Task UpdateSetupTimesAsync(SetupUpdateDto dto)
         {
             using var connection = _connectionFactory.CreateConnection();
@@ -235,8 +235,6 @@ namespace RouteCardProcess.Repositories
             {
                 dto.SetUpID,
                 dto.OperatorTransactionId,
-                SetupStartTime = dto.SetupStartDateTime,   
-                SetupEndTime = dto.SetupEndDateTime,
                 OperatorStartTime = dto.OperatorStartDateTime,
                 OperatorEndTime = dto.OperatorEndDateTime,
                 dto.UpdatedOperatorId
@@ -289,8 +287,8 @@ namespace RouteCardProcess.Repositories
             {
                 dto.MachiningOperatorTransactionId,
                 dto.MachiningId,
-                OperatorStartTime = dto.OperatorStartTime,
-                OperatorEndTime = dto.OperatorEndTime,     
+                OperatorStartTime = dto.MachiningOpertorStartDateTime,
+                OperatorEndTime = dto.MachiningOpertorEndDateTime,     
                 dto.UpdatedOperatorId
             }, commandType: CommandType.StoredProcedure);
         }

@@ -182,27 +182,26 @@ namespace RouteCardProcess.Controllers
             {
                 if (dto.Setup != null)
                 {
-                    if (dto.Setup.SetupStartTime.HasValue || dto.Setup.SetupEndTime.HasValue ||
-                        dto.Setup.OperatorStartTime.HasValue || dto.Setup.OperatorEndTime.HasValue)
+                    if (dto.Setup.OperatorStartDateTime.HasValue || dto.Setup.OperatorEndDateTime.HasValue)
                         await _repo.UpdateSetupTimesAsync(dto.Setup);
 
                     if (dto.Setup.IdleTimes?.Any() == true)
-                        await _repo.UpdateIdleTimesAsync(dto.OperatorId,dto.Setup.SetUpID, dto.Setup.UpdatedOperatorId, dto.Setup.IdleTimes);
+                        await _repo.UpdateIdleTimesAsync(dto.setupOperatorId,dto.Setup.SetUpID, dto.Setup.UpdatedOperatorId, dto.Setup.IdleTimes);
 
                     if (dto.Setup.ExceptionTimes?.Any() == true)
-                        await _repo.UpdateExceptionTimesAsync(dto.OperatorId,dto.Setup.SetUpID, dto.Setup.UpdatedOperatorId, dto.Setup.ExceptionTimes);
+                        await _repo.UpdateExceptionTimesAsync(dto.setupOperatorId,dto.Setup.SetUpID, dto.Setup.UpdatedOperatorId, dto.Setup.ExceptionTimes);
                 }
 
                 if (dto.Machining != null)
                 {
-                    if (dto.Machining.MachiningStartTime.HasValue || dto.Machining.MachiningEndTime.HasValue)
+                    if (dto.Machining.MachiningOpertorStartDateTime.HasValue || dto.Machining.MachiningOpertorEndDateTime.HasValue)
                         await _repo.UpdateMachiningTimesAsync(dto.Machining);
 
                     if (dto.Machining.IdleTimes?.Any() == true)
-                        await _repo.UpdateMachiningIdleTimesAsync(dto.OperatorId,dto.Machining.MachiningId, dto.Machining.UpdatedOperatorId, dto.Machining.IdleTimes);
+                        await _repo.UpdateMachiningIdleTimesAsync(dto.machiningOperatorId,dto.Machining.MachiningId, dto.Machining.UpdatedOperatorId, dto.Machining.IdleTimes);
 
                     if (dto.Machining.ExceptionTimes?.Any() == true)
-                        await _repo.UpdateMachiningExceptionTimesAsync(dto.OperatorId,dto.Machining.MachiningId, dto.Machining.UpdatedOperatorId, dto.Machining.ExceptionTimes);
+                        await _repo.UpdateMachiningExceptionTimesAsync(dto.machiningOperatorId,dto.Machining.MachiningId, dto.Machining.UpdatedOperatorId, dto.Machining.ExceptionTimes);
 
                     if (dto.Machining.OperatorQuantities?.Any() == true)
                         await _repo.UpdateMachiningOperatorQuantitiesAsync(dto.Machining.MachiningId, dto.Machining.OperatorQuantities);
