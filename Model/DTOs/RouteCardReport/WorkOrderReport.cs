@@ -15,6 +15,9 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
     {
         public string? SetupId { get; set; }
         public string? MachiningId { get; set; }
+        public Guid? OperatorTransactionId { get; set; }
+        public Guid? MachiningOperatorTransactionId { get; set; }
+        public string? OperatorId { get; set; }
     }
 
 
@@ -37,7 +40,6 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
         public string WorkCenterText { get; set; }
         public string Material { get; set; }
         public string MaterialText { get; set; }
-
         public string MrpController { get; set; }
         public string ProductionScheduler { get; set; }
         public string ProcessingUnit { get; set; }
@@ -45,21 +47,22 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
         public string OperationNo { get; set; }
         public string OperationDescription { get; set; }
         public string OrderType { get; set; }
+        public string ControlKey { get; set; }
         public int TotalQty { get; set; }
         public int Pending_qty { get; set; }
         public int CompletedQty { get; set; }
         public string SetupId { get; set; }
         [JsonConverter(typeof(DateOnlyConverter))]
-        public DateTime SetupStartDate { get; set; }
-        public TimeSpan SetupStartTime { get; set; } // for the TIME part 
+        public DateTime? SetupStartDate { get; set; }
+        public TimeSpan? SetupStartTime { get; set; } // for the TIME part 
 
         [JsonConverter(typeof(DateOnlyConverter))]
-        public DateTime SetupEndDate { get; set; }
-        public TimeSpan SetupEndTime { get; set; } // for the TIME part 
+        public DateTime? SetupEndDate { get; set; }
+        public TimeSpan? SetupEndTime { get; set; } // for the TIME part 
 
-        public TimeSpan StandardSetupTime { get; set; }
+        public TimeSpan? StandardSetupTime { get; set; }
         public int ActualSetupTime { get; set; }
-        public string ActualSetupTime_HHMMSS { get;set;}
+        public string ActualSetupTime_HHMMSS { get; set; }
         public int TotalSetupIdleMinutes { get; set; }
         public string TotalSetupIdle_HHMMSS { get; set; }
 
@@ -70,13 +73,13 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
         public DateTime? SetupOperatorEndTime { get; set; }
         public string MachiningId { get; set; }
         [JsonConverter(typeof(DateOnlyConverter))]
-        public DateTime MachiningStartDate { get; set; }
+        public DateTime? MachiningStartDate { get; set; }
         public TimeSpan MachiningStartTime { get; set; } // for the TIME part 
 
         [JsonConverter(typeof(DateOnlyConverter))]
-        public DateTime MachiningEndDate { get; set; }
-        public TimeSpan MachiningEndTime { get; set; } // for the TIME part 
-        public TimeSpan StandardMachiningTime { get; set; }
+        public DateTime? MachiningEndDate { get; set; }
+        public TimeSpan? MachiningEndTime { get; set; } // for the TIME part 
+        public TimeSpan? StandardMachiningTime { get; set; }
         public int ActualMachiningTime { get; set; }
         public string ActualMachiningTime_HHMMSS { get; set; }
         public int TotalMachiningIdleMinutes { get; set; }
@@ -93,9 +96,11 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
         public DateTime? FinishDate { get; set; }
         public int ActualLaborTime { get; set; }
         public decimal ActualLaborTime_Hours { get; set; }
+        public Guid? OperatorTransactionId { get; set; }
+        public Guid? MachiningOperatorTransactionId { get; set; }
     }
 
-    public class LossOrderResponseDto
+        public class LossOrderResponseDto
     {
         public string ORDER { get; set; }
         public List<SetupIdleDto> SetupIdleRecords { get; set; }
@@ -162,36 +167,42 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
 
     public class TimingInfoDto
     {
+        // Existing setup fields...
         [JsonConverter(typeof(DateOnlyConverter))]
         public DateTime? SetupStartDate { get; set; }
-
         public TimeSpan? SetupStartTime { get; set; }
-
         [JsonConverter(typeof(DateOnlyConverter))]
         public DateTime? SetupEndDate { get; set; }
-
         public TimeSpan? SetupEndTime { get; set; }
-
         public TimeSpan? StandardSetupTime { get; set; }
         public TimeSpan? TotalSetupTime { get; set; }
 
+        // Machining fields...
         [JsonConverter(typeof(DateOnlyConverter))]
         public DateTime? MachiningStartDate { get; set; }
-
         public TimeSpan? MachiningStartTime { get; set; }
-
         [JsonConverter(typeof(DateOnlyConverter))]
         public DateTime? MachiningEndDate { get; set; }
-
         public TimeSpan? MachiningEndTime { get; set; }
-
         public TimeSpan? StandardMachiningTime { get; set; }
         public TimeSpan? TotalMachiningTime { get; set; }
         public int? CompletedQty { get; set; }
+
         public string? SetupId { get; set; }
         public string? MachiningId { get; set; }
 
+        // Operator level
+        public string? OperatorId { get; set; }
+        [JsonConverter(typeof(DateOnlyConverter))]
+        public DateTime? OperatorStartDate { get; set; }
+        public TimeSpan? OperatorStartTime { get; set; }
+        public DateTime? OperatorEndDate { get; set; }
+        public TimeSpan? OperatorEndTime { get; set; }
+        public TimeSpan? TotalOperatorTime { get; set; }
+
+        // Newly added
+        public Guid? OperatorTransactionId { get; set; }
+        public Guid? MachiningOperatorTransactionId { get; set; }
+
     }
-
-
 }

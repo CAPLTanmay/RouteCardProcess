@@ -11,11 +11,11 @@ namespace RouteCardProcess.Interfaces
         Task<ExceptionReportResponseDto?> GetExceptionReportAsync(OrderReportRequestDto request);
         Task<TimingInfoDto?> GetTimingInfoAsync(OrderReportRequestDto request);
         Task UpdateSetupTimesAsync(SetupUpdateDto dto);
-        Task UpdateIdleTimesAsync(string setupId, int operatorId, List<IdleTimeUpdateDto> idleTimes);
-        Task UpdateExceptionTimesAsync(string setupId, int operatorId, List<ExceptionTimeUpdateDto> exceptionTimes);
+        Task UpdateIdleTimesAsync(string operatorId, string setupId, string UpdatedOperatorId, List<IdleTimeUpdateDto> idleTimes);
+        Task UpdateExceptionTimesAsync(string operatorId, string setupId, string UpdatedOperatorId, List<ExceptionTimeUpdateDto> exceptionTimes);
         Task UpdateMachiningTimesAsync(MachiningUpdateDto dto);
-        Task UpdateMachiningIdleTimesAsync(string machiningId, int operatorId, List<MachiningIdleTimeUpdateDto> idleTimes);
-        Task UpdateMachiningExceptionTimesAsync(string machiningId, int operatorId, List<MachiningExceptionUpdateDto> exceptionTimes);
-        Task UpdateMachiningOperatorQuantitiesAsync(string machiningId, List<MachiningOperatorQtyUpdateDto> quantities);
+        Task UpdateMachiningIdleTimesAsync(string operatorId, string machiningId, string UpdatedOperatorId, List<MachiningIdleTimeUpdateDto> idleTimes);
+        Task UpdateMachiningExceptionTimesAsync(string operatorId, string machiningId, string UpdatedOperatorId, List<MachiningExceptionUpdateDto> exceptionTimes);
+        Task UpdateMachiningOperatorQuantitiesAsync( string machiningId, List<MachiningOperatorQtyUpdateDto> quantities);
     }
 }

@@ -4,6 +4,7 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
 {
     public class FullUpdateDto
     {
+        public string? OperatorId { get; set; }
         public SetupUpdateDto Setup { get; set; }
         public MachiningUpdateDto Machining { get; set; }
     }
@@ -12,19 +13,22 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
     {
         public string SetUpID { get; set; }
         [JsonConverter(typeof(DateOnlyConverter))]
+        public string? OperatorTransactionId { get; set; }
         public DateTime? SetupStartDate { get; set; }
-
         public TimeSpan? SetupStartTime { get; set; }
-
         [JsonConverter(typeof(DateOnlyConverter))]
         public DateTime? SetupEndDate { get; set; }
-
         public TimeSpan? SetupEndTime { get; set; }
-        public int UpdatedOperatorId { get; set; }
+        [JsonConverter(typeof(DateOnlyConverter))]
+        public DateTime? OperatorStartDate { get; set; }
+        public TimeSpan? OperatorStartTime { get; set; }
 
+        [JsonConverter(typeof(DateOnlyConverter))]
+        public DateTime? OperatorEndDate { get; set; }
+        public TimeSpan? OperatorEndTime { get; set; }
+        public string UpdatedOperatorId { get; set; }
         public List<IdleTimeUpdateDto> IdleTimes { get; set; } = new();
         public List<ExceptionTimeUpdateDto> ExceptionTimes { get; set; } = new();
-
         // Computed properties to combine Date + Time
         [JsonIgnore]
         public DateTime? SetupStartDateTime =>
@@ -37,10 +41,23 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
             (SetupEndDate.HasValue && SetupEndTime.HasValue)
                 ? SetupEndDate.Value.Date + SetupEndTime.Value
                 : null;
+
+        [JsonIgnore]
+        public DateTime? OperatorStartDateTime =>
+       (OperatorStartDate.HasValue && OperatorStartTime.HasValue)
+           ? OperatorStartDate.Value.Date + OperatorStartTime.Value
+           : null;
+
+        [JsonIgnore]
+        public DateTime? OperatorEndDateTime =>
+            (OperatorEndDate.HasValue && OperatorEndTime.HasValue)
+                ? OperatorEndDate.Value.Date + OperatorEndTime.Value
+                : null;
     }
 
     public class IdleTimeUpdateDto
     {
+
         public string MSTIdleCode { get; set; }
         public TimeSpan NewSetupIdleTime { get; set; }
     }
@@ -56,15 +73,21 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
     {
         public string MachiningId { get; set; }
         [JsonConverter(typeof(DateOnlyConverter))]
+        public string? MachiningOperatorTransactionId{get;set;}
         public DateTime? MachiningStartDate { get; set; }
-
         public TimeSpan? MachiningStartTime { get; set; }
 
         [JsonConverter(typeof(DateOnlyConverter))]
         public DateTime? MachiningEndDate { get; set; }
-
         public TimeSpan? MachiningEndTime { get; set; }
-        public int UpdatedOperatorId { get; set; }
+        [JsonConverter(typeof(DateOnlyConverter))]
+        public DateTime? OperatorStartDate { get; set; }
+        public TimeSpan? OperatorStartTime { get; set; }
+
+        [JsonConverter(typeof(DateOnlyConverter))]
+        public DateTime? OperatorEndDate { get; set; }
+        public TimeSpan? OperatorEndTime { get; set; }
+        public string UpdatedOperatorId { get; set; }
 
         public List<MachiningIdleTimeUpdateDto> IdleTimes { get; set; } = new();
         public List<MachiningExceptionUpdateDto> ExceptionTimes { get; set; } = new();
@@ -99,7 +122,7 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
 
     public class MachiningOperatorQtyUpdateDto
     {
-        public int OperatorId { get; set; }
+        public string OperatorId { get; set; }
         public int NewCompletedQty { get; set; }
     }
 

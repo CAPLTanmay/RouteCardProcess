@@ -97,7 +97,8 @@ namespace RouteCardProcess.Repositories
             var parameters = new
             {
                 SetupId = request.SetupId,
-                MachiningId = request.MachiningId
+                MachiningId = request.MachiningId,
+                OperatorId = request.OperatorId
             };
 
             using var multi = await connection.QueryMultipleAsync("dbo.usp_GetLossOrderByIds", parameters, commandType: CommandType.StoredProcedure);
@@ -118,7 +119,6 @@ namespace RouteCardProcess.Repositories
             };
         }
 
-
         public async Task<ExceptionReportResponseDto?> GetExceptionReportAsync(OrderReportRequestDto request)
         {
             using var connection = _connectionFactory.CreateConnection();
@@ -127,7 +127,8 @@ namespace RouteCardProcess.Repositories
             var parameters = new
             {
                 SetupId = request.SetupId,
-                MachiningId = request.MachiningId
+                MachiningId = request.MachiningId,
+                OperatorId = request.OperatorId
             };
 
             using var multi = await connection.QueryMultipleAsync("dbo.usp_GetExceptionReport", parameters, commandType: CommandType.StoredProcedure);
@@ -154,11 +155,18 @@ namespace RouteCardProcess.Repositories
 
             var timingInfo = new TimingInfoDto();
 
-            if (!string.IsNullOrEmpty(request.MachiningId))
+            if (!string.IsNullOrEmpty(request.MachiningId) ||
+                    (!request.MachiningOperatorTransactionId.HasValue || request.MachiningOperatorTransactionId == Guid.Empty))
             {
-
-
-                var machiningResult = await connection.QueryFirstOrDefaultAsync<TimingInfoDto>("usp_GetMachiningTimingInfo",new { request.MachiningId },commandType: CommandType.StoredProcedure);
+                var machiningResult = await connection.QueryFirstOrDefaultAsync<TimingInfoDto>(
+                    "usp_GetMachiningTimingInfo",
+                    new
+                    {
+                        MachiningId = request.MachiningId,
+                        MachiningOperatorTransactionId = request.MachiningOperatorTransactionId
+                    },
+                    commandType: CommandType.StoredProcedure
+                );
 
                 if (machiningResult != null)
                 {
@@ -170,12 +178,29 @@ namespace RouteCardProcess.Repositories
                     timingInfo.TotalMachiningTime = machiningResult.TotalMachiningTime;
                     timingInfo.CompletedQty = machiningResult.CompletedQty;
                     timingInfo.MachiningId = request.MachiningId;
+
+                    timingInfo.OperatorId = machiningResult.OperatorId;
+                    timingInfo.OperatorStartDate = machiningResult.OperatorStartDate;
+                    timingInfo.OperatorStartTime = machiningResult.OperatorStartTime;
+                    timingInfo.OperatorEndTime = machiningResult.OperatorEndTime;
+                    timingInfo.TotalOperatorTime = machiningResult.TotalOperatorTime;
+
+                    timingInfo.MachiningOperatorTransactionId = request.MachiningOperatorTransactionId;
                 }
             }
 
-            if (!string.IsNullOrEmpty(request.SetupId))
+            if (!string.IsNullOrEmpty(request.SetupId) ||
+               (!request.OperatorTransactionId.HasValue || request.OperatorTransactionId == Guid.Empty) )
             {
-                var setupResult = await connection.QueryFirstOrDefaultAsync<TimingInfoDto>( "usp_GetSetupTimingInfo", new { request.SetupId }, commandType: CommandType.StoredProcedure);
+                var setupResult = await connection.QueryFirstOrDefaultAsync<TimingInfoDto>(
+                    "usp_GetSetupTimingInfo",
+                    new
+                    {
+                        SetupId = request.SetupId,
+                        OperatorTransactionId = request.OperatorTransactionId
+                    },
+                    commandType: CommandType.StoredProcedure
+                );
 
                 if (setupResult != null)
                 {
@@ -186,11 +211,20 @@ namespace RouteCardProcess.Repositories
                     timingInfo.SetupEndTime = setupResult.SetupEndTime;
                     timingInfo.TotalSetupTime = setupResult.TotalSetupTime;
                     timingInfo.SetupId = request.SetupId;
+
+                    timingInfo.OperatorTransactionId = setupResult.OperatorTransactionId;
+                    timingInfo.OperatorId = setupResult.OperatorId;
+                    timingInfo.OperatorStartDate = setupResult.OperatorStartDate;
+                    timingInfo.OperatorStartTime = setupResult.OperatorStartTime;
+                    timingInfo.OperatorEndDate = setupResult.OperatorEndDate;
+                    timingInfo.OperatorEndTime = setupResult.OperatorEndTime;
+                    timingInfo.TotalOperatorTime = setupResult.TotalOperatorTime;
                 }
             }
 
             return timingInfo;
         }
+
 
         public async Task UpdateSetupTimesAsync(SetupUpdateDto dto)
         {
@@ -200,13 +234,16 @@ namespace RouteCardProcess.Repositories
             await connection.ExecuteAsync("dbo.usp_UpdateSetupTimes", new
             {
                 dto.SetUpID,
+                dto.OperatorTransactionId,
                 SetupStartTime = dto.SetupStartDateTime,   
                 SetupEndTime = dto.SetupEndDateTime,
+                OperatorStartTime = dto.OperatorStartDateTime,
+                OperatorEndTime = dto.OperatorEndDateTime,
                 dto.UpdatedOperatorId
             }, commandType: CommandType.StoredProcedure);
         }
 
-        public async Task UpdateIdleTimesAsync(string setupId, int operatorId, List<IdleTimeUpdateDto> idleTimes)
+        public async Task UpdateIdleTimesAsync(string OperatorId, string setupId, string UpdatedOperatorId, List<IdleTimeUpdateDto> idleTimes)
         {
             using var connection = _connectionFactory.CreateConnection();
             await connection.OpenAsync();
@@ -216,14 +253,15 @@ namespace RouteCardProcess.Repositories
                 await connection.ExecuteAsync("dbo.usp_UpdateIdleTimes", new
                 {
                     SetUpID = setupId,
+                    OperatorId= OperatorId,
                     idle.MSTIdleCode,
                     idle.NewSetupIdleTime,
-                    UpdatedOperatorId = operatorId
+                    UpdatedOperatorId = UpdatedOperatorId
                 }, commandType: CommandType.StoredProcedure);
             }
         }
 
-        public async Task UpdateExceptionTimesAsync(string setupId, int operatorId, List<ExceptionTimeUpdateDto> exceptions)
+        public async Task UpdateExceptionTimesAsync(string OperatorId, string setupId, String UpdatedOperatorId, List<ExceptionTimeUpdateDto> exceptions)
         {
             using var connection = _connectionFactory.CreateConnection();
             await connection.OpenAsync();
@@ -233,10 +271,11 @@ namespace RouteCardProcess.Repositories
                 await connection.ExecuteAsync("dbo.usp_UpdateExceptionTimes", new
                 {
                     SetUpID = setupId,
+                    OperatorId = OperatorId,
                     ex.StdExceptionsReasonCode,
                     ex.ExceptionsReasonCode,
                     ex.NewExceptionsTime,
-                    UpdatedOperatorId = operatorId
+                    UpdatedOperatorId = UpdatedOperatorId
                 }, commandType: CommandType.StoredProcedure);
             }
         }
@@ -248,14 +287,15 @@ namespace RouteCardProcess.Repositories
 
             await connection.ExecuteAsync("dbo.usp_UpdateMachiningTimes", new
             {
+                dto.MachiningOperatorTransactionId,
                 dto.MachiningId,
-                MachiningStartTime = dto.MachiningStartDateTime,
-                MachiningEndTime = dto.MachiningEndDateTime,     
+                OperatorStartTime = dto.OperatorStartTime,
+                OperatorEndTime = dto.OperatorEndTime,     
                 dto.UpdatedOperatorId
             }, commandType: CommandType.StoredProcedure);
         }
 
-        public async Task UpdateMachiningIdleTimesAsync(string machiningId, int operatorId, List<MachiningIdleTimeUpdateDto> idleTimes)
+        public async Task UpdateMachiningIdleTimesAsync(string operatorId, string machiningId, string UpdatedOperatorId, List<MachiningIdleTimeUpdateDto> idleTimes)
         {
             using var connection = _connectionFactory.CreateConnection();
             await connection.OpenAsync();
@@ -264,15 +304,16 @@ namespace RouteCardProcess.Repositories
             {
                 await connection.ExecuteAsync("dbo.usp_UpdateMachiningIdleTimes", new
                 {
+                    OperatorId = operatorId,
                     MachiningId = machiningId,
                     idle.MSTIdleCode,
                     idle.NewMachiningIdleTime,
-                    UpdatedOperatorId = operatorId
+                    UpdatedOperatorId = UpdatedOperatorId
                 }, commandType: CommandType.StoredProcedure);
             }
         }
 
-        public async Task UpdateMachiningExceptionTimesAsync(string machiningId, int operatorId, List<MachiningExceptionUpdateDto> exceptions)
+        public async Task UpdateMachiningExceptionTimesAsync(string operatorId, string machiningId, string UpdatedOperatorId, List<MachiningExceptionUpdateDto> exceptions)
         {
             using var connection = _connectionFactory.CreateConnection();
             await connection.OpenAsync();
@@ -281,16 +322,17 @@ namespace RouteCardProcess.Repositories
             {
                 await connection.ExecuteAsync("dbo.usp_UpdateMachiningExceptionTimes", new
                 {
+                    OperatorId = operatorId,
                     MachiningID = machiningId,
                     ex.StdExceptionsReasonCode,
                     ex.ExceptionsReasonCode,
                     ex.NewExceptionsTime,
-                    UpdatedByOperatorId = operatorId
+                    UpdatedByOperatorId = UpdatedOperatorId
                 }, commandType: CommandType.StoredProcedure);
             }
         }
 
-        public async Task UpdateMachiningOperatorQuantitiesAsync(string machiningId, List<MachiningOperatorQtyUpdateDto> quantities)
+        public async Task UpdateMachiningOperatorQuantitiesAsync( string machiningId, List<MachiningOperatorQtyUpdateDto> quantities)
         {
             using var connection = _connectionFactory.CreateConnection();
             await connection.OpenAsync();

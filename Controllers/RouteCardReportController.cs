@@ -14,7 +14,6 @@ namespace RouteCardProcess.Controllers
         private readonly IRouteCardReportRepository _repo;
         private readonly ISystemLoggerRepository _systemLogger;
         private readonly IUserMessageService _userMessageService;
-
         public RouteCardReportController(IRouteCardReportRepository repo, ISystemLoggerRepository systemLogger, IUserMessageService userMessageService)
         {
             _repo = repo;
@@ -133,9 +132,23 @@ namespace RouteCardProcess.Controllers
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(request.SetupId) && string.IsNullOrWhiteSpace(request.MachiningId))
-                    return BadRequest(new { message = "Either SetupId or MachiningId must be provided." });
+                // Validation - at least one identifier must be provided
+                if (string.IsNullOrWhiteSpace(request.SetupId) &&
+                     string.IsNullOrWhiteSpace(request.MachiningId) &&
+                    (!request.OperatorTransactionId.HasValue || request.OperatorTransactionId == Guid.Empty) &&
+                    (!request.MachiningOperatorTransactionId.HasValue || request.MachiningOperatorTransactionId == Guid.Empty))
+                {
+                    return BadRequest(new
+                    {
+                        message = "At least one of SetupId, MachiningId, OperatorTransactionId, or MachiningOperatorTransactionId must be provided."
+                    });
+                }
+
                 var timingInfoTask = _repo.GetTimingInfoAsync(request);
+                if (timingInfoTask != null)
+                {
+                    request.OperatorId = timingInfoTask.Result.OperatorId;
+                }
                 var navLossTask = _repo.GetLossOrderByIdsAsync(request);
                 var exceptionReportTask = _repo.GetExceptionReportAsync(request);
             
@@ -168,14 +181,15 @@ namespace RouteCardProcess.Controllers
             {
                 if (dto.Setup != null)
                 {
-                    if (dto.Setup.SetupStartTime.HasValue || dto.Setup.SetupEndTime.HasValue)
+                    if (dto.Setup.SetupStartTime.HasValue || dto.Setup.SetupEndTime.HasValue ||
+                        dto.Setup.OperatorStartTime.HasValue || dto.Setup.OperatorEndTime.HasValue)
                         await _repo.UpdateSetupTimesAsync(dto.Setup);
 
                     if (dto.Setup.IdleTimes?.Any() == true)
-                        await _repo.UpdateIdleTimesAsync(dto.Setup.SetUpID, dto.Setup.UpdatedOperatorId, dto.Setup.IdleTimes);
+                        await _repo.UpdateIdleTimesAsync(dto.OperatorId,dto.Setup.SetUpID, dto.Setup.UpdatedOperatorId, dto.Setup.IdleTimes);
 
                     if (dto.Setup.ExceptionTimes?.Any() == true)
-                        await _repo.UpdateExceptionTimesAsync(dto.Setup.SetUpID, dto.Setup.UpdatedOperatorId, dto.Setup.ExceptionTimes);
+                        await _repo.UpdateExceptionTimesAsync(dto.OperatorId,dto.Setup.SetUpID, dto.Setup.UpdatedOperatorId, dto.Setup.ExceptionTimes);
                 }
 
                 if (dto.Machining != null)
@@ -184,10 +198,10 @@ namespace RouteCardProcess.Controllers
                         await _repo.UpdateMachiningTimesAsync(dto.Machining);
 
                     if (dto.Machining.IdleTimes?.Any() == true)
-                        await _repo.UpdateMachiningIdleTimesAsync(dto.Machining.MachiningId, dto.Machining.UpdatedOperatorId, dto.Machining.IdleTimes);
+                        await _repo.UpdateMachiningIdleTimesAsync(dto.OperatorId,dto.Machining.MachiningId, dto.Machining.UpdatedOperatorId, dto.Machining.IdleTimes);
 
                     if (dto.Machining.ExceptionTimes?.Any() == true)
-                        await _repo.UpdateMachiningExceptionTimesAsync(dto.Machining.MachiningId, dto.Machining.UpdatedOperatorId, dto.Machining.ExceptionTimes);
+                        await _repo.UpdateMachiningExceptionTimesAsync(dto.OperatorId,dto.Machining.MachiningId, dto.Machining.UpdatedOperatorId, dto.Machining.ExceptionTimes);
 
                     if (dto.Machining.OperatorQuantities?.Any() == true)
                         await _repo.UpdateMachiningOperatorQuantitiesAsync(dto.Machining.MachiningId, dto.Machining.OperatorQuantities);

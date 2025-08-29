@@ -170,27 +170,24 @@ namespace RouteCardProcess.Repositories
 
             response.EnsureSuccessStatusCode();
 
+            // Instead of SAP response, return dummy JSON
+            //var responseData = "{\"message\":\"SAP step skipped for testing\",\"success\":true}";
 
             //  Update DB flags only if success
-            //var sql = @"UPDATE Trans_Setup SET IsUploadToSAP = 1 WHERE SetupId = @SetupId;
-            //UPDATE Trans_Machining_Operator SET IsUploadToSAP = 1 WHERE MachiningId = @MachiningId; ";
-            //await connection.ExecuteAsync(sql, new
-            //{
-            //    SetupId = request.LossOrder.SetupId,
-            //    MachiningId = request.LossOrder.MachiningId
-            //});
+
             // Step 2: Update DB flags using SP
+            var operatorId1 = request.ProductionOrder?.NAV_CONF?.FirstOrDefault()?.PERS_NO;
+
             await connection.ExecuteAsync(
                 "usp_UpdateUploadToSAP_ProductionOrder",
                 new
                 {
                     SetupId = request.LossOrder.SetupId,
-                    MachiningId = request.LossOrder.MachiningId
+                    MachiningId = request.LossOrder.MachiningId,
+                    OperatorId = operatorId1
                 },
                 commandType: CommandType.StoredProcedure
             );
-
-
             return responseData;
         }
         // Confirm Loss  Order
