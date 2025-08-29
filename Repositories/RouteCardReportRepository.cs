@@ -277,18 +277,17 @@ namespace RouteCardProcess.Repositories
                 }, commandType: CommandType.StoredProcedure);
             }
         }
-
         public async Task UpdateMachiningTimesAsync(MachiningUpdateDto dto)
         {
             using var connection = _connectionFactory.CreateConnection();
             await connection.OpenAsync();
 
-            await connection.ExecuteAsync("dbo.usp_UpdateMachiningTimes", new
+            await connection.ExecuteAsync("dbo.usp_UpdateMachiningOperatorTimes", new
             {
-                dto.MachiningOperatorTransactionId,
                 dto.MachiningId,
-                OperatorStartTime = dto.MachiningOpertorStartDateTime,
-                OperatorEndTime = dto.MachiningOpertorEndDateTime,     
+                dto.MachiningOperatorTransactionId,
+                MachiningStartTime = dto.MachiningOpertorStartDateTime,
+                MachiningEndTime = dto.MachiningOpertorEndDateTime,
                 dto.UpdatedOperatorId
             }, commandType: CommandType.StoredProcedure);
         }
