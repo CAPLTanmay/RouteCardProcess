@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -144,18 +145,51 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
         public List<ExceptionRecordDto> MachiningExceptions { get; set; } = new();
     }
 
-    public class DateOnlyConverter : JsonConverter<DateTime>
+    public class DateOnlyConverter : JsonConverter<DateTime?>
     {
         private const string Format = "yyyy-MM-dd";
 
-        public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        public override DateTime? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            return DateTime.ParseExact(reader.GetString()!, Format, null);
+            if (reader.TokenType == JsonTokenType.Null)
+                return null;
+
+            if (reader.TokenType == JsonTokenType.String)
+            {
+                var str = reader.GetString();
+
+                // Handle empty or whitespace as null
+                if (string.IsNullOrWhiteSpace(str))
+                    return null;
+
+                // Parse exact with format
+                if (DateTime.TryParseExact(str, Format, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+                {
+                    return date;
+                }
+
+                // Optional: fallback to normal parsing
+                if (DateTime.TryParse(str, out var fallback))
+                {
+                    return fallback;
+                }
+
+                throw new JsonException($"Invalid date format. Expected {Format} but got '{str}'.");
+            }
+
+            throw new JsonException($"Unexpected token {reader.TokenType} when parsing date.");
         }
 
-        public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
+        public override void Write(Utf8JsonWriter writer, DateTime? value, JsonSerializerOptions options)
         {
-            writer.WriteStringValue(value.ToString(Format));
+            if (value.HasValue)
+            {
+                writer.WriteStringValue(value.Value.ToString(Format, CultureInfo.InvariantCulture));
+            }
+            else
+            {
+                writer.WriteNullValue();
+            }
         }
     }
     public class CombinedOrderReportResponseDto

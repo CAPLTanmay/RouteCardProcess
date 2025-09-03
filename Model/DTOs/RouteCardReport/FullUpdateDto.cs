@@ -12,9 +12,9 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
 
     public class SetupUpdateDto
     {
-        public string SetUpID { get; set; }
+        public string? SetUpID { get; set; }
+        public Guid? OperatorTransactionId { get; set; }
         [JsonConverter(typeof(DateOnlyConverter))]
-        public string? OperatorTransactionId { get; set; }
         public DateTime? setupOperatorStartDate { get; set; }
         public TimeSpan? setupOperatorStartTime { get; set; }
         [JsonConverter(typeof(DateOnlyConverter))]
@@ -54,9 +54,8 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
 
     public class MachiningUpdateDto
     {
-        public string MachiningId { get; set; }
-        [JsonConverter(typeof(DateOnlyConverter))]
-        public string? MachiningOperatorTransactionId{get;set;}
+        public string? MachiningId { get; set; }
+        public Guid? MachiningOperatorTransactionId{get;set;}
    
         [JsonConverter(typeof(DateOnlyConverter))]
         public DateTime? machiningOperatorStartDate { get; set; }
