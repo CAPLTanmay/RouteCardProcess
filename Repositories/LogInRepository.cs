@@ -81,6 +81,7 @@ namespace RouteCardProcess.Repositories
             try
             {
                 var useKblAuth = _authConfig.UseKblAuthAPI;
+                var shift = await GetCurrentShiftAsync();
 
                 if (useKblAuth)
                 {
@@ -111,7 +112,11 @@ namespace RouteCardProcess.Repositories
                                     OperatorRole = emp.Designation,
                                     DepartmentId = 3,
                                     DepartmentName = emp.Deptnm,
-                                    Shift = await GetCurrentShiftAsync(),
+                                    Shift = shift.ShiftCode,
+                                    ShiftStartTime = shift.StartTime,
+                                    ShiftEndTime = shift.EndTime,
+                                    NotificationTime = shift.NotificationTime,
+                                    BufferTime = shift.BufferTime,
                                     IsFromKBL = true
                                 };
                             }
@@ -134,7 +139,11 @@ namespace RouteCardProcess.Repositories
                             OperatorRole = emp.Designation,
                             DepartmentId = 3,
                             DepartmentName = emp.Deptnm,
-                            Shift = await GetCurrentShiftAsync(),
+                            Shift = shift.ShiftCode,
+                            ShiftStartTime = shift.StartTime,
+                            ShiftEndTime = shift.EndTime,
+                            NotificationTime = shift.NotificationTime,
+                            BufferTime = shift.BufferTime,
                             IsFromKBL = true
                         };
                     }
@@ -156,7 +165,6 @@ namespace RouteCardProcess.Repositories
 
             if (user != null)
             {
-                user.Shift = await GetCurrentShiftAsync();
                 user.IsFromKBL = false;
             }
 
@@ -169,6 +177,7 @@ namespace RouteCardProcess.Repositories
             {
                 using var connection = _connectionFactory.CreateConnection();
                 await connection.OpenAsync();
+                var shift = await GetCurrentShiftAsync();
 
                 // Step 0: Get employee details by EmployeeCode
                 var employee = await connection.QueryFirstOrDefaultAsync<dynamic>("usp_GetEmployeeLoginInfo",new { OperatorId = operatorId },commandType: CommandType.StoredProcedure);
@@ -218,7 +227,11 @@ namespace RouteCardProcess.Repositories
                                 DepartmentId = 0, // You can map department from mapping table
                                 DepartmentName = employee.UserDepartment,
                                 RBACDepartmentName = departmentNames,
-                                Shift = await GetCurrentShiftAsync(),
+                                Shift = shift.ShiftCode,
+                                ShiftStartTime = shift.StartTime,
+                                ShiftEndTime = shift.EndTime,
+                                NotificationTime = shift.NotificationTime,
+                                BufferTime = shift.BufferTime,
                                 IsFromKBL = false                        
                             }
                         };
@@ -239,7 +252,11 @@ namespace RouteCardProcess.Repositories
                             DepartmentId = 0,
                             DepartmentName = employee.UserDepartment,
                             RBACDepartmentName = departmentNames,
-                            Shift = await GetCurrentShiftAsync(),
+                            Shift = shift.ShiftCode,
+                            ShiftStartTime = shift.StartTime,
+                            ShiftEndTime = shift.EndTime,
+                            NotificationTime = shift.NotificationTime,
+                            BufferTime = shift.BufferTime,
                             IsFromKBL = false
                         }
                     };
@@ -277,7 +294,11 @@ namespace RouteCardProcess.Repositories
                                         OperatorRole = emp.Designation,
                                         DepartmentId = 3,
                                         DepartmentName = emp.Deptnm,
-                                        Shift = await GetCurrentShiftAsync(),
+                                        Shift = shift.ShiftCode,
+                                        ShiftStartTime = shift.StartTime,
+                                        ShiftEndTime = shift.EndTime,
+                                         NotificationTime = shift.NotificationTime,
+                                        BufferTime = shift.BufferTime,
                                         IsFromKBL = true
                                     }
                                 };
@@ -309,7 +330,11 @@ namespace RouteCardProcess.Repositories
                             DepartmentId = 0,
                             DepartmentName = employee.UserDepartment,
                             RBACDepartmentName = departmentNames,
-                            Shift = await GetCurrentShiftAsync(),
+                            Shift = shift.ShiftCode,
+                            ShiftStartTime = shift.StartTime,
+                            ShiftEndTime = shift.EndTime,
+                            NotificationTime = shift.NotificationTime,
+                            BufferTime = shift.BufferTime,
                             IsFromKBL = true
                         }
                     };
@@ -348,29 +373,23 @@ namespace RouteCardProcess.Repositories
             }
         }
 
-        public async Task<string> GetCurrentShiftAsync(DateTime? dateTime = null)
+        public async Task<ShiftDto> GetCurrentShiftAsync()
         {
             using var connection = _connectionFactory.CreateConnection();
             await connection.OpenAsync();
 
-
-            // Determine the time to be evaluated
-            var timeNow = (dateTime ?? DateTime.Now).TimeOfDay;
-
-            // Define parameters for stored procedure execution
-            var parameters = new { TimeNow = timeNow };
-
-            // Execute the stored procedure to retrieve the current shift code
-            var shift = await connection.QueryFirstOrDefaultAsync<string>(
+            var shift = await connection.QueryFirstOrDefaultAsync<ShiftDto>(
                 "usp_GetCurrentShift",
-                parameters,
                 commandType: CommandType.StoredProcedure
             );
 
-            // Return the result or a fallback value
-            return shift ?? _userMessageService.GetMessage(1072);
+            return shift ?? new ShiftDto
+            {
+                ShiftCode = _userMessageService.GetMessage(1072),
+                StartTime = TimeSpan.Zero,
+                EndTime = TimeSpan.Zero
+            };
         }
-
 
     }
 }

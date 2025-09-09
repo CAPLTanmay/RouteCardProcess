@@ -32,11 +32,12 @@ namespace RouteCardProcess.Repositories
                 if (!string.IsNullOrWhiteSpace(result[i].MachiningEndTime) &&
                     DateTime.TryParse(result[i].MachiningEndTime, out shiftTime))
                 {
-                    result[i].Shift = await _logInRepository.GetCurrentShiftAsync(shiftTime);
+                    result[i].Shift = (await _logInRepository.GetCurrentShiftAsync()).ShiftCode;
+
                 }
                 else
                 {
-                    result[i].Shift = await _logInRepository.GetCurrentShiftAsync(DateTime.Now);
+                    result[i].Shift = (await _logInRepository.GetCurrentShiftAsync()).ShiftCode;
                 }
             }
 

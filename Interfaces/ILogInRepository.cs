@@ -10,7 +10,6 @@ namespace RouteCardProcess.Interfaces
         Task<LogInMaster?> ValidateLoginAsync(string operatorId, string password);
         Task<LoginResult> LoginEmployeeAsync(string operatorId, string password);
         Task<(int Flag, string Message)> TryLogoutAsync(string workCenterNo, string workOrderNo, string operationNo);
-       Task<string> GetCurrentShiftAsync(DateTime? dateTime = null);
-
+        Task<ShiftDto> GetCurrentShiftAsync(); 
     }
 }

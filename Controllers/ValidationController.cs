@@ -41,14 +41,16 @@ namespace RouteCardProcess.Controllers
                     data = data
                 });
             }
-            catch (HttpRequestException ex) when (ex.Message.Contains("400"))
+            catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.BadRequest)
             {
                 await _systemLogger.LogAsync("ValidationController", "validate-workcenter", ex.ToString());
+
+                string sapMessage = ValidationRepository.ExtractSapErrorMessage(ex.Message);
+
                 return BadRequest(new
                 {
                     success = false,
-                    message = _userMessageService.GetMessage(1107),
-                    details = ex.Message
+                    message = sapMessage
                 });
             }
             catch (HttpRequestException ex)
@@ -80,23 +82,26 @@ namespace RouteCardProcess.Controllers
             try
             {
                 var resultJson = await _repo.ValidateOrderAsync(request.Order, request.WorkCenter);
-                var data = JsonSerializer.Deserialize<object>(resultJson);
+
+                var parsedData = JsonSerializer.Deserialize<object>(resultJson);
 
                 return Ok(new
                 {
                     success = true,
                     message = _userMessageService.GetMessage(1065),
-                    data = data
+                    data = parsedData
                 });
             }
-            catch (HttpRequestException ex) when (ex.Message.Contains("400"))
+            catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.BadRequest)
             {
                 await _systemLogger.LogAsync("ValidationController", "validate-order", ex.ToString());
+
+                string sapMessage = ValidationRepository.ExtractSapErrorMessage(ex.Message);
+
                 return BadRequest(new
                 {
                     success = false,
-                    message = _userMessageService.GetMessage(1107),
-                    details = ex.Message
+                    message = sapMessage
                 });
             }
             catch (HttpRequestException ex)
@@ -120,6 +125,7 @@ namespace RouteCardProcess.Controllers
                 });
             }
         }
+
 
         [HttpPost("routing-data")]
         [AllowAnonymous]
@@ -318,14 +324,16 @@ namespace RouteCardProcess.Controllers
                     data = JsonSerializer.Deserialize<object>(response)
                 });
             }
-            catch (HttpRequestException ex) when (ex.Message.Contains("400"))
+            catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.BadRequest)
             {
                 await _systemLogger.LogAsync("ValidationController", "confirmProductionOrder", ex.ToString());
+
+                string sapMessage = ValidationRepository.ExtractSapErrorMessage(ex.Message);
+
                 return BadRequest(new
                 {
                     success = false,
-                    message = _userMessageService.GetMessage(1107),
-                    details = ex.Message
+                    message = sapMessage
                 });
             }
             catch (HttpRequestException ex)
@@ -353,14 +361,16 @@ namespace RouteCardProcess.Controllers
                     data = JsonSerializer.Deserialize<object>(response)
                 });
             }
-            catch (HttpRequestException ex) when (ex.Message.Contains("400"))
+            catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.BadRequest)
             {
                 await _systemLogger.LogAsync("LossOrderController", "confirmLossOrder", ex.ToString());
+
+                string sapMessage = ValidationRepository.ExtractSapErrorMessage(ex.Message);
+
                 return BadRequest(new
                 {
                     success = false,
-                    message = _userMessageService.GetMessage(1108),
-                    details = ex.Message
+                    message = sapMessage
                 });
             }
             catch (HttpRequestException ex)
@@ -445,7 +455,6 @@ namespace RouteCardProcess.Controllers
                 return StatusCode(500, new { success = false, message = "Internal server error", details = ex.Message });
             }
         }
-
 
     }
 }
