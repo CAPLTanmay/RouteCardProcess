@@ -113,8 +113,6 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-
-
         [HttpPost("start-setup")]
         public async Task<IActionResult> StartSetup([FromBody] SetupIdentifierRequest request)
         {
@@ -122,16 +120,21 @@ namespace RouteCardProcess.Controllers
             {
                 var result = await _repo.StartSetupAsync(request);
 
-                return result == _userMessageService.GetMessage(1056)
-                    ? Ok(new { message = result })
-                    : BadRequest(new { message = result });
+                return result.Message == _userMessageService.GetMessage(1056)
+                    ? Ok(result)         // includes message and OperatorStartTime
+                    : BadRequest(result); // includes message and OperatorStartTime
             }
             catch (Exception ex)
             {
                 await _systemLogger.LogAsync("SetUpTransController", "start-setup", ex.ToString());
-                return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
+                return StatusCode(500, new
+                {
+                    message = _userMessageService.GetMessage(5005),
+                    error = ex.Message
+                });
             }
         }
+
 
         [HttpPost("toggle-pause")]
         public async Task<IActionResult> TogglePause([FromBody] SetupPauseRequest request)

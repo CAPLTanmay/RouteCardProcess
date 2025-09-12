@@ -14,8 +14,8 @@ namespace RouteCardProcess.Model.Entities
         public string Shift { get; set; }
         public TimeSpan ShiftStartTime { get; set; }
         public TimeSpan ShiftEndTime { get; set; }
-        public TimeSpan NotificationTime { get; set; } 
-        public int BufferTime { get; set; }
+        public TimeSpan NotificationTime { get; set; }
+        public TimeSpan ShiftStartBufferTime { get; set; }
         public bool IsFromKBL { get; set; }
         public string? OperatorDummyID { get;  set; }
     }

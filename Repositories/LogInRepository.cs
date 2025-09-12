@@ -116,7 +116,7 @@ namespace RouteCardProcess.Repositories
                                     ShiftStartTime = shift.StartTime,
                                     ShiftEndTime = shift.EndTime,
                                     NotificationTime = shift.NotificationTime,
-                                    BufferTime = shift.BufferTime,
+                                    ShiftStartBufferTime = shift.ShiftStartBufferTime,
                                     IsFromKBL = true
                                 };
                             }
@@ -143,7 +143,7 @@ namespace RouteCardProcess.Repositories
                             ShiftStartTime = shift.StartTime,
                             ShiftEndTime = shift.EndTime,
                             NotificationTime = shift.NotificationTime,
-                            BufferTime = shift.BufferTime,
+                            ShiftStartBufferTime = shift.ShiftStartBufferTime,
                             IsFromKBL = true
                         };
                     }
@@ -231,7 +231,7 @@ namespace RouteCardProcess.Repositories
                                 ShiftStartTime = shift.StartTime,
                                 ShiftEndTime = shift.EndTime,
                                 NotificationTime = shift.NotificationTime,
-                                BufferTime = shift.BufferTime,
+                                ShiftStartBufferTime = shift.ShiftStartBufferTime,
                                 IsFromKBL = false                        
                             }
                         };
@@ -256,7 +256,7 @@ namespace RouteCardProcess.Repositories
                             ShiftStartTime = shift.StartTime,
                             ShiftEndTime = shift.EndTime,
                             NotificationTime = shift.NotificationTime,
-                            BufferTime = shift.BufferTime,
+                            ShiftStartBufferTime = shift.ShiftStartBufferTime,
                             IsFromKBL = false
                         }
                     };
@@ -297,8 +297,8 @@ namespace RouteCardProcess.Repositories
                                         Shift = shift.ShiftCode,
                                         ShiftStartTime = shift.StartTime,
                                         ShiftEndTime = shift.EndTime,
-                                         NotificationTime = shift.NotificationTime,
-                                        BufferTime = shift.BufferTime,
+                                        NotificationTime = shift.NotificationTime,
+                                        ShiftStartBufferTime = shift.ShiftStartBufferTime,
                                         IsFromKBL = true
                                     }
                                 };
@@ -334,7 +334,7 @@ namespace RouteCardProcess.Repositories
                             ShiftStartTime = shift.StartTime,
                             ShiftEndTime = shift.EndTime,
                             NotificationTime = shift.NotificationTime,
-                            BufferTime = shift.BufferTime,
+                            ShiftStartBufferTime = shift.ShiftStartBufferTime,
                             IsFromKBL = true
                         }
                     };

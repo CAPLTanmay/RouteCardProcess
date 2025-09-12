@@ -7,6 +7,7 @@
         public TimeSpan EndTime { get; set; }
         public string ShiftDesc { get; set; }
         public TimeSpan NotificationTime { get; set; }  
-        public int BufferTime { get; set; }
+        public TimeSpan ShiftStartBufferTime { get; set; }
+        
     }
 }

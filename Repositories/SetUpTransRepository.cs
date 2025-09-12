@@ -205,49 +205,62 @@ namespace RouteCardProcess.Repositories
                 throw;
             }
         }
-        public async Task<string> StartSetupAsync(SetupIdentifierRequest request)
+        public async Task<SetupStartResponse> StartSetupAsync(SetupIdentifierRequest request)
         {
             using var connection = CreateConnection();
-            var parameters = new { SetUpID = request.SetUpID };
 
             try
             {
-                // Check if the Setup ID exists in the database
                 var existingSetup = await connection.QueryFirstOrDefaultAsync<int?>(
-             "usp_CheckSetupExists",
-             parameters,
-             commandType: CommandType.StoredProcedure);
-
+                    "usp_CheckSetupExists",
+                    new { SetUpID = request.SetUpID },
+                    commandType: CommandType.StoredProcedure
+                );
 
                 if (existingSetup == null)
                 {
-                    // If the setup does not exist, create a new setup
                     var setupMasterDto = new SetupMasterDto
                     {
                         SetUpID = request.SetUpID,
                         // Add other properties like OperatorId, WorkCenterNo, etc.
                     };
 
-                    // Call the stored procedure to create the new setup
-                    await connection.ExecuteAsync("usp_CreateSetup", setupMasterDto, commandType: CommandType.StoredProcedure);
+                    await connection.ExecuteAsync(
+                        "usp_CreateSetup",
+                        setupMasterDto,
+                        commandType: CommandType.StoredProcedure
+                    );
+                }
 
-                    // After creating, proceed with starting the setup
-                    await connection.ExecuteAsync("usp_StartSetup", parameters, commandType: CommandType.StoredProcedure);
-                    return _userMessageService.GetMessage(1055);
-                }
-                else
+                // ✅ Use DynamicParameters for OUTPUT
+                var parameters = new DynamicParameters();
+                parameters.Add("@SetUpID", request.SetUpID);
+                parameters.Add("@OperatorStartTime", dbType: DbType.DateTime, direction: ParameterDirection.Output);
+
+                await connection.ExecuteAsync(
+                    "usp_StartSetup",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+
+                var operatorStartTime = parameters.Get<DateTime>("@OperatorStartTime");
+
+                var message = existingSetup == null
+                    ? _userMessageService.GetMessage(1055)
+                    : _userMessageService.GetMessage(1056);
+
+                return new SetupStartResponse
                 {
-                    // If the setup exists, proceed with starting the setup
-                    await connection.ExecuteAsync("usp_StartSetup", parameters, commandType: CommandType.StoredProcedure);
-                    return _userMessageService.GetMessage(1056);
-                }
+                    Message = message,
+                    StartDate = operatorStartTime.ToString("yyyy-MM-dd"),
+                    StartTime = operatorStartTime.ToString("HH:mm:ss")
+                };
             }
             catch (Exception ex)
             {
-                var errorPrefix = _userMessageService.GetMessage(1089); // "Error starting setup:"
+                var errorPrefix = _userMessageService.GetMessage(1089);
                 throw new Exception($"{errorPrefix} {ex.Message}", ex);
             }
-
         }
 
         public async Task<string> TogglePauseAsync(SetupPauseRequest request)
