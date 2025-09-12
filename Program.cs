@@ -133,6 +133,7 @@ builder.Services.AddScoped<IBreakdownGroupCodeRepository, BreakdownGroupCodeRepo
 builder.Services.AddScoped<IBreakdownCodeRepository, BreakdownCodeRepository>();
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 builder.Services.AddScoped<IModuleRepository, ModuleRepository>();
+builder.Services.AddScoped<IWeeklyReportRepository, WeeklyReportRepository>();
 
 // Services
 builder.Services.AddScoped<IPasswordSecurityService, PasswordSecurityService>();
