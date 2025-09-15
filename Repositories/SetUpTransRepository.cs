@@ -232,7 +232,7 @@ namespace RouteCardProcess.Repositories
                     );
                 }
 
-                // ✅ Use DynamicParameters for OUTPUT
+                //  Use DynamicParameters for OUTPUT
                 var parameters = new DynamicParameters();
                 parameters.Add("@SetUpID", request.SetUpID);
                 parameters.Add("@OperatorStartTime", dbType: DbType.DateTime, direction: ParameterDirection.Output);

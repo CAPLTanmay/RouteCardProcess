@@ -14,7 +14,6 @@ namespace RouteCardProcess.Controllers
         private readonly IMachiningRepository _repo;
         private readonly ISystemLoggerRepository _systemLogger;
         private readonly IUserMessageService _userMessageService;
-
         public MachiningController(IMachiningRepository repo, ISystemLoggerRepository systemLogger, IUserMessageService userMessageService)
         {
             _repo = repo;
@@ -95,7 +94,6 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-
         [HttpPost("start-machining")]
         public async Task<IActionResult> StartMachining([FromBody] MachiningIdentifierRequest request)
         {
@@ -104,13 +102,20 @@ namespace RouteCardProcess.Controllers
                 if (string.IsNullOrWhiteSpace(request.MachiningId))
                     return BadRequest(new { message = _userMessageService.GetMessage(1024) });
 
-                await _repo.StartMachiningAsync(request);
-                return Ok(new { message = _userMessageService.GetMessage(1025) });
+                var result = await _repo.StartMachiningAsync(request);
+
+                return result.Message == _userMessageService.GetMessage(1082) // "Machining started"
+                    ? Ok(result)         
+                    : BadRequest(result); 
             }
             catch (Exception ex)
             {
                 await _systemLogger.LogAsync("MachiningController", "start-machining", ex.ToString());
-                return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
+                return StatusCode(500, new
+                {
+                    message = _userMessageService.GetMessage(5005),
+                    error = ex.Message
+                });
             }
         }
 
@@ -131,7 +136,6 @@ namespace RouteCardProcess.Controllers
                 return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
             }
         }
-
 
         [HttpPost("end-machining")]
         public async Task<IActionResult> EndOperatorTime([FromBody] MachiningIdentifierRequest request)

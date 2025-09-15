@@ -70,7 +70,6 @@ public class MachiningRepository : IMachiningRepository
         return machiningData;
 
     }
-
     public async Task InsertMachiningOperatorStartAsync(MachiningOperatorStartRequest request)
     {
         var query = "EXEC Insert_MachiningOperatorStart @MachiningId, @OperatorId, @OperatorStartTime";
@@ -85,48 +84,64 @@ public class MachiningRepository : IMachiningRepository
         using var connection = CreateConnection();
         await connection.ExecuteAsync(query, parameters);
     }
-
-
-    public async Task<string> StartMachiningAsync(MachiningIdentifierRequest request)
+    public async Task<MachiningStartResponse> StartMachiningAsync(MachiningIdentifierRequest request)
     {
-        using var connection = CreateConnection(); 
-        var parameters = new { MachiningID = request.MachiningId };
+        using var connection = CreateConnection();
 
         try
         {
-            // Check if the Machining ID exists in the database
+            // Step 1: Check if machining exists
             var existingMachining = await connection.QueryFirstOrDefaultAsync<int?>(
-           "usp_CheckMachiningExists",
-           parameters,
-           commandType: CommandType.StoredProcedure);
+                "usp_CheckMachiningExists",
+                new { MachiningID = request.MachiningId },
+                commandType: CommandType.StoredProcedure
+            );
 
             if (existingMachining == null)
             {
-                // If not found, create a new machining entry
                 var machiningMasterDto = new MachiningDto
                 {
                     MachiningId = request.MachiningId,
-                    // Populate other necessary properties: OperatorID, WorkOrderNo, etc.
+                    // Populate other necessary properties
                 };
 
-                await connection.ExecuteAsync("usp_CreateMachining", machiningMasterDto, commandType: CommandType.StoredProcedure);
+                await connection.ExecuteAsync(
+                    "usp_CreateMachining",
+                    machiningMasterDto,
+                    commandType: CommandType.StoredProcedure
+                );
+            }
 
-                // Start machining after creating it
-                await connection.ExecuteAsync("usp_StartMachining", parameters, commandType: CommandType.StoredProcedure);
-                return _userMessageService.GetMessage(1031);
-            }
-            else
+            // Step 2: Call usp_StartMachining with OUTPUT parameter
+            var parameters = new DynamicParameters();
+            parameters.Add("@MachiningID", request.MachiningId);
+            parameters.Add("@OperatorStartTime", dbType: DbType.DateTime, direction: ParameterDirection.Output);
+
+            await connection.ExecuteAsync(
+                "usp_StartMachining",
+                parameters,
+                commandType: CommandType.StoredProcedure
+            );
+
+            var operatorStartTime = parameters.Get<DateTime>("@OperatorStartTime");
+
+            var message = existingMachining == null
+                ? _userMessageService.GetMessage(1031)  // "Machining created and started"
+                : _userMessageService.GetMessage(1082); // "Machining started"
+
+            return new MachiningStartResponse
             {
-                // Start machining if it already exists
-                await connection.ExecuteAsync("usp_StartMachining", parameters, commandType: CommandType.StoredProcedure);
-                return _userMessageService.GetMessage(1082);
-            }
+                Message = message,
+                StartDate = operatorStartTime.ToString("yyyy-MM-dd"),
+                StartTime = operatorStartTime.ToString("HH:mm:ss")
+            };
         }
         catch (Exception ex)
         {
             throw new Exception($"Error starting machining: {ex.Message}", ex);
         }
     }
+
     public async Task TogglePauseAsync(MachiningPauseRequest request)
     {
         using var connection = CreateConnection();
@@ -271,7 +286,6 @@ public class MachiningRepository : IMachiningRepository
             };
         }
     }
-
     public async Task<bool> AddDelaysAsync(MachiningDelayRequest request)
     {
         using var connection = (SqlConnection)CreateConnection();
