@@ -8,7 +8,7 @@ namespace RouteCardProcess.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-   
+
     public class WeeklyReportController : ControllerBase
     {
         private readonly IWeeklyReportRepository _repo;
@@ -47,5 +47,81 @@ namespace RouteCardProcess.Controllers
                 return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
             }
         }
+
+        [HttpPost("get-without-exception")]
+        public async Task<IActionResult> GetWithoutExceptionReport([FromBody] WeeklyReportRequestDto request)
+        {
+            try
+            {
+                if (request.FromDate == default || request.ToDate == default)
+                    return BadRequest(new { message = "FromDate and ToDate are required." });
+
+                var result = await _repo.GetWithoutExceptionReportAsync(request);
+
+                if (result == null || !result.Any())
+                {
+                    var msg = _userMessageService.GetMessage(1063) ?? "No data found";
+                    await _systemLogger.LogAsync("WeeklyReportController", "get-exception", "No data for given filters.");
+                    return Ok(new { success = false, message = msg, data = new List<object>() });
+                }
+
+                return Ok(new { success = true, message = "Data fetched successfully", data = result });
+            }
+            catch (Exception ex)
+            {
+                await _systemLogger.LogAsync("WeeklyReportController", "get-exception", ex.ToString());
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
+            }
+        }
+
+        [HttpPost("get-idelcode")]
+        public async Task<IActionResult> GetIdelCodeReport([FromBody] WeeklyReportRequestDto request)
+        {
+            try
+            {
+                if (request.FromDate == default || request.ToDate == default)
+                    return BadRequest(new { message = "FromDate and ToDate are required." });
+
+                var result = await _repo.GetIdelCodeReportAsync(request);
+
+                if (result == null || !result.Any())
+                {
+                    var msg = _userMessageService.GetMessage(1063) ?? "No data found";
+                    await _systemLogger.LogAsync("WeeklyReportController", "get-exception", "No data for given filters.");
+                    return Ok(new { success = false, message = msg, data = new List<object>() });
+                }
+
+                return Ok(new { success = true, message = "Data fetched successfully", data = result });
+            }
+            catch (Exception ex)
+            {
+                await _systemLogger.LogAsync("WeeklyReportController", "get-exception", ex.ToString());
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
+            }
+        }
+
+        [HttpPost("get-associate")]
+        public async Task<IActionResult> GetAssociateCounts()
+        {
+            try
+            {
+                var result = await _repo.GetAssociateCountsAsync();
+
+                if (result == null || !result.Any())
+                {
+                    var msg = _userMessageService.GetMessage(1063) ?? "No data found";
+                    await _systemLogger.LogAsync("WeeklyReportController", "get-associate", "No data found in MSTDepartmentCounts.");
+                    return Ok(new { success = false, message = msg, data = new List<object>() });
+                }
+
+                return Ok(new { success = true, message = "Data fetched successfully", data = result });
+            }
+            catch (Exception ex)
+            {
+                await _systemLogger.LogAsync("WeeklyReportController", "get-associate", ex.ToString());
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
+            }
+        }
+
     }
 }

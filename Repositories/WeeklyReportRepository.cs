@@ -15,7 +15,6 @@ namespace RouteCardProcess.Repositories
             _connectionFactory = connectionFactory;
             _logInRepository = logInRepository;
         }
-
         public async Task<IEnumerable<WeeklyExceptionReportModel>> GetExceptionReportAsync(WeeklyReportRequestDto request)
         {
             using var connection = _connectionFactory.CreateConnection();
@@ -30,6 +29,50 @@ namespace RouteCardProcess.Repositories
                 DepartmentId = string.IsNullOrEmpty(request.Department) ? (int?)null : int.Parse(request.Department)
             },
             commandType: CommandType.StoredProcedure)).AsList();
+            return result;
+        }
+        public async Task<IEnumerable<WeeklyExceptionReportModel>> GetWithoutExceptionReportAsync(WeeklyReportRequestDto request)
+        {
+            using var connection = _connectionFactory.CreateConnection();
+            await connection.OpenAsync();
+
+            var result = (await connection.QueryAsync<WeeklyExceptionReportModel>(
+            "usp_GetWeeklyWithoutExceptionReport",
+            new
+            {
+                FromDate = request.FromDate,
+                ToDate = request.ToDate,
+                DepartmentId = string.IsNullOrEmpty(request.Department) ? (int?)null : int.Parse(request.Department)
+            },
+            commandType: CommandType.StoredProcedure)).AsList();
+            return result;
+        }
+        public async Task<IEnumerable<IdleReportModel>> GetIdelCodeReportAsync(WeeklyReportRequestDto request)
+        {
+            using var connection = _connectionFactory.CreateConnection();
+            await connection.OpenAsync();
+
+            var result = (await connection.QueryAsync<IdleReportModel>(
+            "usp_GetWeeklyIdealReport",
+            new
+            {
+                FromDate = request.FromDate,
+                ToDate = request.ToDate,
+                DepartmentId = string.IsNullOrEmpty(request.Department) ? (int?)null : int.Parse(request.Department)
+            },
+            commandType: CommandType.StoredProcedure)).AsList();
+            return result;
+        }
+
+        public async Task<IEnumerable<AssociateReportModel>> GetAssociateCountsAsync()
+        {
+            using var connection = _connectionFactory.CreateConnection();
+            await connection.OpenAsync();
+
+            var result = (await connection.QueryAsync<AssociateReportModel>(
+                "SELECT Department, TotalCount FROM MSTDepartmentCounts WHERE TotalCount > 0"
+            )).AsList();
+
             return result;
         }
     }

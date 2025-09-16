@@ -135,7 +135,6 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-
         [HttpPost("toggle-pause")]
         public async Task<IActionResult> TogglePause([FromBody] SetupPauseRequest request)
         {
