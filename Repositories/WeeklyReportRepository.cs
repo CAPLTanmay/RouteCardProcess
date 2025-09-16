@@ -26,7 +26,7 @@ namespace RouteCardProcess.Repositories
             {
                 FromDate = request.FromDate,
                 ToDate = request.ToDate,
-                DepartmentId = string.IsNullOrEmpty(request.Department) ? (int?)null : int.Parse(request.Department)
+                DepartmentName = string.IsNullOrEmpty(request.Department) ? null : request.Department
             },
             commandType: CommandType.StoredProcedure)).AsList();
             return result;
@@ -42,7 +42,7 @@ namespace RouteCardProcess.Repositories
             {
                 FromDate = request.FromDate,
                 ToDate = request.ToDate,
-                DepartmentId = string.IsNullOrEmpty(request.Department) ? (int?)null : int.Parse(request.Department)
+                DepartmentName = string.IsNullOrEmpty(request.Department) ? null : request.Department
             },
             commandType: CommandType.StoredProcedure)).AsList();
             return result;
