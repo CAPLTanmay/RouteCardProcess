@@ -8,7 +8,7 @@ namespace RouteCardProcess.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-
+    [Authorize]
     public class WeeklyReportController : ControllerBase
     {
         private readonly IWeeklyReportRepository _repo;
