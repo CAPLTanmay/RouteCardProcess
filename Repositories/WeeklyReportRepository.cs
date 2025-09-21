@@ -63,17 +63,17 @@ namespace RouteCardProcess.Repositories
             commandType: CommandType.StoredProcedure)).AsList();
             return result;
         }
-
         public async Task<IEnumerable<AssociateReportModel>> GetAssociateCountsAsync()
         {
             using var connection = _connectionFactory.CreateConnection();
             await connection.OpenAsync();
 
-            var result = (await connection.QueryAsync<AssociateReportModel>(
-                "SELECT Department, TotalCount FROM MSTDepartmentCounts WHERE TotalCount > 0"
-            )).AsList();
+            var result = await connection.QueryAsync<AssociateReportModel>(
+                "usp_GetAssociateCounts",
+                commandType: CommandType.StoredProcedure
+            );
 
-            return result;
+            return result.ToList();
         }
     }
 }

@@ -197,7 +197,6 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-
         [HttpPost("add-delays")]
         public async Task<IActionResult> AddDelays([FromBody] MachiningDelayRequest request)
         {
@@ -216,15 +215,14 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-
-        [HttpGet("{machiningId}")]
-        public async Task<IActionResult> GetById(string machiningId)
+        [HttpPost("GetById")]
+        public async Task<IActionResult> GetById([FromBody] MachiningIdentifierRequest request)
         {
             try
             {
                 var machining = await _repo.GetByCompositeKeyAsync(new CompositeKeyRequest
                 {
-                    WorkCenterNo = machiningId,
+                    WorkCenterNo = request.MachiningId,
                     ProductionOrderNo = string.Empty,
                     OperationNo = string.Empty
                 });
