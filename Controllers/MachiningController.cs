@@ -44,8 +44,9 @@ namespace RouteCardProcess.Controllers
                     bool isOperatorEnded = existing.OperatorEndTime != DateTime.MinValue;
                     bool isDifferentOperator = !string.IsNullOrEmpty(request.OperatorId) &&
                                                !string.Equals(existing.OperatorId, request.OperatorId, StringComparison.OrdinalIgnoreCase);
+                    bool isMachingStopped=string.Equals(existing.MachiningStatus, "Machining Stopped", StringComparison.OrdinalIgnoreCase);
 
-                    if (isOperatorEnded || isDifferentOperator)
+                    if ((isOperatorEnded || isDifferentOperator) && !isMachingStopped)
                     {
                         var operatorStartRequest = new MachiningOperatorStartRequest
                         {

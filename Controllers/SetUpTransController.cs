@@ -69,8 +69,9 @@ namespace RouteCardProcess.Controllers
                     bool isOperatorEnded = existing.OperatorEndTime != DateTime.MinValue;
                     bool isDifferentOperator = !string.IsNullOrEmpty(request.OperatorId) &&
                                                !string.Equals(existing.OperatorId, request.OperatorId, StringComparison.OrdinalIgnoreCase);
+                    bool isSetupStopped =string.Equals(existing.SetupStatus, "Setup Stopped", StringComparison.OrdinalIgnoreCase);
 
-                    if (isOperatorEnded || isDifferentOperator)
+                    if ((isOperatorEnded || isDifferentOperator) && !isSetupStopped)
                     {
                         // Insert into Trans_Setup_Operator only
                         await _repo.InsertSetupOperatorStartAsync(existing.SetUpID, request.OperatorId, DateTime.Now);
