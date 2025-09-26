@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model.DTOs.SapValidation;
@@ -30,7 +31,7 @@ public class SapSyncController : ControllerBase
             return Ok(new
             {
                 success = true,
-                message = _userMessageService.GetMessage(1097) 
+                message = _userMessageService.GetMessage(1097)
             });
         }
         catch (Exception ex)
@@ -71,6 +72,29 @@ public class SapSyncController : ControllerBase
         catch (Exception ex)
         {
             await _logger.LogAsync("SapSyncController", "GetRoutingDataByOrderNumber", ex.ToString());
+
+            return StatusCode(500, new
+            {
+                success = false,
+                message = _userMessageService.GetMessage(5001),
+                details = ex.Message
+            });
+        }
+    }
+
+    [HttpPost("GetmaterialTextLink")]
+    public async Task<IActionResult> GetmaterialTextLink([FromBody] MaterialTextLinkRequest request)
+    {
+        try
+        {
+            var fileBytes = await 
+                _sapSyncService.GetMaterialPdfAsync(request.material);
+
+            return File(fileBytes, "application/pdf", "Material.pdf");
+        }
+        catch (Exception ex)
+        {
+            await _logger.LogAsync("SapSyncController", "GetmaterialTextLink", ex.ToString());
 
             return StatusCode(500, new
             {

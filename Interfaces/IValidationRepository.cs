@@ -17,5 +17,6 @@ namespace RouteCardProcess.Interfaces
         Task<SAPBreakdownRequest?> PostBreakdownAsync(SAPBreakdownRequest request);
         Task<SAPBreakdownCloseRequest?> PostBreakdownCloseAsync(SAPBreakdownCloseRequest request);
         Task<List<SAPBreakdownStatusResponse>> GetBulkBreakdownStatusesAsync(List<string> notifNums);
+        Task<ConEmployee?> GetEmployeeByContractEmpIdAsync(string contractEmpId);
     }
 }

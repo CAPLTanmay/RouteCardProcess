@@ -15,4 +15,8 @@
     {
         public string OrderNumber { get; set; }
     }
+    public class MaterialTextLinkRequest
+    {
+        public string material { get; set; }
+    }
 }

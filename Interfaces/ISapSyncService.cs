@@ -6,5 +6,6 @@ namespace RouteCardProcess.Interfaces
     {
         Task SyncRoutingDataAsync(string orderNumber);
         Task<IEnumerable<RoutingDataResponse>> GetSelectedRoutingDataAsync(string orderNumber);
+        Task<byte[]> GetMaterialPdfAsync(string material);
     }
 }

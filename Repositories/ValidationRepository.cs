@@ -161,6 +161,26 @@ namespace RouteCardProcess.Repositories
             using var connection = _connectionFactory.CreateConnection();
             await connection.OpenAsync();
 
+            var persNo = request.ProductionOrder?.NAV_CONF?.FirstOrDefault()?.PERS_NO;
+
+            if (request.ProductionOrder?.NAV_CONF != null)
+            {
+                foreach (var nav in request.ProductionOrder.NAV_CONF)
+                {
+                    if (!string.IsNullOrEmpty(nav.PERS_NO))
+                    {
+                        // check employee
+                        var employee = await GetEmployeeByContractEmpIdAsync(nav.PERS_NO);
+
+                        if (employee != null && employee.IsContractEmployee)
+                        {
+                            // replace PERS_NO with EmployeeCode
+                            nav.PERS_NO = employee.EmployeeCode;
+                        }
+                    }
+                }
+            }
+
             // Step 1: Confirm Production Order in SAP
             string fetchUrl = $"{_baseUrl}ZCONFIRMSet";
             var (csrfToken, cookie) = await FetchCsrfTokenAsync(fetchUrl);
@@ -195,7 +215,7 @@ namespace RouteCardProcess.Repositories
                 {
                     SetupId = request.LossOrder.SetupId,
                     MachiningId = request.LossOrder.MachiningId,
-                    OperatorId = operatorId1
+                    OperatorId = persNo,
                 },
                 commandType: CommandType.StoredProcedure
             );
@@ -268,7 +288,7 @@ namespace RouteCardProcess.Repositories
 
                 if (!isProductionSuccess)
                 {
-                     sapError = ValidationRepository.ExtractSapErrorMessage(productionJson);
+                    sapError = ValidationRepository.ExtractSapErrorMessage(productionJson);
                     transaction.Rollback();
                     //return (productionResult, null);
                     return (new { success = false, type = "Production", data = sapError }, null);
@@ -356,10 +376,11 @@ namespace RouteCardProcess.Repositories
             }
             catch (Exception ex)
             {
-               
+
                 transaction.Rollback();
+                string sapMessage = ValidationRepository.ExtractSapErrorMessage(ex.Message);
                 //throw new Exception("Error in ConfirmProdAndLossOrderAsync", ex);
-                return (new { success = false, type = "System", message = sapError }, null);
+                return (new { success = false, type = "System", message = sapMessage }, null);
             }
 
             return (productionResult, lossResult);
@@ -514,7 +535,12 @@ namespace RouteCardProcess.Repositories
 
             return "Unknown SAP error occurred";
         }
+        public async Task<ConEmployee?> GetEmployeeByContractEmpIdAsync(string contractEmpId)
+        {
+            using var connection = _connectionFactory.CreateConnection();
+            await connection.OpenAsync();
 
+            return await connection.QueryFirstOrDefaultAsync<ConEmployee>("dbo.usp_GetEmployeeByContractEmpId", new { ContractEmpId = contractEmpId },commandType: CommandType.StoredProcedure );
+        }
     }
-
 }

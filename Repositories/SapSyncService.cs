@@ -133,6 +133,16 @@ namespace RouteCardProcess.Repositories
                     }
             return data;
         }
+        public async Task<byte[]> GetMaterialPdfAsync(string material)
+        {
+            if (string.IsNullOrEmpty(material))
+                throw new ArgumentException("Material is required", nameof(material));
 
+            // Base URL + Material process
+            var fileUrl = $"{_materialBaseUrl}{Regex.Replace(material, @"\d{3}$", "")}";
+
+            var fileBytes = await _httpClient.GetByteArrayAsync(fileUrl);
+            return fileBytes;
+        }
     }
 }
