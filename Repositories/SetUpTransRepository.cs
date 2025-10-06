@@ -302,7 +302,7 @@ namespace RouteCardProcess.Repositories
             }
         }
 
-        public async Task<bool> EndSetupTimeAsync(SetupIdentifierRequest request)
+        public async Task<EndSetupResultDto> EndSetupTimeAsync(SetupIdentifierRequest request)
         {
             using var connection = CreateConnection();
             var parameters = new { SetUpID = request.SetUpID };
@@ -323,13 +323,32 @@ namespace RouteCardProcess.Repositories
 
             if (rowsAffected > 0)
             {
-                await connection.ExecuteAsync("usp_UpdateSetupEndTime",
-                    new { EndTime = DateTime.Now, SetUpID = request.SetUpID },
-                    commandType: CommandType.StoredProcedure);
-                return true;
+                var setupData = await connection.QueryFirstOrDefaultAsync<dynamic>(
+                    @"SELECT SetupStartTime, SetupEndTime, TotalSetupTime 
+              FROM Trans_Setup 
+              WHERE SetupId = @SetUpID",
+                    new { SetUpID = request.SetUpID });
+
+                string timeDiff = null;
+                if (setupData != null)
+                {
+                    timeDiff = ((TimeSpan)setupData.TotalSetupTime).ToString(@"hh\:mm\:ss");
+                }
+
+                return new EndSetupResultDto
+                {
+                    Success = true,
+                    Message = _userMessageService.GetMessage(1027),
+                    TimeDiff = timeDiff
+                };
             }
 
-            return false;
+            return new EndSetupResultDto
+            {
+                Success = false,
+                Message = _userMessageService.GetMessage(1087),
+                TimeDiff = null
+            };
         }
 
         public async Task<bool> InsertDelaysAsync(SetupDelayRequest request)

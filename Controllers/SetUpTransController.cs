@@ -159,16 +159,22 @@ namespace RouteCardProcess.Controllers
         {
             try
             {
-                var success = await _repo.EndSetupTimeAsync(request);
+                var result = await _repo.EndSetupTimeAsync(request);
 
-                return success
-                    ? Ok(new { message = _userMessageService.GetMessage(1027) })
-                    : NotFound(new { message = _userMessageService.GetMessage(1087)});
+                if (result.Success)
+                    return Ok(result);
+                else
+                    return NotFound(result);
             }
             catch (Exception ex)
             {
                 await _systemLogger.LogAsync("SetUpTransController", "end-setup", ex.ToString());
-                return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
+                return StatusCode(500, new EndSetupResultDto
+                {
+                    Success = false,
+                    Message = _userMessageService.GetMessage(5005),
+                    TimeDiff = null
+                });
             }
         }
 

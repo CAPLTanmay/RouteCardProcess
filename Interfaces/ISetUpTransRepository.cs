@@ -11,7 +11,7 @@ namespace RouteCardProcess.Interfaces
         Task<SetupMaster> CreateSetupAsync(SetupMasterDto request);
         Task<SetupStartResponse> StartSetupAsync(SetupIdentifierRequest request);
         Task<string> TogglePauseAsync(SetupPauseRequest request);
-        Task<bool> EndSetupTimeAsync(SetupIdentifierRequest request);
+        Task<EndSetupResultDto> EndSetupTimeAsync(SetupIdentifierRequest request);
         Task<bool> InsertDelaysAsync(SetupDelayRequest request);
         Task InsertSetupOperatorStartAsync(string setupId, string operatorId, DateTime startTime);
     }
