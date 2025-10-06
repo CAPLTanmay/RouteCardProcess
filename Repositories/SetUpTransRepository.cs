@@ -313,6 +313,10 @@ namespace RouteCardProcess.Repositories
                 commandType: CommandType.StoredProcedure);
 
             string status = setupInfo?.SetupStatus;
+            string standardSetupTime = setupInfo?.StandardSetupTime != null
+    ? TimeSpan.Parse(setupInfo.StandardSetupTime.ToString()).ToString(@"hh\:mm\:ss")
+    : null;
+
 
             if (status == _userMessageService.GetMessage(1075))
             {
@@ -339,7 +343,8 @@ namespace RouteCardProcess.Repositories
                 {
                     Success = true,
                     Message = _userMessageService.GetMessage(1027),
-                    TimeDiff = timeDiff
+                    TimeDiff = timeDiff,
+                    StandardSetupTime = standardSetupTime
                 };
             }
 

@@ -17,5 +17,6 @@
         public string? ActualSetupTime { get; set; }
         public string? TotalSetupTime { get; set; }
         public string OrderTypeDesc { get; set; }
+        public string? TimeDiff { get; set; }  // hh:mm:ss format
     }
 }
