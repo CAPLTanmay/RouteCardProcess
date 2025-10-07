@@ -187,7 +187,7 @@ namespace RouteCardProcess.Repositories
                     return new LoginResult
                     {
                         IsSuccess = false,
-                        FailureReason = "Invalid operator ID. Not for DRC app"
+                        FailureReason = _userMessageService.GetMessage(1001)
                     };
                 }
 
@@ -207,7 +207,7 @@ namespace RouteCardProcess.Repositories
                         return new LoginResult
                         {
                             IsSuccess = false,
-                            FailureReason = "Invalid password."
+                            FailureReason = _userMessageService.GetMessage(1001)
                         };
                     }
 

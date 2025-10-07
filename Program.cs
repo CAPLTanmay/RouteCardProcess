@@ -9,7 +9,10 @@ using RouteCardProcess.Model.DTOs.Login;
 using RouteCardProcess.Model.DTOs.PasswordEncryption;
 using RouteCardProcess.Repositories;
 using RouteCardProcess.Services;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 using static RouteCardProcess.Repositories.SetUpTransRepository;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -86,17 +89,6 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-/*builder.Services.AddCors(options =>
-{
-    options.AddPolicy("DefaultCorsPolicy", policy =>
-    {
-        policy.WithOrigins(allowedOrigin)
-              .AllowAnyHeader()
-              .AllowAnyMethod();
-    });
-});*/
-
-
 //  Read multiple origins from configuration
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigin").Get<string[]>();
 
@@ -115,6 +107,7 @@ builder.Services.AddCors(options =>
 // Repositories
 builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
 builder.Services.AddScoped<ILogInRepository, LogInRepository>();
+builder.Services.AddScoped<ITokenBlacklistService, TokenBlacklistService>();
 builder.Services.AddScoped<ISetUpTransRepository, SetUpTransRepository>();
 builder.Services.AddScoped<IMachiningRepository, MachiningRepository>();
 builder.Services.AddScoped<IHelperRepository, HelperRepository>();
@@ -164,6 +157,19 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+// Rate Limiting Configuration
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("LoginRateLimit", opt =>
+    {
+        opt.PermitLimit = 5;                    // 5 attempts
+        opt.Window = TimeSpan.FromMinutes(1);  // every 1 min
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 0;
+    });
+});
+
+
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
@@ -174,6 +180,8 @@ app.Use(async (context, next) =>
     context.Response.Headers.Add("X-Content-Type-Options", "nosniff");
     context.Response.Headers.Add("X-Frame-Options", "DENY");
     context.Response.Headers.Add("X-XSS-Protection", "1; mode=block");
+    context.Response.Headers.Add("Cache-Control", "no-store, no-cache, must-revalidate");
+    context.Response.Headers.Add("Pragma", "no-cache");
     await next();
 });
 
@@ -184,6 +192,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseMiddleware<ExceptionMiddleware>();
+app.UseMiddleware<JwtBlacklistMiddleware>();
 
 // Swagger
 app.UseSwagger();
@@ -195,6 +204,9 @@ app.UseSwaggerUI(c =>
 
 app.UseHttpsRedirection();
 app.UseCors("DefaultCorsPolicy");
+app.UseMiddleware<OperatorValidationMiddleware>();
+app.UseMiddleware<RateLimitResponseMiddleware>();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

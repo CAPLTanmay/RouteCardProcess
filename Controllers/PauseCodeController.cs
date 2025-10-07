@@ -20,6 +20,7 @@ namespace RouteCardProcess.Controllers
             _userMessageService = userMessageService;
         }
 
+        [Authorize(Roles = "Supervisor,DRC_admin")]
         [HttpPost("addPauseCode")]
         public async Task<IActionResult> AddPauseCode([FromBody] PauseCodeRequest request)
         {
@@ -36,6 +37,7 @@ namespace RouteCardProcess.Controllers
             }
         }
 
+        [Authorize(Roles = "Supervisor,DRC_admin")]
         [HttpPost("updatePauseCode")]
         public async Task<IActionResult> UpdatePauseCode([FromBody] PauseCodeRequest request)
         {
@@ -65,6 +67,8 @@ namespace RouteCardProcess.Controllers
                 return StatusCode(500, new { message = _userMessageService.GetMessage(5001), error = ex.Message });
             }
         }
+
+        [Authorize(Roles = "Supervisor,DRC_admin")]
         [HttpPost("deletePauseCode")]
         public async Task<IActionResult> DeletePauseCode([FromBody] DeletePauseCodeRequest request)
         {

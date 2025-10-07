@@ -22,6 +22,7 @@
         public int PendingQty { get; set; }
         public string OrderTypeDesc { get; set; }
         public string SetupId { get; set; }
+        public string? MachiningTimeDiff { get; set; }      // hh:mm:ss format
     }
 
     public class SapRoutingInfo

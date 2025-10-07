@@ -1,8 +1,10 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+﻿using System.Data;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using RouteCardProcess.Interfaces;
+using RouteCardProcess.Repositories;
 
 namespace RouteCardProcess.Services
 {
@@ -10,39 +12,63 @@ namespace RouteCardProcess.Services
     {
         private readonly IConfiguration _configuration;
         private readonly ISystemLoggerRepository _systemLogger;
+        private readonly ITokenBlacklistService _tokenBlacklistService;
 
-        public JwtTokenService(IConfiguration configuration, ISystemLoggerRepository systemLogger)
+        public JwtTokenService(
+            IConfiguration configuration,
+            ISystemLoggerRepository systemLogger,
+            ITokenBlacklistService tokenBlacklistService)
         {
             _configuration = configuration;
             _systemLogger = systemLogger;
+            _tokenBlacklistService = tokenBlacklistService;
         }
 
-        public async Task<string> GenerateTokenAsync(string operatorId)
+        public async Task<string> GenerateTokenAsync(string operatorId, string role)
         {
             try
             {
-                return await Task.Run(() =>
+                // 1️ Revoke any existing tokens for this operator (rotation on re-login)
+                await _tokenBlacklistService.RevokeAllTokensByOperatorIdAsync(operatorId);
+
+                // 2️ Build new JWT
+                var jwtSettings = _configuration.GetSection("JwtSettings");
+
+                var key = new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(jwtSettings["Key"]));
+                var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+                var jti = Guid.NewGuid().ToString();
+                var claims = new[]
                 {
-                    var jwtSettings = _configuration.GetSection("JwtSettings");
+                    new Claim(ClaimTypes.Name, operatorId),
+                     new Claim(ClaimTypes.Role, role),
+                    new Claim(JwtRegisteredClaimNames.Jti, jti),
+                    new Claim(
+                        JwtRegisteredClaimNames.Iat,
+                        DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),
+                        ClaimValueTypes.Integer64)
+                };
 
-                    var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]));
-                    var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+                // Convert expiry to IST (UTC +5:30)
+                var expiryInIst = TimeZoneInfo.ConvertTimeFromUtc(
+                    DateTime.UtcNow.AddMinutes(
+                        double.TryParse(jwtSettings["DurationInMinutes"], out var mins) ? mins : 15),
+                    TimeZoneInfo.FindSystemTimeZoneById("India Standard Time"));
 
-                    var claims = new[]
-                    {
-                        new Claim(ClaimTypes.Name, operatorId)
-                    };
+                var token = new JwtSecurityToken(
+                    issuer: jwtSettings["Issuer"],
+                    audience: jwtSettings["Audience"],
+                    claims: claims,
+                    expires: expiryInIst,
+                    signingCredentials: creds);
 
-                    var token = new JwtSecurityToken(
-                        issuer: jwtSettings["Issuer"],
-                        audience: jwtSettings["Audience"],
-                        claims: claims,
-                        expires: DateTime.UtcNow.AddMinutes(double.Parse(jwtSettings["DurationInMinutes"])),
-                        signingCredentials: creds
-                    );
+                var jwt = new JwtSecurityTokenHandler().WriteToken(token);
 
-                    return new JwtSecurityTokenHandler().WriteToken(token);
-                });
+                // 3️ Store this new token in ActiveTokens table for tracking
+                await _tokenBlacklistService.RecordActiveTokenAsync(operatorId, jti,expiryInIst);
+
+                return jwt;
             }
             catch (Exception ex)
             {

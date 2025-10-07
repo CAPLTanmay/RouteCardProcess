@@ -20,6 +20,7 @@ namespace RouteCardProcess.Controllers
             _userMessageService = userMessageService;
         }
 
+        [Authorize(Roles = "Supervisor,DRC_admin")]
         [HttpPost("addStdException")]
         public async Task<IActionResult> AddStdException([FromBody] StdExceptionRequest request)
         {
@@ -36,6 +37,7 @@ namespace RouteCardProcess.Controllers
             }
         }
 
+        [Authorize(Roles = "Supervisor,DRC_admin")]
         [HttpPost("updateStdException")]
         public async Task<IActionResult> UpdateStdException([FromBody] StdExceptionRequest request)
         {
@@ -66,6 +68,7 @@ namespace RouteCardProcess.Controllers
             }
         }
 
+        [Authorize(Roles = "Supervisor,DRC_admin")]
         [HttpPost("deleteStdException")]
         public async Task<IActionResult> DeleteStdException([FromBody] DeleteStdExceptionRequest request)
         {

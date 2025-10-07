@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.IdentityModel.Tokens.Jwt;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model.DTOs.Login;
 using RouteCardProcess.Model.Entities;
@@ -17,13 +19,16 @@ namespace RouteCardProcess.Controllers
         private readonly IJwtTokenService _jwtService;
         private readonly ISystemLoggerRepository _systemLogger;
         private readonly IUserMessageService _userMessageService;
+        private readonly ITokenBlacklistService _tokenBlacklistService;
 
-        public LogInController(ILogInRepository repo, IJwtTokenService jwtService, ISystemLoggerRepository systemLogger, IUserMessageService userMessageService)
+
+        public LogInController(ILogInRepository repo, IJwtTokenService jwtService, ISystemLoggerRepository systemLogger, IUserMessageService userMessageService, ITokenBlacklistService tokenBlacklistService)
         {
             _repo = repo;
             _jwtService = jwtService;
             _systemLogger = systemLogger;
             _userMessageService = userMessageService;
+            _tokenBlacklistService = tokenBlacklistService;
         }
 
         [HttpGet("GetAllUsers")]
@@ -68,6 +73,7 @@ namespace RouteCardProcess.Controllers
         }
 
         [AllowAnonymous]
+        [EnableRateLimiting("LoginRateLimit")]
         [HttpPost("validate")]
         public async Task<IActionResult> ValidateLogin([FromBody] LoginRequest request)
         {
@@ -83,7 +89,7 @@ namespace RouteCardProcess.Controllers
                     return Unauthorized(new { message });
                 }
 
-                var token = await _jwtService.GenerateTokenAsync(request.OperatorId);
+                var token = await _jwtService.GenerateTokenAsync(request.OperatorId,user.OperatorRole);
                 var successMessage = _userMessageService.GetMessage(2001); // Login successful
 
                 return Ok(new { message = successMessage, token, user });
@@ -97,6 +103,7 @@ namespace RouteCardProcess.Controllers
         }
 
         [AllowAnonymous]
+        [EnableRateLimiting("LoginRateLimit")]
         [HttpPost("loginEmployee")]
         public async Task<IActionResult> LoginEmployee([FromBody] LoginRequest request)
         {
@@ -115,7 +122,7 @@ namespace RouteCardProcess.Controllers
                     });
                 }
 
-                var token = await _jwtService.GenerateTokenAsync(request.OperatorId);
+                var token = await _jwtService.GenerateTokenAsync(request.OperatorId,loginResult.User.OperatorRole);
                 var successMessage = _userMessageService.GetMessage(2001); // Login successful
 
                 return Ok(new
@@ -135,17 +142,45 @@ namespace RouteCardProcess.Controllers
         }
 
 
+        [Authorize]
         [HttpPost("TryLogout")]
         public async Task<IActionResult> TryLogout([FromBody] LogoutRequest request)
         {
             try
             {
-                var (flag, message) = await _repo.TryLogoutAsync(request.WorkCenterNo, request.WorkOrderNo, request.OperationNo);
+                // STEP 1: Business Logic Validation
+                var (flag, message) = await _repo.TryLogoutAsync(
+                    request.WorkCenterNo,
+                    request.WorkOrderNo,
+                    request.OperationNo);
 
-                if (flag == 1)
-                    return Ok(new { Success = true, Message = message });
+                if (flag == 0)
+                {
+                    // Not allowed to logout
+                    return BadRequest(new { Success = false, Message = message });
+                }
 
-                return BadRequest(new { Success = false, Message = message });
+                // STEP 2: Extract current JWT details from the logged-in user
+                var jti = User.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+                var expUnix = User.FindFirst(JwtRegisteredClaimNames.Exp)?.Value;
+
+                if (string.IsNullOrEmpty(jti) || string.IsNullOrEmpty(expUnix))
+                {
+                    return Unauthorized(new { Success = false, Message = "Invalid or missing token claims" });
+                }
+
+                var exp = DateTimeOffset.FromUnixTimeSeconds(long.Parse(expUnix)).UtcDateTime;
+
+                // STEP 3: Revoke token (add to blacklist table)
+                await _tokenBlacklistService.RevokeTokenAsync(jti, exp);
+
+                // STEP 4: Return unified success response
+                return Ok(new
+                {
+                    Success = true,
+                    Message = message, // this comes from your business logic (_userMessageService.GetMessage(1005))
+                    TokenRevoked = true
+                });
             }
             catch (Exception ex)
             {
@@ -154,5 +189,6 @@ namespace RouteCardProcess.Controllers
                 return StatusCode(500, new { Success = false, Message = errorMessage });
             }
         }
+
     }
 }

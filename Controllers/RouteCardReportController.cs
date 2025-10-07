@@ -172,6 +172,7 @@ namespace RouteCardProcess.Controllers
             }
         }
 
+        [Authorize(Roles = "Supervisor,Admin")]
         [HttpPost("update-all")]
         public async Task<IActionResult> UpdateAll([FromBody] FullUpdateDto dto)
         {

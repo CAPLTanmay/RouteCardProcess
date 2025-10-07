@@ -29,7 +29,7 @@ namespace RouteCardProcess.Controllers
                 var compositeKey = new CompositeKeyRequest
                 {
                     WorkCenterNo = request.WorkCenterNo,
-                    ProductionOrderNo = request.ProductionOrderNo, 
+                    ProductionOrderNo = request.ProductionOrderNo,
                     OperationNo = request.OperationNo
                 };
 
@@ -37,14 +37,14 @@ namespace RouteCardProcess.Controllers
 
 
                 //if (existing != null && !string.Equals(existing.MachiningStatus, "Completed", StringComparison.OrdinalIgnoreCase))
-                    if (existing != null &&
-                    !string.Equals(existing.MachiningStatus, "Completed", StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(existing.MachiningStatus, "Partially Completed", StringComparison.OrdinalIgnoreCase))
-                    {
+                if (existing != null &&
+                !string.Equals(existing.MachiningStatus, "Completed", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(existing.MachiningStatus, "Partially Completed", StringComparison.OrdinalIgnoreCase))
+                {
                     bool isOperatorEnded = existing.OperatorEndTime != DateTime.MinValue;
                     bool isDifferentOperator = !string.IsNullOrEmpty(request.OperatorId) &&
                                                !string.Equals(existing.OperatorId, request.OperatorId, StringComparison.OrdinalIgnoreCase);
-                    bool isMachingStopped=string.Equals(existing.MachiningStatus, "Machining Stopped", StringComparison.OrdinalIgnoreCase);
+                    bool isMachingStopped = string.Equals(existing.MachiningStatus, "Machining Stopped", StringComparison.OrdinalIgnoreCase);
 
                     if ((isOperatorEnded || isDifferentOperator) && !isMachingStopped)
                     {
@@ -106,8 +106,8 @@ namespace RouteCardProcess.Controllers
                 var result = await _repo.StartMachiningAsync(request);
 
                 return result.Message == _userMessageService.GetMessage(1082) // "Machining started"
-                    ? Ok(result)         
-                    : BadRequest(result); 
+                    ? Ok(result)
+                    : BadRequest(result);
             }
             catch (Exception ex)
             {
@@ -146,13 +146,18 @@ namespace RouteCardProcess.Controllers
                 if (string.IsNullOrWhiteSpace(request.MachiningId))
                     return BadRequest(new { message = _userMessageService.GetMessage(1024) });
 
-                await _repo.EndMachiningAsync(request);
-                return Ok(new { message =  _userMessageService.GetMessage(1027) });
+                var result = await _repo.EndMachiningAsync(request);
+
+                return Ok(result);
             }
             catch (Exception ex)
             {
                 await _systemLogger.LogAsync("MachiningController", "end-machining", ex.ToString());
-                return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
+                return StatusCode(500, new
+                {
+                    message = _userMessageService.GetMessage(5005),
+                    error = ex.Message
+                });
             }
         }
 
@@ -198,7 +203,6 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-
         [HttpPost("add-delays")]
         public async Task<IActionResult> AddDelays([FromBody] MachiningDelayRequest request)
         {
@@ -216,7 +220,6 @@ namespace RouteCardProcess.Controllers
                 return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
             }
         }
-
 
         [HttpGet("{machiningId}")]
         public async Task<IActionResult> GetById(string machiningId)

@@ -35,6 +35,7 @@ public class DepartmentController : ControllerBase
         }
     }
 
+    [Authorize(Roles = "Supervisor,DRC_admin")]
     [HttpPost("CreateDepartment")]
     public async Task<IActionResult> Create([FromBody] DepartmentMasterDto department)
     {

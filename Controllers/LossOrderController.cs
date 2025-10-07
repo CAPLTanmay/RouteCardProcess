@@ -20,6 +20,7 @@ namespace RouteCardProcess.Controllers
             _userMessageService = userMessageService;
         }
 
+        [Authorize(Roles = "Supervisor,DRC_admin")]
         [HttpPost("addLossOrder")]
         public async Task<IActionResult> AddLossOrder([FromBody] LossOrderRequest request)
         {
@@ -40,6 +41,7 @@ namespace RouteCardProcess.Controllers
             }
         }
 
+        [Authorize(Roles = "Supervisor,DRC_admin")]
         [HttpPost("updateLossOrder")]
         public async Task<IActionResult> UpdateLossOrder([FromBody] DeleteLossOrderRequest request)
         {
@@ -70,6 +72,7 @@ namespace RouteCardProcess.Controllers
             }
         }
 
+        [Authorize(Roles = "Supervisor,DRC_admin")]
         [HttpPost("deleteLossOrder")]
         public async Task<IActionResult> DeleteLossOrder([FromBody] DeleteLossOrderRequest request)
         {

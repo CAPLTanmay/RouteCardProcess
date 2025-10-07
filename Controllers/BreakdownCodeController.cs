@@ -20,6 +20,7 @@ namespace RouteCardProcess.Controllers
             _userMessageService = userMessageService;
         }
 
+        [Authorize(Roles = "Supervisor,DRC_admin")]
         [HttpPost("addBreakdownCode")]
         public async Task<IActionResult> Add([FromBody] BreakdownCodeRequest request)
         {
@@ -36,6 +37,7 @@ namespace RouteCardProcess.Controllers
             }
         }
 
+        [Authorize(Roles = "Supervisor,DRC_admin")]
         [HttpPost("updateBreakdownCode")]
         public async Task<IActionResult> Update([FromBody] BreakdownCodeRequest request)
         {
@@ -51,7 +53,7 @@ namespace RouteCardProcess.Controllers
                 return StatusCode(500, new { message = _userMessageService.GetMessage(5001), error = ex.Message });
             }
         }
-
+   
         [HttpGet("allBreakdownCode")]
         public async Task<IActionResult> GetAll()
         {
@@ -66,6 +68,7 @@ namespace RouteCardProcess.Controllers
             }
         }
 
+        [Authorize(Roles = "Supervisor,DRC_admin")]
         [HttpPost("deleteBreakdownCode")]
         public async Task<IActionResult> Delete([FromBody] BreakdownCodeRequest request)
         {

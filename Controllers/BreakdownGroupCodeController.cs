@@ -21,6 +21,7 @@ namespace RouteCardProcess.Controllers
             _userMessageService = userMessageService;
         }
 
+        [Authorize(Roles = "Supervisor,DRC_admin")]
         [HttpPost("addBreakdownGroupCode")]
         public async Task<IActionResult> Add([FromBody] BreakdownGroupCodeRequest request)
         {
@@ -41,6 +42,7 @@ namespace RouteCardProcess.Controllers
             }
         }
 
+        [Authorize(Roles = "Supervisor,DRC_admin")]
         [HttpPost("updateBreakdownGroupCode")]
         public async Task<IActionResult> Update([FromBody] BreakdownGroupCodeRequest request)
         {
@@ -71,6 +73,7 @@ namespace RouteCardProcess.Controllers
             }
         }
 
+        [Authorize(Roles = "Supervisor,DRC_admin")]
         [HttpPost("deleteBreakdownGroupCode")]
         public async Task<IActionResult> Delete([FromBody] string breakdownCodeGroup)
         {

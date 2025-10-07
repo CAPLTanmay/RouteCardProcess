@@ -20,6 +20,7 @@ namespace RouteCardProcess.Controllers
             _userMessageService = userMessageService;
         }
 
+        [Authorize(Roles = "Supervisor,DRC_admin")]
         [HttpPost("addIdleCode")]
         public async Task<IActionResult> AddIdleCode([FromBody] IdleCodeRequest request)
         {
@@ -36,6 +37,7 @@ namespace RouteCardProcess.Controllers
             }
         }
 
+        [Authorize(Roles = "Supervisor,DRC_admin")]
         [HttpPost("updateIdleCode")]
         public async Task<IActionResult> UpdateIdleCode([FromBody] IdleCodeRequest request)
         {
@@ -66,6 +68,7 @@ namespace RouteCardProcess.Controllers
             }
         }
 
+        [Authorize(Roles = "Supervisor,DRC_admin")]
         [HttpPost("deleteIdleCode")]
         public async Task<IActionResult> DeleteIdleCode([FromBody] DeleteCodeRequest request)
         {

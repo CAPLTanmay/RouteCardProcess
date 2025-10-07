@@ -152,39 +152,69 @@ public class MachiningRepository : IMachiningRepository
         );
     }
 
-    public async Task<bool> EndMachiningAsync(MachiningIdentifierRequest request)
+    public async Task<EndMachiningResultDto> EndMachiningAsync(MachiningIdentifierRequest request)
     {
-        using var connection = CreateConnection(); // Use the same connection factory
+        using var connection = CreateConnection();
         var parameters = new { MachiningID = request.MachiningId };
 
-        // 1. Get current status
+        // 1. Get machining info (status + standard time)
         var machiningInfo = await connection.QueryFirstOrDefaultAsync<dynamic>(
             "usp_GetMachiningStatusAndOperator",
             parameters,
-            commandType: CommandType.StoredProcedure
-        );
+            commandType: CommandType.StoredProcedure);
 
         string status = machiningInfo?.MachiningStatus;
+        string standardMachiningTime = machiningInfo?.StandardMachiningTime != null
+            ? TimeSpan.Parse(machiningInfo.StandardMachiningTime.ToString()).ToString(@"hh\:mm\:ss")
+            : null;
 
-        // 2. If paused, toggle resume
-        if (status == "Machining Pause")
+        // 2. If paused, resume it
+        if (status == _userMessageService.GetMessage(1076)) // assuming 1076 = "Machining Pause"
         {
             await connection.ExecuteAsync("usp_ToggleMachiningPause", parameters, commandType: CommandType.StoredProcedure);
         }
 
         // 3. End machining
         var rowsAffected = await connection.ExecuteAsync("usp_EndMachining", parameters, commandType: CommandType.StoredProcedure);
-
-        // 4. Update end time
+        // 4. If successful, get the time difference
         if (rowsAffected > 0)
         {
-            await connection.ExecuteAsync("usp_UpdateMachiningEndTime",
-                new { EndTime = DateTime.Now, MachiningID = request.MachiningId },
-                commandType: CommandType.StoredProcedure);
-            return true;
+            var machiningData = await connection.QueryFirstOrDefaultAsync<dynamic>(
+                @"SELECT MachiningStartTime, MachiningEndTime 
+          FROM Trans_Machining 
+          WHERE MachiningId = @MachiningID",
+                parameters);
+
+            string machiningTimeDiff = null;
+
+            if (machiningData != null && machiningData.MachiningStartTime != null && machiningData.MachiningEndTime != null)
+            {
+                DateTime startTime = machiningData.MachiningStartTime;
+                DateTime endTime = machiningData.MachiningEndTime;
+
+                TimeSpan diff = endTime - startTime;
+                machiningTimeDiff = diff.ToString(@"hh\:mm\:ss");
+            }
+
+            return new EndMachiningResultDto
+            {
+                Success = true,
+                Message = _userMessageService.GetMessage(1027),
+                MachiningTimeDiff = machiningTimeDiff,
+                StandardMachiningTime = standardMachiningTime
+            };
         }
-        return false;
+
+
+        return new EndMachiningResultDto
+        {
+            Success = false,
+            Message = _userMessageService.GetMessage(1087),
+            MachiningTimeDiff = null
+        };
     }
+
+
     public async Task AddQuantitiesAsync(AddQuantityRequest request)
     {
         using var connection = CreateConnection();

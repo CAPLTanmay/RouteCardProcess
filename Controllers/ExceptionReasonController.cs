@@ -20,6 +20,7 @@ namespace RouteCardProcess.Controllers
             _userMessageService = userMessageService;
         }
 
+        [Authorize(Roles = "Supervisor,DRC_admin")]
         [HttpPost("addExceptionReason")]
         public async Task<IActionResult> AddExceptionReason([FromBody] ExceptionReasonRequest request)
         {
@@ -37,6 +38,7 @@ namespace RouteCardProcess.Controllers
             }
         }
 
+        [Authorize(Roles = "Supervisor,DRC_admin")]
         [HttpPost("updateExceptionReason")]
         public async Task<IActionResult> UpdateExceptionReason([FromBody] ExceptionReasonRequest request)
         {
@@ -68,6 +70,7 @@ namespace RouteCardProcess.Controllers
             }
         }
 
+        [Authorize(Roles = "Supervisor,DRC_admin")]
         [HttpPost("deleteExceptionReason")]
         public async Task<IActionResult> DeleteExceptionReason([FromBody] DeleteExceptionRequest request)
         {

@@ -1,3 +1,4 @@
+using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RouteCardProcess.Interfaces;
@@ -14,12 +15,14 @@ namespace RouteCardProcess.Controllers
         private readonly IHelperRepository _helperRepository;
         private readonly ISystemLoggerRepository _systemLogger;
         private readonly IUserMessageService _userMessageService;
+        private readonly ITokenBlacklistService _tokenBlacklistService;
 
-        public AddHelperController(IHelperRepository helperRepository, ISystemLoggerRepository systemLogger, IUserMessageService userMessageService)
+        public AddHelperController(IHelperRepository helperRepository, ISystemLoggerRepository systemLogger, IUserMessageService userMessageService, ITokenBlacklistService tokenBlacklistService)
         {
             _helperRepository = helperRepository;
             _systemLogger = systemLogger;
             _userMessageService = userMessageService;
+            _tokenBlacklistService = tokenBlacklistService;
         }
 
         [HttpPost("add-helper")]
@@ -95,11 +98,13 @@ namespace RouteCardProcess.Controllers
             }
         }
 
+        [Authorize]
         [HttpPost("check-helper-before-logout")]
         public async Task<IActionResult> CheckHelperBeforeLogout([FromBody] MainOperatorRequestDto request)
         {
             try
             {
+                // STEP 1?: Check if helpers are attached
                 var helpers = await _helperRepository.GetHelpersByMainOperatorIdAsync(request.MainOperatorId);
 
                 if (helpers != null && helpers.Any())
@@ -107,24 +112,39 @@ namespace RouteCardProcess.Controllers
                     return Ok(new
                     {
                         status = false,
-                        message = _userMessageService.GetMessage(1100),
+                        message = _userMessageService.GetMessage(1100), // "Detach helpers before logout"
                         data = helpers
                     });
                 }
 
+                // STEP 2?: If no helpers found ? revoke current JWT token
+                var jti = User.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+                var expUnix = User.FindFirst(JwtRegisteredClaimNames.Exp)?.Value;
+
+                if (string.IsNullOrEmpty(jti) || string.IsNullOrEmpty(expUnix))
+                {
+                    return Unauthorized(new { status = false, message = "Invalid or missing token claims" });
+                }
+
+                var exp = DateTimeOffset.FromUnixTimeSeconds(long.Parse(expUnix)).UtcDateTime;
+                await _tokenBlacklistService.RevokeTokenAsync(jti, exp);
+
+                // STEP 3?: Return success
                 return Ok(new
                 {
                     status = true,
-                    message = _userMessageService.GetMessage(1101)
+                    message = _userMessageService.GetMessage(1101), // "Logout successful"
+                    tokenRevoked = true
                 });
             }
             catch (Exception ex)
             {
                 await _systemLogger.LogAsync("AddHelperController", "check-helper-before-logout", ex.ToString());
-                var message = _userMessageService.GetMessage(5001);
-                return StatusCode(500, message);
+                var message = _userMessageService.GetMessage(5001); // "Internal error"
+                return StatusCode(500, new { status = false, message });
             }
         }
+
 
         [HttpPost("release-all-helpers")]
         public async Task<IActionResult> ReleaseAllHelpers([FromBody] MainOperatorRequestDto request)
