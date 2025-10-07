@@ -27,29 +27,41 @@ namespace RouteCardProcess.Middleware
             {
                 try
                 {
-                    // Create scope and resolve the logger
+                    // Use scoped dependency for DB logger
                     using var scope = _serviceProvider.CreateScope();
                     var logger = scope.ServiceProvider.GetRequiredService<ISystemLoggerRepository>();
-                    await logger.LogAsync("ExceptionMiddleware", "Invoke", ex.ToString());
+
+                    await logger.LogAsync(
+                        "Global",
+                        "ExceptionMiddleware",
+                        $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {ex}");
                 }
                 catch
                 {
-                    // Log failure in logger silently or to a file, if needed
+                    // Avoid throwing from logging
                 }
 
+                // Return safe response
                 context.Response.ContentType = "application/json";
                 context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 
                 var response = new
                 {
-                    message = _env.IsDevelopment() ? ex.Message : "Internal Server Error",
-                    stackTrace = _env.IsDevelopment() ? ex.StackTrace : null
+                    status = 500,
+                    message = _env.IsDevelopment()
+                        ? $"Internal Server Error (Developer Mode): {ex.Message}"
+                        : "An unexpected error occurred. Please contact your administrator.",
+                    // In production, never include stack trace
+                    details = _env.IsDevelopment() ? ex.StackTrace : null
                 };
 
-                var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-                var json = JsonSerializer.Serialize(response, options);
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    WriteIndented = true
+                };
 
-                await context.Response.WriteAsync(json);
+                await context.Response.WriteAsync(JsonSerializer.Serialize(response, options));
             }
         }
     }

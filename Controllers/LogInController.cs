@@ -102,6 +102,45 @@ namespace RouteCardProcess.Controllers
             }
         }
 
+        //[AllowAnonymous]
+        //[EnableRateLimiting("LoginRateLimit")]
+        //[HttpPost("loginEmployee")]
+        //public async Task<IActionResult> LoginEmployee([FromBody] LoginRequest request)
+        //{
+        //    try
+        //    {
+        //        if (!ModelState.IsValid)
+        //            return BadRequest(ModelState);
+
+        //        var loginResult = await _repo.LoginEmployeeAsync(request.OperatorId, request.Password);
+
+        //        if (!loginResult.IsSuccess)
+        //        {
+        //            return Unauthorized(new
+        //            {
+        //                message = loginResult.FailureReason ?? _userMessageService.GetMessage(1001)
+        //            });
+        //        }
+
+        //        var token = await _jwtService.GenerateTokenAsync(request.OperatorId,loginResult.User.OperatorRole);
+        //        var successMessage = _userMessageService.GetMessage(2001); // Login successful
+
+        //        return Ok(new
+        //        {
+        //            message = successMessage,
+        //            token,
+        //            isTempPassword = loginResult.IsTempPassword,
+        //            user = loginResult.User
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        await _systemLogger.LogAsync("LogInController", "LoginEmployee", ex.ToString());
+        //        var errMsg = _userMessageService.GetMessage(5001); // Internal error
+        //        return StatusCode(500, new { message = errMsg });
+        //    }
+        //}
+
         [AllowAnonymous]
         [EnableRateLimiting("LoginRateLimit")]
         [HttpPost("loginEmployee")]
@@ -115,20 +154,23 @@ namespace RouteCardProcess.Controllers
                 var loginResult = await _repo.LoginEmployeeAsync(request.OperatorId, request.Password);
 
                 if (!loginResult.IsSuccess)
-                {
-                    return Unauthorized(new
-                    {
-                        message = loginResult.FailureReason ?? _userMessageService.GetMessage(1001)
-                    });
-                }
+                    return Unauthorized(new { message = _userMessageService.GetMessage(1001) });
 
-                var token = await _jwtService.GenerateTokenAsync(request.OperatorId,loginResult.User.OperatorRole);
-                var successMessage = _userMessageService.GetMessage(2001); // Login successful
+                var token = await _jwtService.GenerateTokenAsync(request.OperatorId, loginResult.User.OperatorRole);
+
+                var cookieOptions = new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,               // Only send over HTTPS
+                    SameSite = SameSiteMode.Strict,
+                    Expires = DateTime.UtcNow.AddMinutes(15)
+                };
+
+                Response.Cookies.Append("AuthToken", token, cookieOptions);
 
                 return Ok(new
                 {
-                    message = successMessage,
-                    token,
+                    message = _userMessageService.GetMessage(2001),
                     isTempPassword = loginResult.IsTempPassword,
                     user = loginResult.User
                 });
@@ -136,7 +178,7 @@ namespace RouteCardProcess.Controllers
             catch (Exception ex)
             {
                 await _systemLogger.LogAsync("LogInController", "LoginEmployee", ex.ToString());
-                var errMsg = _userMessageService.GetMessage(5001); // Internal error
+                var errMsg = _userMessageService.GetMessage(5001);
                 return StatusCode(500, new { message = errMsg });
             }
         }
