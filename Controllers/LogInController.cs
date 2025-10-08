@@ -122,7 +122,7 @@ namespace RouteCardProcess.Controllers
         //            });
         //        }
 
-        //        var token = await _jwtService.GenerateTokenAsync(request.OperatorId,loginResult.User.OperatorRole);
+        //        var token = await _jwtService.GenerateTokenAsync(request.OperatorId, loginResult.User.OperatorRole);
         //        var successMessage = _userMessageService.GetMessage(2001); // Login successful
 
         //        return Ok(new
@@ -162,8 +162,9 @@ namespace RouteCardProcess.Controllers
                 {
                     HttpOnly = true,
                     Secure = true,               // Only send over HTTPS
-                    SameSite = SameSiteMode.Strict,
-                    Expires = DateTime.UtcNow.AddMinutes(15)
+                    SameSite = SameSiteMode.None,
+                    Expires = DateTime.UtcNow.AddMinutes(15),
+                    Path = "/"
                 };
 
                 Response.Cookies.Append("AuthToken", token, cookieOptions);
@@ -172,6 +173,7 @@ namespace RouteCardProcess.Controllers
                 {
                     message = _userMessageService.GetMessage(2001),
                     isTempPassword = loginResult.IsTempPassword,
+                    token,
                     user = loginResult.User
                 });
             }

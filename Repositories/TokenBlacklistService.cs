@@ -1,7 +1,7 @@
 ﻿using Dapper;
 using RouteCardProcess.Interfaces;
-using RouteCardProcess.Model.Configurations;
 using RouteCardProcess.Repositories;
+using System.Data;
 
 namespace RouteCardProcess.Services
 {
@@ -14,15 +14,15 @@ namespace RouteCardProcess.Services
             _factory = factory;
         }
 
-        //  Logout-based token revocation
+        // Logout-based token revocation
         public async Task RevokeTokenAsync(string jti, DateTime expiry)
         {
             using var conn = _factory.CreateConnection();
 
-            string sql = @"INSERT INTO RevokedTokens (Jti, Expiry)
-                           VALUES (@jti, @expiry);";
-
-            await conn.ExecuteAsync(sql, new { jti, expiry });
+            await conn.ExecuteAsync(
+                "usp_RevokeToken",
+                new { Jti = jti, ExpirationTime = expiry },
+                commandType: CommandType.StoredProcedure);
         }
 
         // Middleware check — whether a token is revoked
@@ -30,41 +30,34 @@ namespace RouteCardProcess.Services
         {
             using var conn = _factory.CreateConnection();
 
-            string sql = @"SELECT COUNT(1)
-                           FROM RevokedTokens
-                           WHERE Jti = @jti";
+            var count = await conn.ExecuteScalarAsync<int>(
+                "usp_IsTokenRevoked",
+                new { Jti = jti },
+                commandType: CommandType.StoredProcedure);
 
-            var count = await conn.ExecuteScalarAsync<int>(sql, new { jti });
             return count > 0;
         }
 
-        //  Rotation: revoke all tokens for a given operator
+        // Rotation: revoke all tokens for a given operator
         public async Task RevokeAllTokensByOperatorIdAsync(string operatorId)
         {
             using var conn = _factory.CreateConnection();
 
-            // Move all active tokens for this operator to RevokedTokens
-            string sql = @"
-                INSERT INTO RevokedTokens (Jti, Expiry)
-                SELECT Jti, Expiry FROM ActiveTokens WHERE OperatorId = @operatorId;
-
-                DELETE FROM ActiveTokens WHERE OperatorId = @operatorId;
-            ";
-
-            await conn.ExecuteAsync(sql, new { operatorId });
+            await conn.ExecuteAsync(
+                "usp_RevokeAllTokensByOperatorId",
+                new { OperatorId = operatorId },
+                commandType: CommandType.StoredProcedure);
         }
 
-        //  Record a new token (for rotation tracking)
+        // Record a new token (for rotation tracking)
         public async Task RecordActiveTokenAsync(string operatorId, string jti, DateTime expiry)
         {
             using var conn = _factory.CreateConnection();
 
-            string sql = @"
-                INSERT INTO ActiveTokens (OperatorId, Jti, Expiry)
-                VALUES (@operatorId, @jti, @expiry);
-            ";
-
-            await conn.ExecuteAsync(sql, new { operatorId, jti, expiry });
+            await conn.ExecuteAsync(
+                "usp_RecordActiveToken",
+                new { OperatorId = operatorId, Jti = jti, Expiry = expiry },
+                commandType: CommandType.StoredProcedure);
         }
     }
 }

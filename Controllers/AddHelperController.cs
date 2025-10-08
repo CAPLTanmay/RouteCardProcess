@@ -104,9 +104,8 @@ namespace RouteCardProcess.Controllers
         {
             try
             {
-                // STEP 1?: Check if helpers are attached
+                //  STEP 1: Check if helpers are attached
                 var helpers = await _helperRepository.GetHelpersByMainOperatorIdAsync(request.MainOperatorId);
-
                 if (helpers != null && helpers.Any())
                 {
                     return Ok(new
@@ -117,7 +116,7 @@ namespace RouteCardProcess.Controllers
                     });
                 }
 
-                // STEP 2?: If no helpers found ? revoke current JWT token
+                //  STEP 2: Extract JWT claims from current user
                 var jti = User.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
                 var expUnix = User.FindFirst(JwtRegisteredClaimNames.Exp)?.Value;
 
@@ -127,9 +126,20 @@ namespace RouteCardProcess.Controllers
                 }
 
                 var exp = DateTimeOffset.FromUnixTimeSeconds(long.Parse(expUnix)).UtcDateTime;
+
+                //  STEP 3: Blacklist token
                 await _tokenBlacklistService.RevokeTokenAsync(jti, exp);
 
-                // STEP 3?: Return success
+                //  STEP 4: Delete cookie from browser
+                Response.Cookies.Delete("AuthToken", new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.Strict,
+                    Path = "/"
+                });
+
+                //  STEP 5: Return unified success
                 return Ok(new
                 {
                     status = true,
@@ -144,7 +154,6 @@ namespace RouteCardProcess.Controllers
                 return StatusCode(500, new { status = false, message });
             }
         }
-
 
         [HttpPost("release-all-helpers")]
         public async Task<IActionResult> ReleaseAllHelpers([FromBody] MainOperatorRequestDto request)
@@ -190,7 +199,5 @@ namespace RouteCardProcess.Controllers
                 return StatusCode(500, message);
             }
         }
-
-
     }
 }

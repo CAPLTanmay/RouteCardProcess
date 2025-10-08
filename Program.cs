@@ -97,9 +97,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("DefaultCorsPolicy", policy =>
     {
-        policy.WithOrigins(allowedOrigins)
-              .AllowAnyHeader()
-              .AllowAnyMethod();
+        policy.WithOrigins("http://localhost:4200")
+               .AllowAnyHeader()
+              .AllowAnyMethod()
+         .AllowCredentials();
     });
 });
 
@@ -138,13 +139,29 @@ builder.Services.AddSingleton<IUserMessageService, UserMessageService>();
 
 // JWT Auth
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 .AddJwtBearer(options =>
 {
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            // First, try to read token from cookie
+            if (context.Request.Cookies.ContainsKey("AuthToken"))
+            {
+                context.Token = context.Request.Cookies["AuthToken"];
+            }
+            //  Fallback to Authorization header (Swagger / Postman)
+            else if (context.Request.Headers.ContainsKey("Authorization"))
+            {
+                var header = context.Request.Headers["Authorization"].ToString();
+                if (header.StartsWith("Bearer "))
+                    context.Token = header.Substring(7);
+            }
+            return Task.CompletedTask;
+        }
+    };
+
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -152,8 +169,10 @@ builder.Services.AddAuthentication(options =>
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
         ValidIssuer = jwtSettings["Issuer"],
+        ClockSkew = TimeSpan.Zero,
         ValidAudience = jwtSettings["Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]))
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(jwtSettings["Key"]))
     };
 });
 
@@ -243,55 +262,31 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseMiddleware<ExceptionMiddleware>();
-app.UseMiddleware<JwtBlacklistMiddleware>();
-
-// Swagger
-app.UseSwagger();
-app.UseSwaggerUI(c =>
-{
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "RouteCardProcess API V1");
-    c.RoutePrefix = "swagger";
-});
-
 app.UseHttpsRedirection();
 app.UseCors("DefaultCorsPolicy");
 
-// Exception handling early
-if (app.Environment.IsDevelopment())
-{
-    app.UseDeveloperExceptionPage();
-}
-else
-{
-    app.UseExceptionHandler("/error");
-    app.UseHsts();
-}
+app.UseAuthentication();                  
+app.UseMiddleware<JwtBlacklistMiddleware>();
+app.UseAuthorization();
 
 app.UseMiddleware<ExceptionMiddleware>();
-app.UseMiddleware<JwtBlacklistMiddleware>();
-
-// Swagger after exception middleware
-app.UseSwagger();
-app.UseSwaggerUI(c =>
-{
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "RouteCardProcess API V1");
-    c.RoutePrefix = "swagger";
-});
-
 app.UseMiddleware<OperatorValidationMiddleware>();
 app.UseMiddleware<RateLimitResponseMiddleware>();
 app.UseRateLimiter();
 
-app.UseAuthentication();
-app.UseAuthorization();
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "RouteCardProcess API V1");
+    c.RoutePrefix = "swagger";
+});
+
 app.MapControllers();
 
-// fallback safe endpoint
 app.Map("/error", (HttpContext context) =>
 {
     return Results.Problem("An unexpected error occurred. Please contact your administrator.");
 });
 
-app.Run();
 
+app.Run();
