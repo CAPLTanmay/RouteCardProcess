@@ -185,7 +185,6 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-
         [Authorize]
         [HttpPost("TryLogout")]
         public async Task<IActionResult> TryLogout([FromBody] LogoutRequest request)

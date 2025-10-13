@@ -128,6 +128,7 @@ builder.Services.AddScoped<IBreakdownCodeRepository, BreakdownCodeRepository>();
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 builder.Services.AddScoped<IModuleRepository, ModuleRepository>();
 builder.Services.AddScoped<IWeeklyReportRepository, WeeklyReportRepository>();
+builder.Services.AddScoped<IManualDataRepository, MaualDataRepository>();
 
 // Services
 builder.Services.AddScoped<IPasswordSecurityService, PasswordSecurityService>();
@@ -256,24 +257,36 @@ app.Use(async (context, next) =>
 });
 
 
-// Production-Only HSTS
+// Global exception wrapper first so it catches everything below
+app.UseMiddleware<ExceptionMiddleware>();
+
+// Security hardening
 if (!app.Environment.IsDevelopment())
 {
     app.UseHsts();
 }
-
 app.UseHttpsRedirection();
+
+// Routing must run before any middleware that inspects endpoint metadata
+app.UseRouting();
+
+// CORS must be between UseRouting and UseAuthorization
 app.UseCors("DefaultCorsPolicy");
 
-app.UseAuthentication();                  
+// AuthN: build ClaimsPrincipal from token
+app.UseAuthentication();
+
+// Token-level guards (skip for anonymous)
 app.UseMiddleware<JwtBlacklistMiddleware>();
+app.UseMiddleware<OperatorValidationMiddleware>();
+
+// AuthZ: role/policy checks
 app.UseAuthorization();
 
-app.UseMiddleware<ExceptionMiddleware>();
-app.UseMiddleware<OperatorValidationMiddleware>();
-app.UseMiddleware<RateLimitResponseMiddleware>();
+// Rate limiting (now endpoint metadata is available)
 app.UseRateLimiter();
 
+// Swagger, then endpoints
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -284,9 +297,6 @@ app.UseSwaggerUI(c =>
 app.MapControllers();
 
 app.Map("/error", (HttpContext context) =>
-{
-    return Results.Problem("An unexpected error occurred. Please contact your administrator.");
-});
-
+    Results.Problem("An unexpected error occurred. Please contact your administrator."));
 
 app.Run();

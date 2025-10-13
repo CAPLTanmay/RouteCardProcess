@@ -1,5 +1,4 @@
 ﻿using RouteCardProcess.Model.DTOs.Machining;
-using RouteCardProcess.Model.DTOs.Setup;
 using RouteCardProcess.Model.Entities;
 
 namespace RouteCardProcess.Interfaces
