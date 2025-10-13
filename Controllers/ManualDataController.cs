@@ -7,6 +7,8 @@ using RouteCardProcess.Repositories;
 
 namespace RouteCardProcess.Controllers
 {
+    [ApiController]
+    [Route("api/[controller]")]
     public class ManualDataController : ControllerBase
     {
         private readonly IManualDataRepository _maualDataRepository;
