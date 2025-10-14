@@ -1,6 +1,5 @@
 ﻿using RouteCardProcess.Model.DTOs.Manualdata;
 using RouteCardProcess.Model.DTOs.ManualData;
-using RouteCardProcess.Model.DTOs.SapSync;
 
 namespace RouteCardProcess.Interfaces
 {
@@ -8,7 +7,8 @@ namespace RouteCardProcess.Interfaces
     {
         Task SyncManualDataAsync(MaualDataRequest request);
         Task<IEnumerable<ManualDataResponseDto>> GetManualDataAsync(GetMaualDataRequest request);
-        Task<(bool Success, string SetupId, string MachiningId)> UpdateManualDataAsync(ManualDataUpdateDto request);
-
+        Task<ManualDataUpdateResult> UpdateManualDataAsync(ManualDataUpdateDto request);
+        Task<bool> InsertDelaysAsync(ManualSetupDelayRequest request);
+        Task<bool> AddDelaysAsync(ManualMachiningDelayRequest request);
     }
 }

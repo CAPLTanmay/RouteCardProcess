@@ -1,4 +1,7 @@
-﻿namespace RouteCardProcess.Model.DTOs.Manualdata
+﻿using RouteCardProcess.Model.DTOs.Machining;
+using RouteCardProcess.Model.DTOs.Setup;
+
+namespace RouteCardProcess.Model.DTOs.Manualdata
 {
     public class ManualDataUpdateDto
     {
@@ -13,5 +16,22 @@
         public DateTime? SetupEndTime { get; set; }
         public DateTime? MachiningStartTime { get; set; }
         public DateTime? MachiningEndTime { get; set; }
+    }
+
+    public class ManualSetupDelayRequest
+    {
+        public string SetUpID { get; set; }
+        public string SetUpStatus { get; set; }
+        public int OperatorId { get; set; }
+        public List<ExceptionsRequest> Exceptions { get; set; }
+        public List<IdleTimeRequest> IdleTimes { get; set; }
+    }
+
+    public class ManualMachiningDelayRequest
+    {
+        public string MachiningId { get; set; }
+        public int OperatorId { get; set; }
+        public List<MachiningExceptionsRequest> Exceptions { get; set; }
+        public List<MachiningIdleTimeRequest> IdleTimes { get; set; }
     }
 }

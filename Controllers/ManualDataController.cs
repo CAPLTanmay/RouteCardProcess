@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using RouteCardProcess.Interfaces;
+using RouteCardProcess.Model.DTOs.Machining;
 using RouteCardProcess.Model.DTOs.Manualdata;
+using RouteCardProcess.Model.DTOs.Setup;
 using RouteCardProcess.Repositories;
 using System.Threading.Tasks;
 
@@ -24,7 +26,7 @@ namespace RouteCardProcess.Controllers
             _logger = logger;
         }
 
-        // ------------------ SYNC FROM SAP ------------------
+        //  SYNC FROM SAP 
         [HttpPost("sync-manual-routing")]
         public async Task<IActionResult> SyncRoutingData([FromBody] MaualDataRequest request)
         {
@@ -49,7 +51,7 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-        // ------------------ GET MANUAL DATA ------------------
+        // GET MANUAL DATA 
         [HttpPost("get-manual-data")]
         public async Task<IActionResult> GetRoutingDataByOrderNumber([FromBody] GetMaualDataRequest request)
         {
@@ -85,7 +87,7 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-        // ------------------ UPDATE MANUAL DATA ------------------
+        // UPDATE MANUAL DATA 
         [HttpPost("update-manual-data")]
         public async Task<IActionResult> UpdateManualData([FromBody] ManualDataUpdateDto dto)
         {
@@ -96,10 +98,46 @@ namespace RouteCardProcess.Controllers
                 success = result.Success,
                 message = result.Success ? "Data updated successfully" : "No record found to update",
                 setupId = result.SetupId,
-                machiningId = result.MachiningId
+                machiningId = result.MachiningId,
+                opertorid = result.OperatorId
             });
         }
 
-    }
+        //ADD DELAYS
+        [HttpPost("add-setup-delays")]
+        public async Task<IActionResult> AddDelays([FromBody] ManualSetupDelayRequest request)
+        {
+            try
+            {
+                var result = await _manualDataRepository.InsertDelaysAsync(request);
 
+                return result
+                    ? Ok(new { message = _userMessageService.GetMessage(1034) })
+                    : BadRequest(new { message = _userMessageService.GetMessage(1035) });
+            }
+            catch (Exception ex)
+            {
+                await _logger.LogAsync("SetUpTransController", "add-delays", ex.ToString());
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
+            }
+        }
+
+        [HttpPost("add-machining-delays")]
+        public async Task<IActionResult> AddDelays([FromBody] ManualMachiningDelayRequest request)
+        {
+            try
+            {
+                var result = await _manualDataRepository.AddDelaysAsync(request);
+
+                return result
+                    ? Ok(new { message = _userMessageService.GetMessage(1034) })
+                    : BadRequest(new { message = _userMessageService.GetMessage(1035) });
+            }
+            catch (Exception ex)
+            {
+                await _logger.LogAsync("MachiningController", "add-delays", ex.ToString());
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
+            }
+        }
+    }
 }

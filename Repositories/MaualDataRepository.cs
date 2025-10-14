@@ -4,10 +4,13 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Dapper;
+using Microsoft.Data.SqlClient;
 using RouteCardProcess.Interfaces;
+using RouteCardProcess.Model.DTOs.Machining;
 using RouteCardProcess.Model.DTOs.Manualdata;
 using RouteCardProcess.Model.DTOs.ManualData;
 using RouteCardProcess.Model.DTOs.SapSync;
+using RouteCardProcess.Model.DTOs.Setup;
 
 namespace RouteCardProcess.Repositories
 {
@@ -136,7 +139,7 @@ namespace RouteCardProcess.Repositories
             }
             return data;
         }
-        public async Task<(bool Success, string? SetupId, string? MachiningId)> UpdateManualDataAsync(ManualDataUpdateDto dto)
+        public async Task<ManualDataUpdateResult> UpdateManualDataAsync(ManualDataUpdateDto dto)
         {
             using var connection = _connectionFactory.CreateConnection();
 
@@ -161,9 +164,135 @@ namespace RouteCardProcess.Repositories
             var setupId = parameters.Get<string>("@SetupId");
             var machiningId = parameters.Get<string>("@MachiningId");
 
-            return (Success: setupId != null || machiningId != null, SetupId: setupId, MachiningId: machiningId);
+            var dtoResult = new ManualDataUpdateResult
+            {
+                Success = setupId != null || machiningId != null,
+                SetupId = setupId,
+                MachiningId = machiningId,
+                OperatorId = dto.OperatorId
+            };
+
+            return dtoResult;
         }
 
+        public async Task<bool> InsertDelaysAsync(ManualSetupDelayRequest request)
+        {
+            using var connection = _connectionFactory.CreateConnection();
+            await connection.OpenAsync();
+            using var transaction = connection.BeginTransaction();
+            try
+            {
+                
+                // Insert Exceptions if any
+                if (request.Exceptions?.Any() == true)
+                {
+                    foreach (var exception in request.Exceptions)
+                    {
+                        await connection.ExecuteAsync(
+                            "usp_InsertSetupException",
+                            new
+                            {
+                                SetUpID = request.SetUpID,
+                                OperatorId = request.OperatorId,
+                                exception.ExceptionsReasonCode,
+                                exception.Std_exceptions_ReasonCode,
+                                exception.ExceptionsTime,
+                                exception.Std_exceptions_Remark
+                            },
+                            transaction,
+                            commandType: CommandType.StoredProcedure
+                        );
+                    }
+                }
 
+                // Insert Idle Times if any
+                if (request.IdleTimes?.Any() == true)
+                {
+                    foreach (var idle in request.IdleTimes)
+                    {
+                        await connection.ExecuteAsync(
+                            "usp_InsertSetupIdle",
+                            new
+                            {
+                                SetUpID = request.SetUpID,
+                                OperatorId = request.OperatorId,
+                                idle.MSTIdleCode,
+                                idle.SetupIdleTime
+                            },
+                            transaction,
+                            commandType: CommandType.StoredProcedure
+                        );
+                    }
+                }
+                transaction.Commit();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
+
+        public async Task<bool> AddDelaysAsync(ManualMachiningDelayRequest request)
+        {
+            using var connection = _connectionFactory.CreateConnection();
+            await connection.OpenAsync();
+            using var transaction = connection.BeginTransaction();
+
+            try
+            {
+              
+
+                // Insert Exceptions if any
+                if (request.Exceptions?.Any() == true)
+                {
+                    foreach (var exception in request.Exceptions)
+                    {
+                        await connection.ExecuteAsync(
+                            "usp_InsertMachiningException",
+                            new
+                            {
+                                MachiningID = request.MachiningId,
+                                OperatorId = request.OperatorId,
+                                exception.ExceptionsReasonCode,
+                                exception.Std_exceptions_ReasonCode,
+                                exception.ExceptionsTime,
+                                exception.Std_exceptions_Remark
+                            },
+                            transaction,
+                            commandType: CommandType.StoredProcedure
+                        );
+                    }
+                }
+
+                // Insert Idle Times if any
+                if (request.IdleTimes?.Any() == true)
+                {
+                    foreach (var idle in request.IdleTimes)
+                    {
+                        await connection.ExecuteAsync(
+                            "usp_InsertMachiningIdle",
+                            new
+                            {
+                                MachiningID = request.MachiningId,
+                                OperatorId = request.OperatorId,
+                                idle.MSTIdleCode,
+                                idle.MachiningIdleTime
+                            },
+                            transaction,
+                            commandType: CommandType.StoredProcedure
+                        );
+                    }
+                }
+                transaction.Commit();
+                return true;
+            }
+            catch (Exception)
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
     }
 }
