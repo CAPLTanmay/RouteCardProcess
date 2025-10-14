@@ -8,5 +8,7 @@ namespace RouteCardProcess.Interfaces
     {
         Task SyncManualDataAsync(MaualDataRequest request);
         Task<IEnumerable<ManualDataResponseDto>> GetManualDataAsync(GetMaualDataRequest request);
+        Task<(bool Success, string SetupId, string MachiningId)> UpdateManualDataAsync(ManualDataUpdateDto request);
+
     }
 }

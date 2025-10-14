@@ -1,9 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model.DTOs.Manualdata;
-using RouteCardProcess.Model.DTOs.SapValidation;
 using RouteCardProcess.Repositories;
-
+using System.Threading.Tasks;
 
 namespace RouteCardProcess.Controllers
 {
@@ -11,24 +10,27 @@ namespace RouteCardProcess.Controllers
     [Route("api/[controller]")]
     public class ManualDataController : ControllerBase
     {
-        private readonly IManualDataRepository _maualDataRepository;
+        private readonly IManualDataRepository _manualDataRepository;
         private readonly IUserMessageService _userMessageService;
         private readonly ISystemLoggerRepository _logger;
 
-        public ManualDataController(IManualDataRepository maualDataRepository, IUserMessageService userMessageService, ISystemLoggerRepository logger)
+        public ManualDataController(
+            IManualDataRepository manualDataRepository,
+            IUserMessageService userMessageService,
+            ISystemLoggerRepository logger)
         {
-            _maualDataRepository = maualDataRepository;
+            _manualDataRepository = manualDataRepository;
             _userMessageService = userMessageService;
             _logger = logger;
         }
 
+        // ------------------ SYNC FROM SAP ------------------
         [HttpPost("sync-manual-routing")]
         public async Task<IActionResult> SyncRoutingData([FromBody] MaualDataRequest request)
         {
             try
             {
-                await _maualDataRepository.SyncManualDataAsync(request);
-
+                await _manualDataRepository.SyncManualDataAsync(request);
                 return Ok(new
                 {
                     success = true,
@@ -37,8 +39,7 @@ namespace RouteCardProcess.Controllers
             }
             catch (Exception ex)
             {
-                await _logger.LogAsync("SapSyncController", "SyncRoutingData", ex.ToString());
-
+                await _logger.LogAsync("ManualDataController", "SyncRoutingData", ex.ToString());
                 return StatusCode(500, new
                 {
                     success = false,
@@ -47,12 +48,14 @@ namespace RouteCardProcess.Controllers
                 });
             }
         }
+
+        // ------------------ GET MANUAL DATA ------------------
         [HttpPost("get-manual-data")]
         public async Task<IActionResult> GetRoutingDataByOrderNumber([FromBody] GetMaualDataRequest request)
         {
             try
             {
-                var data = await _maualDataRepository.GetManualDataAsync(request);
+                var data = await _manualDataRepository.GetManualDataAsync(request);
 
                 if (data == null || !data.Any())
                 {
@@ -72,8 +75,7 @@ namespace RouteCardProcess.Controllers
             }
             catch (Exception ex)
             {
-                await _logger.LogAsync("SapSyncController", "GetRoutingDataByOrderNumber", ex.ToString());
-
+                await _logger.LogAsync("ManualDataController", "GetRoutingDataByOrderNumber", ex.ToString());
                 return StatusCode(500, new
                 {
                     success = false,
@@ -83,5 +85,21 @@ namespace RouteCardProcess.Controllers
             }
         }
 
+        // ------------------ UPDATE MANUAL DATA ------------------
+        [HttpPost("update-manual-data")]
+        public async Task<IActionResult> UpdateManualData([FromBody] ManualDataUpdateDto dto)
+        {
+            var result = await _manualDataRepository.UpdateManualDataAsync(dto);
+
+            return Ok(new
+            {
+                success = result.Success,
+                message = result.Success ? "Data updated successfully" : "No record found to update",
+                setupId = result.SetupId,
+                machiningId = result.MachiningId
+            });
+        }
+
     }
+
 }

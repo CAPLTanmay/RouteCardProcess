@@ -136,5 +136,34 @@ namespace RouteCardProcess.Repositories
             }
             return data;
         }
+        public async Task<(bool Success, string? SetupId, string? MachiningId)> UpdateManualDataAsync(ManualDataUpdateDto dto)
+        {
+            using var connection = _connectionFactory.CreateConnection();
+
+            var parameters = new DynamicParameters();
+            parameters.Add("@WorkOrder", dto.WorkOrder);
+            parameters.Add("@WorkCenter", dto.WorkCenter);
+            parameters.Add("@OperationNo", dto.OperationNo);
+            parameters.Add("@OperatorId", dto.OperatorId);
+            parameters.Add("@L_CompletedQty", dto.L_CompletedQty);
+            parameters.Add("@SetupStartTime", dto.SetupStartTime);
+            parameters.Add("@SetupEndTime", dto.SetupEndTime);
+            parameters.Add("@MachiningStartTime", dto.MachiningStartTime);
+            parameters.Add("@MachiningEndTime", dto.MachiningEndTime);
+            parameters.Add("@SetupId", dbType: DbType.String, size: 50, direction: ParameterDirection.Output);
+            parameters.Add("@MachiningId", dbType: DbType.String, size: 50, direction: ParameterDirection.Output);
+
+            await connection.ExecuteAsync(
+                "usp_UpdateManualData",
+                parameters,
+                commandType: CommandType.StoredProcedure);
+
+            var setupId = parameters.Get<string>("@SetupId");
+            var machiningId = parameters.Get<string>("@MachiningId");
+
+            return (Success: setupId != null || machiningId != null, SetupId: setupId, MachiningId: machiningId);
+        }
+
+
     }
 }
