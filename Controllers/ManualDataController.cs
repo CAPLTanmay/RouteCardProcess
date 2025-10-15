@@ -2,6 +2,7 @@
 using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model.DTOs.Machining;
 using RouteCardProcess.Model.DTOs.Manualdata;
+using RouteCardProcess.Model.DTOs.RouteCardReport;
 using RouteCardProcess.Model.DTOs.Setup;
 using RouteCardProcess.Repositories;
 using System.Threading.Tasks;
@@ -117,7 +118,7 @@ namespace RouteCardProcess.Controllers
             }
             catch (Exception ex)
             {
-                await _logger.LogAsync("SetUpTransController", "add-delays", ex.ToString());
+                await _logger.LogAsync("ManualDataController", "add-delays", ex.ToString());
                 return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
             }
         }
@@ -135,7 +136,29 @@ namespace RouteCardProcess.Controllers
             }
             catch (Exception ex)
             {
-                await _logger.LogAsync("MachiningController", "add-delays", ex.ToString());
+                await _logger.LogAsync("ManualDataController", "add-delays", ex.ToString());
+                return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
+            }
+        }
+
+        [HttpPost("get-manual-report")]
+        public async Task<IActionResult> GetRouteCardReportFiltered([FromBody] RouteCardReportFilterRequest request)
+        {
+            try
+            {
+                var result = await _manualDataRepository.GetManualReportAsync(request);
+                if (result == null || !result.Any())
+                {
+                    var message = _userMessageService.GetMessage(1063) ?? "No data found";
+                    await _logger.LogAsync("RouteCardReportController", "get-filtered", "No data found for given filters.");
+                    return Ok(new { success = false, message, data = new List<object>() });
+                }
+
+                return Ok(new { success = true, message = "Data fetched successfully", data = result });
+            }
+            catch (Exception ex)
+            {
+                await _logger.LogAsync("ManualDataController", "get-filtered", ex.ToString());
                 return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
             }
         }

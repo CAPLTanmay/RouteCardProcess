@@ -4,13 +4,11 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Dapper;
-using Microsoft.Data.SqlClient;
 using RouteCardProcess.Interfaces;
-using RouteCardProcess.Model.DTOs.Machining;
 using RouteCardProcess.Model.DTOs.Manualdata;
 using RouteCardProcess.Model.DTOs.ManualData;
+using RouteCardProcess.Model.DTOs.RouteCardReport;
 using RouteCardProcess.Model.DTOs.SapSync;
-using RouteCardProcess.Model.DTOs.Setup;
 
 namespace RouteCardProcess.Repositories
 {
@@ -42,7 +40,6 @@ namespace RouteCardProcess.Repositories
             value = value.Trim().Split('.')[0];
             return int.TryParse(value, out var minutes) ? TimeSpan.FromMinutes(minutes) : TimeSpan.Zero;
         }
-
         private int ParseToInt(string value)
         {
             if (string.IsNullOrWhiteSpace(value)) return 0;
@@ -233,7 +230,6 @@ namespace RouteCardProcess.Repositories
                 throw;
             }
         }
-
         public async Task<bool> AddDelaysAsync(ManualMachiningDelayRequest request)
         {
             using var connection = _connectionFactory.CreateConnection();
@@ -293,6 +289,28 @@ namespace RouteCardProcess.Repositories
                 transaction.Rollback();
                 throw;
             }
+        }
+        public async Task<IEnumerable<RouteCardReportDto>> GetManualReportAsync(RouteCardReportFilterRequest request)
+        {
+            using var connection = _connectionFactory.CreateConnection();
+            await connection.OpenAsync();
+
+            //  Pad ProductionOrderNo before using it in the query
+            var paddedOrderNo = request.ProductionOrderNo?.PadLeft(12, '0');
+
+            var result = await connection.QueryAsync<RouteCardReportDto>(
+                "usp_GetManualReport",
+                new
+                {
+                    request.OperatorId,
+                    request.ConfirmationDate,
+                    ProductionOrderNo = paddedOrderNo,
+                    request.WorkCenterNo,
+                    Dept = request.Department
+                },
+                commandType: CommandType.StoredProcedure);
+
+            return result;
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using RouteCardProcess.Model.DTOs.Manualdata;
 using RouteCardProcess.Model.DTOs.ManualData;
+using RouteCardProcess.Model.DTOs.RouteCardReport;
 
 namespace RouteCardProcess.Interfaces
 {
@@ -10,5 +11,6 @@ namespace RouteCardProcess.Interfaces
         Task<ManualDataUpdateResult> UpdateManualDataAsync(ManualDataUpdateDto request);
         Task<bool> InsertDelaysAsync(ManualSetupDelayRequest request);
         Task<bool> AddDelaysAsync(ManualMachiningDelayRequest request);
+        Task<IEnumerable<RouteCardReportDto>> GetManualReportAsync(RouteCardReportFilterRequest request);
     }
 }
