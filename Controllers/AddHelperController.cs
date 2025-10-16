@@ -173,7 +173,7 @@ namespace RouteCardProcess.Controllers
                 {
                     var endHelperRequest = new EndHelperRequest
                     {
-                        OperatorId = helper.OperatorId, 
+                        ReqOperatorId = helper.OperatorId, 
                         SetupId = helper.SetupId,
                         MachiningId = helper.MachiningId
                     };

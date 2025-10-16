@@ -51,16 +51,6 @@ namespace RouteCardProcess.Model.DTOs.ManualData
         public int? Std_Machining_Time { get; set; }
         public string? MaterialTextLink { get; set; }
 
-        public string SetupStartDate => SetupStartTime?.ToString("yyyy-MM-dd") ?? "-";
-        public string SetupStartClock => SetupStartTime?.ToString("HH:mm:ss") ?? "-";
-
-        public string SetupEndDate => SetupEndTime?.ToString("yyyy-MM-dd") ?? "-";
-        public string SetupEndClock => SetupEndTime?.ToString("HH:mm:ss") ?? "-";
-
-        public string MachiningStartDate => MachiningStartTime?.ToString("yyyy-MM-dd") ?? "-";
-        public string MachiningStartClock => MachiningStartTime?.ToString("HH:mm:ss") ?? "-";
-
-        public string MachiningEndDate => MachiningEndTime?.ToString("yyyy-MM-dd") ?? "-";
-        public string MachiningEndClock => MachiningEndTime?.ToString("HH:mm:ss") ?? "-";
+       
     }
 }

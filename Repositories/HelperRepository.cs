@@ -29,17 +29,18 @@ namespace RouteCardProcess.Repositories
             await connection.OpenAsync();
 
             // Step 0: Prevent assigning self as helper
-            if (request.MainOperatorId == request.OperatorId)
-                return _userMessageService.GetMessage(1116); 
+            if (request.MainOperatorId == request.ReqOperatorId)
+                return _userMessageService.GetMessage(1116);
 
-            var validUser = await _repo.LoginEmployeeAsync(request.OperatorId, request.Password);
+            var validUser = await _repo.LoginEmployeeAsync(request.ReqOperatorId, request.Password);
+            
 
             if (validUser.User == null)
                 return _userMessageService.GetMessage(1001);
 
             // Prepare the parameters for adding a helper record
             var parameters = new DynamicParameters();
-            parameters.Add("OperatorId", request.OperatorId);
+            parameters.Add("OperatorId", request.ReqOperatorId);
             parameters.Add("SetupID", request.SetupId);
             parameters.Add("MachiningID", request.MachiningId);
             parameters.Add("OperatorStartTime", DateTime.Now);
@@ -97,7 +98,7 @@ namespace RouteCardProcess.Repositories
             try
             {
                 var parameters = new DynamicParameters();
-                parameters.Add("OperatorId", request.OperatorId);
+                parameters.Add("OperatorId", request.ReqOperatorId);
                 parameters.Add("SetupId", string.IsNullOrEmpty(request.SetupId) ? null : request.SetupId);
                 parameters.Add("MachiningId", string.IsNullOrEmpty(request.MachiningId) ? null : request.MachiningId);
 
@@ -119,10 +120,12 @@ namespace RouteCardProcess.Repositories
             using var connection = CreateConnection();
             await connection.OpenAsync();
 
+            var opertorId = request.ReqOperatorId;
+
             // Find current log row
             var existing = await connection.QueryFirstOrDefaultAsync<dynamic>(
                 "usp_GetHelperBySetupAndMachiningId",
-                new { request.OperatorId, request.SetupId, request.MachiningId },
+                new { OperatorId = opertorId, request.SetupId, request.MachiningId },
                 commandType: CommandType.StoredProcedure);
 
             if (existing == null)
@@ -133,7 +136,7 @@ namespace RouteCardProcess.Repositories
                 // Start pause
                 await connection.ExecuteAsync(
                     "usp_StartHelperPause",
-                    new { request.OperatorId, request.SetupId, request.MachiningId, PauseStartTime = DateTime.Now },
+                    new { OperatorId = opertorId, request.SetupId, request.MachiningId, PauseStartTime = DateTime.Now },
                     commandType: CommandType.StoredProcedure);
                 return _userMessageService.GetMessage(1010);
             }
@@ -148,7 +151,7 @@ namespace RouteCardProcess.Repositories
                     "usp_EndHelperPause",
                     new
                     {
-                        request.OperatorId,
+                        OperatorId =opertorId,
                         request.SetupId,
                         request.MachiningId,
                         PauseEndTime = pauseEnd,

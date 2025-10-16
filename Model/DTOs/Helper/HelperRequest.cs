@@ -5,7 +5,7 @@ namespace RouteCardProcess.Model.DTOs.Helper
     public class HelperRequest
     {
         [Required]
-        public string OperatorId { get; set; }
+        public string ReqOperatorId { get; set; }
 
         [Required]
         public string Password { get; set; }
@@ -20,7 +20,7 @@ namespace RouteCardProcess.Model.DTOs.Helper
     public class EndHelperRequest
     {
         [Required]
-        public string OperatorId { get; set; }
+        public string ReqOperatorId { get; set; }
 
         public string? SetupId { get; set; }
 

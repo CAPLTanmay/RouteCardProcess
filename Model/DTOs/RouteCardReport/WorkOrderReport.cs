@@ -24,7 +24,7 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
 
     public class RouteCardReportFilterRequest
     {
-        public string? OperatorId { get; set; }
+        public string? ReqOperatorId { get; set; }
         public DateTime? ConfirmationDate { get; set; }
         public string? ProductionOrderNo { get; set; }
         public string? Department { get; set; }

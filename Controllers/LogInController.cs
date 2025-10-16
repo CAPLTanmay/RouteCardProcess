@@ -11,7 +11,7 @@ using RouteCardProcess.Repositories;
 namespace RouteCardProcess.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/validate")]
     [Authorize]
     public class LogInController : ControllerBase
     {
@@ -143,7 +143,7 @@ namespace RouteCardProcess.Controllers
 
         [AllowAnonymous]
         [EnableRateLimiting("LoginRateLimit")]
-        [HttpPost("loginEmployee")]
+        [HttpPost("validateEmployee")]
         public async Task<IActionResult> LoginEmployee([FromBody] LoginRequest request)
         {
             try

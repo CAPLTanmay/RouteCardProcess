@@ -51,12 +51,12 @@ namespace RouteCardProcess.Repositories
 
             //  Pad ProductionOrderNo before using it in the query
             var paddedOrderNo = request.ProductionOrderNo?.PadLeft(12, '0');
-
+            var operatorId = request.ReqOperatorId;
             var result = await connection.QueryAsync<RouteCardReportDto>(
                 "usp_GetRouteCardReportFiltered",
                 new
                 {
-                    request.OperatorId,
+                    OperatorId = operatorId,
                     request.ConfirmationDate,
                     ProductionOrderNo = paddedOrderNo,
                     request.WorkCenterNo,
@@ -74,12 +74,13 @@ namespace RouteCardProcess.Repositories
 
             //  Pad ProductionOrderNo before using it in the query
             var paddedOrderNo = request.ProductionOrderNo?.PadLeft(12, '0');
+            var operatorId = request.ReqOperatorId;
 
             var result = await connection.QueryAsync<RouteCardReportDto>(
                 "usp_GetRouteCardReportAll",
                 new
                 {
-                    request.OperatorId,
+                    OperatorId= operatorId,
                     request.ConfirmationDate,
                     ProductionOrderNo = paddedOrderNo,
                     request.WorkCenterNo,
