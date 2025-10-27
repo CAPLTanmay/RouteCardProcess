@@ -18,7 +18,7 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
         public string? MachiningId { get; set; }
         public Guid? OperatorTransactionId { get; set; }
         public Guid? MachiningOperatorTransactionId { get; set; }
-        public string? OperatorId { get; set; }
+        public string? ReqOperatorId { get; set; }
     }
 
 

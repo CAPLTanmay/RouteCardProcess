@@ -100,7 +100,7 @@ namespace RouteCardProcess.Repositories
             {
                 SetupId = request.SetupId,
                 MachiningId = request.MachiningId,
-                OperatorId = request.OperatorId
+                OperatorId = request.ReqOperatorId
             };
 
             using var multi = await connection.QueryMultipleAsync("dbo.usp_GetLossOrderByIds", parameters, commandType: CommandType.StoredProcedure);
@@ -130,7 +130,7 @@ namespace RouteCardProcess.Repositories
             {
                 SetupId = request.SetupId,
                 MachiningId = request.MachiningId,
-                OperatorId = request.OperatorId
+                OperatorId = request.ReqOperatorId
             };
 
             using var multi = await connection.QueryMultipleAsync("dbo.usp_GetExceptionReport", parameters, commandType: CommandType.StoredProcedure);

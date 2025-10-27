@@ -1,6 +1,7 @@
 ﻿using RouteCardProcess.Model.DTOs.Manualdata;
 using RouteCardProcess.Model.DTOs.ManualData;
 using RouteCardProcess.Model.DTOs.RouteCardReport;
+using RouteCardProcess.Model.DTOs.SapValidation;
 
 namespace RouteCardProcess.Interfaces
 {
@@ -12,5 +13,8 @@ namespace RouteCardProcess.Interfaces
         Task<bool> InsertDelaysAsync(ManualSetupDelayRequest request);
         Task<bool> AddDelaysAsync(ManualMachiningDelayRequest request);
         Task<IEnumerable<RouteCardReportDto>> GetManualReportAsync(RouteCardReportFilterRequest request);
+        Task<IEnumerable<RouteCardReportDto>> GetUploadedManualReportAsync(RouteCardReportFilterRequest request);
+        Task<TimingInfoDto?> GetManualTimingInfo(OrderReportRequestDto request);
+        Task<string> ConfirmManualOrderAsync(CombinedSAPConfirmationRequest request);
     }
 }

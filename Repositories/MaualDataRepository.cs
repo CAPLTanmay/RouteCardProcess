@@ -9,6 +9,7 @@ using RouteCardProcess.Model.DTOs.Manualdata;
 using RouteCardProcess.Model.DTOs.ManualData;
 using RouteCardProcess.Model.DTOs.RouteCardReport;
 using RouteCardProcess.Model.DTOs.SapSync;
+using RouteCardProcess.Model.DTOs.SapValidation;
 
 namespace RouteCardProcess.Repositories
 {
@@ -140,6 +141,22 @@ namespace RouteCardProcess.Repositories
         {
             using var connection = _connectionFactory.CreateConnection();
 
+            // 1️⃣ Validate Operator via stored procedure
+            var employee = await connection.QueryFirstOrDefaultAsync(
+                "usp_GetEmployeeLoginInfo",
+                new { dto.OperatorId },
+                commandType: CommandType.StoredProcedure);
+
+            if (employee == null)
+            {
+                return new ManualDataUpdateResult
+                {
+                    Success = false,
+                    OperatorId = dto.OperatorId,
+                    Message = "Invalid or inactive user."
+                };
+            }
+
             var parameters = new DynamicParameters();
             parameters.Add("@WorkOrder", dto.WorkOrder);
             parameters.Add("@WorkCenter", dto.WorkCenter);
@@ -166,7 +183,10 @@ namespace RouteCardProcess.Repositories
                 Success = setupId != null || machiningId != null,
                 SetupId = setupId,
                 MachiningId = machiningId,
-                OperatorId = dto.OperatorId
+                OperatorId = dto.OperatorId,
+                Message = setupId != null || machiningId != null
+        ? "Manual data updated successfully."
+        : "No matching record found or update failed."
             };
 
             return dtoResult;
@@ -179,7 +199,7 @@ namespace RouteCardProcess.Repositories
             using var transaction = connection.BeginTransaction();
             try
             {
-                
+
                 // Insert Exceptions if any
                 if (request.Exceptions?.Any() == true)
                 {
@@ -238,7 +258,7 @@ namespace RouteCardProcess.Repositories
 
             try
             {
-              
+
 
                 // Insert Exceptions if any
                 if (request.Exceptions?.Any() == true)
@@ -303,7 +323,7 @@ namespace RouteCardProcess.Repositories
                 "usp_GetManualReport",
                 new
                 {
-                    OperatorId=operatorId,
+                    OperatorId = operatorId,
                     request.ConfirmationDate,
                     ProductionOrderNo = paddedOrderNo,
                     request.WorkCenterNo,
@@ -312,6 +332,203 @@ namespace RouteCardProcess.Repositories
                 commandType: CommandType.StoredProcedure);
 
             return result;
+        }
+        public async Task<IEnumerable<RouteCardReportDto>> GetUploadedManualReportAsync(RouteCardReportFilterRequest request)
+        {
+            using var connection = _connectionFactory.CreateConnection();
+            await connection.OpenAsync();
+
+            //  Pad ProductionOrderNo before using it in the query
+            var paddedOrderNo = request.ProductionOrderNo?.PadLeft(12, '0');
+            var operatorId = request.ReqOperatorId;
+
+            var result = await connection.QueryAsync<RouteCardReportDto>(
+                "usp_GetUploadedManualReport",
+                new
+                {
+                    OperatorId = operatorId,
+                    request.ConfirmationDate,
+                    ProductionOrderNo = paddedOrderNo,
+                    request.WorkCenterNo,
+                    Dept = request.Department
+                },
+                commandType: CommandType.StoredProcedure);
+
+            return result;
+        }
+        public async Task<TimingInfoDto?> GetManualTimingInfo(OrderReportRequestDto request)
+        {
+            using var connection = _connectionFactory.CreateConnection();
+            await connection.OpenAsync();
+
+            var timingInfo = new TimingInfoDto();
+
+            if (!string.IsNullOrEmpty(request.MachiningId) ||
+                    (!request.MachiningOperatorTransactionId.HasValue || request.MachiningOperatorTransactionId == Guid.Empty))
+            {
+                var machiningResult = await connection.QueryFirstOrDefaultAsync<TimingInfoDto>(
+                    "usp_GetManualMachiningInfo",
+                    new
+                    {
+                        MachiningId = request.MachiningId,
+                        MachiningOperatorTransactionId = request.MachiningOperatorTransactionId
+                    },
+                    commandType: CommandType.StoredProcedure
+                );
+
+                if (machiningResult != null)
+                {
+                    timingInfo.StandardMachiningTime = machiningResult.StandardMachiningTime;
+                    timingInfo.MachiningStartDate = machiningResult.MachiningStartDate;
+                    timingInfo.MachiningStartTime = machiningResult.MachiningStartTime;
+                    timingInfo.MachiningEndDate = machiningResult.MachiningEndDate;
+                    timingInfo.MachiningEndTime = machiningResult.MachiningEndTime;
+                    timingInfo.TotalMachiningTime = machiningResult.TotalMachiningTime;
+                    timingInfo.CompletedQty = machiningResult.CompletedQty;
+                    timingInfo.MachiningId = request.MachiningId;
+
+                    timingInfo.MachiningOperatorId = machiningResult.MachiningOperatorId;
+                    timingInfo.MachiningOperatorStartDate = machiningResult.MachiningOperatorStartDate;
+                    timingInfo.MachiningOperatorStartTime = machiningResult.MachiningOperatorStartTime;
+                    timingInfo.MachiningOperatorEndDate = machiningResult.MachiningOperatorEndDate;
+                    timingInfo.MachiningOperatorEndTime = machiningResult.MachiningOperatorEndTime;
+                    timingInfo.MachiningTotalOperatorTime = machiningResult.MachiningTotalOperatorTime;
+
+                    timingInfo.MachiningOperatorTransactionId = request.MachiningOperatorTransactionId;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(request.SetupId) ||
+               (!request.OperatorTransactionId.HasValue || request.OperatorTransactionId == Guid.Empty))
+            {
+                var setupResult = await connection.QueryFirstOrDefaultAsync<TimingInfoDto>(
+                    "usp_GetManualSetupInfo",
+                    new
+                    {
+                        SetupId = request.SetupId,
+                        OperatorTransactionId = request.OperatorTransactionId
+                    },
+                    commandType: CommandType.StoredProcedure
+                );
+
+                if (setupResult != null)
+                {
+                    timingInfo.StandardSetupTime = setupResult.StandardSetupTime;
+                    timingInfo.SetupStartDate = setupResult.SetupStartDate;
+                    timingInfo.SetupStartTime = setupResult.SetupStartTime;
+                    timingInfo.SetupEndDate = setupResult.SetupEndDate;
+                    timingInfo.SetupEndTime = setupResult.SetupEndTime;
+                    timingInfo.TotalSetupTime = setupResult.TotalSetupTime;
+                    timingInfo.SetupId = request.SetupId;
+
+                    timingInfo.OperatorTransactionId = setupResult.OperatorTransactionId;
+                    timingInfo.SetupOperatorId = setupResult.SetupOperatorId;
+                    timingInfo.SetupOperatorStartDate = setupResult.SetupOperatorStartDate;
+                    timingInfo.SetupOperatorStartTime = setupResult.SetupOperatorStartTime;
+                    timingInfo.SetupOperatorEndDate = setupResult.SetupOperatorEndDate;
+                    timingInfo.SetupOperatorEndTime = setupResult.SetupOperatorEndTime;
+                    timingInfo.SetupTotalOperatorTime = setupResult.SetupTotalOperatorTime;
+                }
+            }
+
+            return timingInfo;
+        }
+        // Confirm Production Order
+        public async Task<string> ConfirmManualOrderAsync(CombinedSAPConfirmationRequest request)
+        {
+            using var connection = _connectionFactory.CreateConnection();
+            await connection.OpenAsync();
+
+            var persNo = request.ProductionOrder?.NAV_CONF?.FirstOrDefault()?.PERS_NO;
+
+            if (request.ProductionOrder?.NAV_CONF != null)
+            {
+                foreach (var nav in request.ProductionOrder.NAV_CONF)
+                {
+                    if (!string.IsNullOrEmpty(nav.PERS_NO))
+                    {
+                        // check employee
+                        var employee = await GetEmpContractEmpIdAsync(nav.PERS_NO);
+
+                        if (employee != null && employee.IsContractEmployee)
+                        {
+                            // replace PERS_NO with EmployeeCode
+                            nav.PERS_NO = employee.EmployeeCode;
+                        }
+                    }
+                }
+            }
+
+            // Step 1: Confirm Production Order in SAP
+            string fetchUrl = $"{_baseUrl}ZCONFIRMSet";
+            var (csrfToken, cookie) = await FetchCsrfTokenAsync(fetchUrl);
+
+            var postRequest = new HttpRequestMessage(HttpMethod.Post, fetchUrl);
+            postRequest.Headers.Add("X-CSRF-Token", csrfToken);
+
+            if (!string.IsNullOrEmpty(cookie))
+                postRequest.Headers.Add("Cookie", cookie);
+
+            postRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            var json = JsonSerializer.Serialize(request.ProductionOrder);
+            postRequest.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.SendAsync(postRequest);
+            var responseData = await response.Content.ReadAsStringAsync();
+
+            //  Custom handling instead of blindly EnsureSuccessStatusCode
+            if (!response.IsSuccessStatusCode)
+            {
+                // Throw HttpRequestException but include SAP response JSON
+                throw new HttpRequestException(responseData, null, response.StatusCode);
+            }
+
+            // Step 2: Update DB flags using SP (only if SAP call succeeded)
+            var operatorId1 = request.ProductionOrder?.NAV_CONF?.FirstOrDefault()?.PERS_NO;
+
+            await connection.ExecuteAsync(
+                "usp_UpdateUploadToSAP_ManualData",
+                new
+                {
+                    SetupId = request.LossOrder.SetupId,
+                    MachiningId = request.LossOrder.MachiningId,
+                    OperatorId = persNo,
+                },
+                commandType: CommandType.StoredProcedure
+            );
+
+            return responseData;
+        }
+
+        public async Task<ConEmployee?> GetEmpContractEmpIdAsync(string contractEmpId)
+        {
+            using var connection = _connectionFactory.CreateConnection();
+            await connection.OpenAsync();
+
+            return await connection.QueryFirstOrDefaultAsync<ConEmployee>("dbo.usp_GetEmployeeByContractEmpId", new { ContractEmpId = contractEmpId }, commandType: CommandType.StoredProcedure);
+        }
+        // Fetch CSRF token and cookie
+        private async Task<(string csrfToken, string? cookie)> FetchCsrfTokenAsync(string url)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Add("X-CSRF-Token", "Fetch");
+
+            var response = await _httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            if (!response.Headers.TryGetValues("X-CSRF-Token", out var tokenValues))
+                throw new Exception("X-CSRF-Token header not found.");
+
+            var csrfToken = tokenValues.FirstOrDefault();
+
+            string? cookie = null;
+            if (response.Headers.TryGetValues("Set-Cookie", out var cookieValues))
+            {
+                cookie = cookieValues.FirstOrDefault()?.Split(';')[0]; // extract cookie name=value
+            }
+
+            return (csrfToken, cookie);
         }
     }
 }

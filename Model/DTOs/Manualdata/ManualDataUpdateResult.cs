@@ -6,6 +6,7 @@
         public string? SetupId { get; set; }
         public string? MachiningId { get; set; }
         public int OperatorId { get; set; }
+        public string? Message { get; set; }
     }
 }
 

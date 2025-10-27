@@ -127,6 +127,7 @@ namespace RouteCardProcess.Controllers
             }
         }
 
+        [AllowAnonymous]
         [HttpPost("combined-order-report")]
         public async Task<IActionResult> GetCombinedOrderReport([FromBody] OrderReportRequestDto request)
         {
@@ -147,7 +148,7 @@ namespace RouteCardProcess.Controllers
                 var timingInfoTask = _repo.GetTimingInfoAsync(request);
                 if (timingInfoTask != null)
                 {
-                    request.OperatorId = timingInfoTask.Result.SetupOperatorId
+                    request.ReqOperatorId = timingInfoTask.Result.SetupOperatorId
                       ?? timingInfoTask.Result.MachiningOperatorId;
                 }
                 var navLossTask = _repo.GetLossOrderByIdsAsync(request);

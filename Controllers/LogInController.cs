@@ -158,12 +158,16 @@ namespace RouteCardProcess.Controllers
 
                 var token = await _jwtService.GenerateTokenAsync(request.OperatorId, loginResult.User.OperatorRole);
 
+                //  Convert to Indian Time (IST) for cookie expiration 
+                TimeZoneInfo indianZone = TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
+                DateTime indianTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, indianZone);
+
                 var cookieOptions = new CookieOptions
                 {
                     HttpOnly = true,
                     Secure = true,               // Only send over HTTPS
                     SameSite = SameSiteMode.None,
-                    Expires = DateTime.UtcNow.AddMinutes(15),
+                    Expires = indianTime.AddMinutes(30),
                     Path = "/"
                 };
 
@@ -173,7 +177,7 @@ namespace RouteCardProcess.Controllers
                 {
                     message = _userMessageService.GetMessage(2001),
                     isTempPassword = loginResult.IsTempPassword,
-                    token,
+                    //token,
                     user = loginResult.User
                 });
             }
