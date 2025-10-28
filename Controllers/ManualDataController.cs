@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model.DTOs.Manualdata;
 using RouteCardProcess.Model.DTOs.RouteCardReport;
@@ -273,5 +274,20 @@ namespace RouteCardProcess.Controllers
                 return StatusCode(500, new { success = false, message = _userMessageService.GetMessage(5001), details = ex.Message });
             }
         }
+
+        [HttpPost("Add-Manual-handover")]
+        public async Task<IActionResult> CloneHandoverRecord([FromBody] ManualHandoverRequest request)
+        {
+            try
+            {
+                var result = await _manualDataRepository.ManualDataForHandoverAsync(request);
+                return Ok(new { message = "Handover record created successfully", affectedRows = result });
+            }
+            catch (SqlException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
     }
 }

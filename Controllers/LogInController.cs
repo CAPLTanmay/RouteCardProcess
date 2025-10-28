@@ -167,7 +167,8 @@ namespace RouteCardProcess.Controllers
                     HttpOnly = true,
                     Secure = true,               // Only send over HTTPS
                     SameSite = SameSiteMode.None,
-                    Expires = indianTime.AddMinutes(30),
+                    //Expires = indianTime.AddMinutes(30),
+                    Expires = DateTime.UtcNow.AddMinutes(30),
                     Path = "/"
                 };
 

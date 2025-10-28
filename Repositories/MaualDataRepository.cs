@@ -73,7 +73,7 @@ namespace RouteCardProcess.Repositories
                     TimeSpan stdMachiningTime = ParseToTime(item.PROCESSING_TIME);
 
                     var existingData = await connection.QueryFirstOrDefaultAsync<int?>(
-                       "usp_GetCompletedQty",
+                       "usp_GetManualCompletedQty",
                         new { WorkOrder = item.ORDER_NUMBER, OperationNo = item.OPERATION_NUMBER },
                         transaction: transaction);
 
@@ -127,7 +127,7 @@ namespace RouteCardProcess.Repositories
             using var connection = _connectionFactory.CreateConnection();
 
             var data = (await connection.QueryAsync<ManualDataResponseDto>(
-                     "usp_GetManualData",
+                     "dbo.usp_GetManualData",
                      new { OrderNumber = request.ProductionOrderNumber, WorkCenter = request.WorkCenter, },
                      commandType: CommandType.StoredProcedure)).ToList();
 
@@ -141,7 +141,7 @@ namespace RouteCardProcess.Repositories
         {
             using var connection = _connectionFactory.CreateConnection();
 
-            // 1️⃣ Validate Operator via stored procedure
+            // 1️ Validate Operator via stored procedure
             var employee = await connection.QueryFirstOrDefaultAsync(
                 "usp_GetEmployeeLoginInfo",
                 new { dto.OperatorId },
@@ -530,5 +530,19 @@ namespace RouteCardProcess.Repositories
 
             return (csrfToken, cookie);
         }
+
+        public async Task<int> ManualDataForHandoverAsync(ManualHandoverRequest request)
+        {
+            using var connection = _connectionFactory.CreateConnection();
+            var parameters = new
+            {
+                WorkOrder = request.WorkOrder,
+                WorkCenter = request.WorkCenter,
+                OperationNo = request.OperationNo
+            };
+
+            return await connection.ExecuteAsync("usp_AddManualDataForHandover", parameters, commandType: CommandType.StoredProcedure);
+        }
+
     }
 }

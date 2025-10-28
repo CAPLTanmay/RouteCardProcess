@@ -16,5 +16,6 @@ namespace RouteCardProcess.Interfaces
         Task<IEnumerable<RouteCardReportDto>> GetUploadedManualReportAsync(RouteCardReportFilterRequest request);
         Task<TimingInfoDto?> GetManualTimingInfo(OrderReportRequestDto request);
         Task<string> ConfirmManualOrderAsync(CombinedSAPConfirmationRequest request);
+        Task<int> ManualDataForHandoverAsync(ManualHandoverRequest request);
     }
 }

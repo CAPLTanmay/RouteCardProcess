@@ -126,8 +126,6 @@ namespace RouteCardProcess.Controllers
                 return StatusCode(500, new { message = _userMessageService.GetMessage(5005), error = ex.Message });
             }
         }
-
-        [AllowAnonymous]
         [HttpPost("combined-order-report")]
         public async Task<IActionResult> GetCombinedOrderReport([FromBody] OrderReportRequestDto request)
         {

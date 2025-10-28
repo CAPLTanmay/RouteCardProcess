@@ -51,22 +51,27 @@ namespace RouteCardProcess.Services
                 };
 
                 // Convert expiry to IST (UTC +5:30)
-                var expiryInIst = TimeZoneInfo.ConvertTimeFromUtc(
-                    DateTime.UtcNow.AddMinutes(
-                        double.TryParse(jwtSettings["DurationInMinutes"], out var mins) ? mins : 15),
-                    TimeZoneInfo.FindSystemTimeZoneById("India Standard Time"));
+                //var expiryUtc = TimeZoneInfo.ConvertTimeFromUtc(
+                //    DateTime.UtcNow.AddMinutes(
+                //        double.TryParse(jwtSettings["DurationInMinutes"], out var mins) ? mins : 15),
+                //    TimeZoneInfo.FindSystemTimeZoneById("India Standard Time"));
+
+                //  keep expiry in UTC
+                var expiryUtc = DateTime.UtcNow.AddMinutes(
+                    double.TryParse(jwtSettings["DurationInMinutes"], out var mins) ? mins : 15);
+
 
                 var token = new JwtSecurityToken(
                     issuer: jwtSettings["Issuer"],
                     audience: jwtSettings["Audience"],
                     claims: claims,
-                    expires: expiryInIst,
+                    expires: expiryUtc,
                     signingCredentials: creds);
 
                 var jwt = new JwtSecurityTokenHandler().WriteToken(token);
 
                 // 3️ Store this new token in ActiveTokens table for tracking
-                await _tokenBlacklistService.RecordActiveTokenAsync(operatorId, jti,expiryInIst);
+                await _tokenBlacklistService.RecordActiveTokenAsync(operatorId, jti, expiryUtc);
 
                 return jwt;
             }
