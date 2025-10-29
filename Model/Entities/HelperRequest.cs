@@ -9,5 +9,6 @@
         public DateTime OperatorStartTime { get; set; }
         public string MainOperatorId { get; set; }
         public bool IsRelease { get; set; }
+        public string? MSTIdleCode { get; set; }
     }
 }
