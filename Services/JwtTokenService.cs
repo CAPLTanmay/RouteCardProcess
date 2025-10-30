@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using System.IdentityModel.Tokens.Jwt;
+using System.Reflection.PortableExecutable;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
@@ -13,23 +14,29 @@ namespace RouteCardProcess.Services
         private readonly IConfiguration _configuration;
         private readonly ISystemLoggerRepository _systemLogger;
         private readonly ITokenBlacklistService _tokenBlacklistService;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
         public JwtTokenService(
             IConfiguration configuration,
             ISystemLoggerRepository systemLogger,
-            ITokenBlacklistService tokenBlacklistService)
+            ITokenBlacklistService tokenBlacklistService,
+            IHttpContextAccessor httpContextAccessor)
         {
             _configuration = configuration;
             _systemLogger = systemLogger;
             _tokenBlacklistService = tokenBlacklistService;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public async Task<string> GenerateTokenAsync(string operatorId, string role)
         {
             try
             {
+                var ipAddress = _httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "UNKNOWN";
+
                 // 1️ Revoke any existing tokens for this operator (rotation on re-login)
-                await _tokenBlacklistService.RevokeAllTokensByOperatorIdAsync(operatorId);
+                //await _tokenBlacklistService.RevokeAllTokensByOperatorIdAsync(operatorId);
+                await _tokenBlacklistService.RevokeAllTokensByOperatorIdAsync(operatorId, ipAddress);
 
                 // 2️ Build new JWT
                 var jwtSettings = _configuration.GetSection("JwtSettings");
@@ -71,8 +78,8 @@ namespace RouteCardProcess.Services
                 var jwt = new JwtSecurityTokenHandler().WriteToken(token);
 
                 // 3️ Store this new token in ActiveTokens table for tracking
-                await _tokenBlacklistService.RecordActiveTokenAsync(operatorId, jti, expiryUtc);
-
+                //await _tokenBlacklistService.RecordActiveTokenAsync(operatorId, jti, expiryUtc);
+                await _tokenBlacklistService.RecordActiveTokenAsync(operatorId, jti, expiryUtc, ipAddress);
                 return jwt;
             }
             catch (Exception ex)

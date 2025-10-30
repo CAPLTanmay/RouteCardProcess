@@ -6,5 +6,7 @@
         public string Message { get; set; }
         public string? StandardMachiningTime { get; set; }  // hh:mm:ss format
         public string? MachiningTimeDiff { get; set; }      // hh:mm:ss format
+        public string? MachiningStartTime { get; set; }
+        public string? MachiningEndTime { get; set; }
     }
 }

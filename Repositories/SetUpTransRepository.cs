@@ -334,9 +334,15 @@ namespace RouteCardProcess.Repositories
                     new { SetUpID = request.SetUpID });
 
                 string timeDiff = null;
+                string setupStartTimeStr = null;
+                string setupEndTimeStr = null;
+
                 if (setupData != null)
                 {
                     timeDiff = ((TimeSpan)setupData.TotalSetupTime).ToString(@"hh\:mm\:ss");
+                    // Format start/end times to HH:mm:ss
+                    setupStartTimeStr = ((DateTime)setupData.SetupStartTime).ToString("HH:mm:ss");
+                    setupEndTimeStr = ((DateTime)setupData.SetupEndTime).ToString("HH:mm:ss");
                 }
 
                 return new EndSetupResultDto
@@ -344,6 +350,8 @@ namespace RouteCardProcess.Repositories
                     Success = true,
                     Message = _userMessageService.GetMessage(1027),
                     TimeDiff = timeDiff,
+                    SetupStartTime = setupStartTimeStr,
+                    SetupEndTime = setupEndTimeStr,
                     StandardSetupTime = standardSetupTime
                 };
             }

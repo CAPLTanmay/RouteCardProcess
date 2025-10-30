@@ -186,6 +186,8 @@ public class MachiningRepository : IMachiningRepository
                 parameters);
 
             string machiningTimeDiff = null;
+            string machiningStartTimeStr = null;
+            string machiningEndTimeStr = null;
 
             if (machiningData != null && machiningData.MachiningStartTime != null && machiningData.MachiningEndTime != null)
             {
@@ -194,6 +196,10 @@ public class MachiningRepository : IMachiningRepository
 
                 TimeSpan diff = endTime - startTime;
                 machiningTimeDiff = diff.ToString(@"hh\:mm\:ss");
+
+                // Format start and end times in HH:mm:ss
+                machiningStartTimeStr = startTime.ToString("HH:mm:ss");
+                machiningEndTimeStr = endTime.ToString("HH:mm:ss");
             }
 
             return new EndMachiningResultDto
@@ -201,7 +207,9 @@ public class MachiningRepository : IMachiningRepository
                 Success = true,
                 Message = _userMessageService.GetMessage(1027),
                 MachiningTimeDiff = machiningTimeDiff,
-                StandardMachiningTime = standardMachiningTime
+                StandardMachiningTime = standardMachiningTime,
+                MachiningStartTime = machiningStartTimeStr,
+                MachiningEndTime = machiningEndTimeStr
             };
         }
 

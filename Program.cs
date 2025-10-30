@@ -31,6 +31,7 @@ builder.Services.Configure<KblApiConfig>(builder.Configuration.GetSection("KblAp
 builder.Services.Configure<EncryptionSettings>(builder.Configuration.GetSection("EncryptionSettings"));
 builder.Services.AddHttpClient<ISapSyncService, SapSyncService>();
 builder.Services.AddHttpClient();
+builder.Services.AddHttpContextAccessor();
 
 var environment = builder.Environment.EnvironmentName;
 
@@ -137,6 +138,7 @@ builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IKblAuthService, KblAuthService>();
 builder.Services.AddHttpClient<IKblAuthService, KblAuthService>();
 builder.Services.AddSingleton<IUserMessageService, UserMessageService>();
+
 
 // JWT Auth
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");

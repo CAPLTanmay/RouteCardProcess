@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authorization;
 using RouteCardProcess.Interfaces;
 
 public class OperatorValidationMiddleware
@@ -15,6 +16,15 @@ public class OperatorValidationMiddleware
     {
         // resolve logger per request scope
         var systemLogger = context.RequestServices.GetService<ISystemLoggerRepository>();
+
+        // skip for [AllowAnonymous] endpoints
+        var endpoint = context.GetEndpoint();
+        if (endpoint?.Metadata.GetMetadata<IAllowAnonymous>() != null)
+        {
+            await _next(context);
+            return;
+        }
+
 
         try
         {

@@ -39,24 +39,24 @@ namespace RouteCardProcess.Services
         }
 
         // Rotation: revoke all tokens for a given operator
-        public async Task RevokeAllTokensByOperatorIdAsync(string operatorId)
+        public async Task RevokeAllTokensByOperatorIdAsync(string operatorId, string ipAddress)
         {
             using var conn = _factory.CreateConnection();
 
             await conn.ExecuteAsync(
                 "usp_RevokeAllTokensByOperatorId",
-                new { OperatorId = operatorId },
+                new { OperatorId = operatorId ,ipAddress},
                 commandType: CommandType.StoredProcedure);
         }
 
         // Record a new token (for rotation tracking)
-        public async Task RecordActiveTokenAsync(string operatorId, string jti, DateTime expiry)
+        public async Task RecordActiveTokenAsync(string operatorId, string jti, DateTime expiry, string ipAddress)
         {
             using var conn = _factory.CreateConnection();
 
             await conn.ExecuteAsync(
                 "usp_RecordActiveToken",
-                new { OperatorId = operatorId, Jti = jti, Expiry = expiry },
+                new { OperatorId = operatorId, Jti = jti, ExpirationTime = expiry, IpAddress = ipAddress },
                 commandType: CommandType.StoredProcedure);
         }
     }
