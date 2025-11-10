@@ -179,11 +179,8 @@ public class MachiningRepository : IMachiningRepository
         // 4. If successful, get the time difference
         if (rowsAffected > 0)
         {
-            var machiningData = await connection.QueryFirstOrDefaultAsync<dynamic>(
-                @"SELECT MachiningStartTime, MachiningEndTime 
-          FROM Trans_Machining 
-          WHERE MachiningId = @MachiningID",
-                parameters);
+            var machiningData = await connection.QueryFirstOrDefaultAsync<dynamic>( "usp_GetMachiningTimeDetails", parameters,commandType: CommandType.StoredProcedure);
+
 
             string machiningTimeDiff = null;
             string machiningStartTimeStr = null;
@@ -221,7 +218,6 @@ public class MachiningRepository : IMachiningRepository
             MachiningTimeDiff = null
         };
     }
-
 
     public async Task AddQuantitiesAsync(AddQuantityRequest request)
     {

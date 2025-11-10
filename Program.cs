@@ -149,21 +149,30 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     {
         OnMessageReceived = context =>
         {
-            // First, try to read token from cookie
-            if (context.Request.Cookies.ContainsKey("AuthToken"))
+            //  If previous middleware set "SkipJwtAuth", bypass token validation entirely
+            if (context.HttpContext.Items.ContainsKey("SkipJwtAuth"))
             {
-                context.Token = context.Request.Cookies["AuthToken"];
+                return Task.CompletedTask;
             }
-            //  Fallback to Authorization header (Swagger / Postman)
-            else if (context.Request.Headers.ContainsKey("Authorization"))
+
+            //  Cookie support
+            if (context.Request.Cookies.TryGetValue("AuthToken", out var cookieToken))
             {
-                var header = context.Request.Headers["Authorization"].ToString();
-                if (header.StartsWith("Bearer "))
-                    context.Token = header.Substring(7);
+                context.Token = cookieToken;
             }
+
+            //  Header fallback (Swagger/Postman)
+            if (string.IsNullOrEmpty(context.Token) &&
+                context.Request.Headers.TryGetValue("Authorization", out var header) &&
+                header.ToString().StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            {
+                context.Token = header.ToString().Substring(7);
+            }
+
             return Task.CompletedTask;
         }
     };
+
 
     options.TokenValidationParameters = new TokenValidationParameters
     {
@@ -175,7 +184,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         ClockSkew = TimeSpan.Zero,
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(jwtSettings["Key"]))
+            Encoding.UTF8.GetBytes(jwtSettings["Key"])),
+        //RoleClaimType = "UserRole"
     };
 });
 
@@ -274,10 +284,9 @@ app.UseRouting();
 
 // CORS must be between UseRouting and UseAuthorization
 app.UseCors("DefaultCorsPolicy");
-
+app.UseMiddleware<SkipJwtForAnonymousMiddleware>();
 // AuthN: build ClaimsPrincipal from token
 app.UseAuthentication();
-
 // Token-level guards (skip for anonymous)
 app.UseMiddleware<JwtBlacklistMiddleware>();
 app.UseMiddleware<OperatorValidationMiddleware>();

@@ -126,9 +126,11 @@ namespace RouteCardProcess.Repositories
         {
             using var connection = _connectionFactory.CreateConnection();
 
+            var paddedOrderNo = request.ProductionOrderNumber?.PadLeft(12, '0');
+
             var data = (await connection.QueryAsync<ManualDataResponseDto>(
                      "dbo.usp_GetManualData",
-                     new { OrderNumber = request.ProductionOrderNumber, WorkCenter = request.WorkCenter, },
+                     new { OrderNumber = paddedOrderNo, WorkCenter = request.WorkCenter, },
                      commandType: CommandType.StoredProcedure)).ToList();
 
             foreach (var item in data)

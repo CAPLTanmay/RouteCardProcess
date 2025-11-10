@@ -313,9 +313,7 @@ namespace RouteCardProcess.Repositories
                 commandType: CommandType.StoredProcedure);
 
             string status = setupInfo?.SetupStatus;
-            string standardSetupTime = setupInfo?.StandardSetupTime != null
-    ? TimeSpan.Parse(setupInfo.StandardSetupTime.ToString()).ToString(@"hh\:mm\:ss")
-    : null;
+            string standardSetupTime = setupInfo?.StandardSetupTime != null ? TimeSpan.Parse(setupInfo.StandardSetupTime.ToString()).ToString(@"hh\:mm\:ss") : null;
 
 
             if (status == _userMessageService.GetMessage(1075))
@@ -327,12 +325,7 @@ namespace RouteCardProcess.Repositories
 
             if (rowsAffected > 0)
             {
-                var setupData = await connection.QueryFirstOrDefaultAsync<dynamic>(
-                    @"SELECT SetupStartTime, SetupEndTime, TotalSetupTime 
-              FROM Trans_Setup 
-              WHERE SetupId = @SetUpID",
-                    new { SetUpID = request.SetUpID });
-
+                var setupData = await connection.QueryFirstOrDefaultAsync<dynamic>( "usp_GetSetupTimeDetails", new { SetUpID = request.SetUpID }, commandType: CommandType.StoredProcedure);
                 string timeDiff = null;
                 string setupStartTimeStr = null;
                 string setupEndTimeStr = null;

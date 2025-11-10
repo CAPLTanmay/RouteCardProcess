@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using RouteCardProcess.Interfaces;
@@ -11,6 +12,7 @@ namespace RouteCardProcess.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class ManualDataController : ControllerBase
     {
         private readonly IManualDataRepository _manualDataRepository;

@@ -7,7 +7,8 @@ namespace RouteCardProcess.Middleware
         AlphaNumeric,
         AlphaOnly,
         NumericOnly,
-        AlphaNumericWithSymbols
+        AlphaNumericWithSymbols,
+         UnicodeText
     }
 
     [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
@@ -36,6 +37,9 @@ namespace RouteCardProcess.Middleware
                 SafeTextPattern.AlphaOnly => @"^[a-zA-Z\s]+$",
                 SafeTextPattern.NumericOnly => @"^[0-9]+$",
                 SafeTextPattern.AlphaNumericWithSymbols => @"^[a-zA-Z0-9\s\-\.,_@]+$",
+                //SafeTextPattern.UnicodeText => @"^[\p{L}\p{N}\p{Zs}\p{P}]+$",
+                SafeTextPattern.UnicodeText => @"^[\p{IsDevanagari}\p{L}\p{N}\p{Zs}\p{P}]+$",
+
                 _ => @"^[a-zA-Z0-9\s\-\.,]+$"
             };
 

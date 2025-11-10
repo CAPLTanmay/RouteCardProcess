@@ -1,13 +1,11 @@
 ﻿using System.Data;
-using Dapper;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using Dapper;
 using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model.DTOs.RouteCardReport;
 using RouteCardProcess.Model.DTOs.SapValidation;
-using System.Transactions;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace RouteCardProcess.Repositories
 {
@@ -64,8 +62,6 @@ namespace RouteCardProcess.Repositories
 
             return content;
         }
-
-
         public async Task<string> GetRoutingDataAsync(string orderNumber)
         {
             // Construct URL with filtering & JSON format
@@ -79,7 +75,6 @@ namespace RouteCardProcess.Repositories
             // Return raw JSON string as is (don't modify the response)
             return jsonString;
         }
-
         public async Task<string> GetLossDataAsync()
         {
             // URL to get all loss data with JSON format
@@ -93,7 +88,6 @@ namespace RouteCardProcess.Repositories
             // Return raw JSON string as is (don't modify the response)
             return jsonString;
         }
-
         public async Task<string> GetMaintenanceNotificationsAsync()
         {
             string url = $"{_baseUrl}ZMAINT_NOTIFSet?$format=json";

@@ -4,10 +4,10 @@ namespace RouteCardProcess.Model.DTOs.Login
 {
     public class LoginRequest
     {
-        [Required]
+        [Required, StringLength(20)]
         public string OperatorId { get; set; }
 
-        [Required]
+        [Required, StringLength(64)]
         public string Password { get; set; }
     }
 

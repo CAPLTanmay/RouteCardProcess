@@ -1,12 +1,24 @@
-﻿namespace RouteCardProcess.Model.Entities
+﻿using RouteCardProcess.Middleware;
+
+namespace RouteCardProcess.Model.Entities
 {
     public class IdleCodeRequest
     {
+        [SafeText(SafeTextPattern.NumericOnly, 4)]
         public string Plant { get; set; }
+
+        [SafeText(SafeTextPattern.NumericOnly, 4)]
         public string IdleCode { get; set; }
+
+        [SafeText(SafeTextPattern.AlphaNumericWithSymbols, 100)]
         public string IdleCodeDesc { get; set; }
+
+        [SafeText(SafeTextPattern.UnicodeText, 100)] 
         public string IdleCodeDescM { get; set; }
-        public string? FullIdleDescription { get;set; }
+
+        [SafeText(SafeTextPattern.AlphaNumericWithSymbols, 200)]
+        public string? FullIdleDescription { get; set; }
+
         public bool? IsActive { get; set; }
     }
 

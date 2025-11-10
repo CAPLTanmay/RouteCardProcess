@@ -92,7 +92,10 @@ namespace RouteCardProcess.Controllers
                 var token = await _jwtService.GenerateTokenAsync(request.OperatorId,user.OperatorRole);
                 var successMessage = _userMessageService.GetMessage(2001); // Login successful
 
-                return Ok(new { message = successMessage, token, user });
+                return Ok(new { message = successMessage,
+                    //token,
+                    user });
+
             }
             catch (Exception ex)
             {
@@ -102,44 +105,6 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-        //[AllowAnonymous]
-        //[EnableRateLimiting("LoginRateLimit")]
-        //[HttpPost("loginEmployee")]
-        //public async Task<IActionResult> LoginEmployee([FromBody] LoginRequest request)
-        //{
-        //    try
-        //    {
-        //        if (!ModelState.IsValid)
-        //            return BadRequest(ModelState);
-
-        //        var loginResult = await _repo.LoginEmployeeAsync(request.OperatorId, request.Password);
-
-        //        if (!loginResult.IsSuccess)
-        //        {
-        //            return Unauthorized(new
-        //            {
-        //                message = loginResult.FailureReason ?? _userMessageService.GetMessage(1001)
-        //            });
-        //        }
-
-        //        var token = await _jwtService.GenerateTokenAsync(request.OperatorId, loginResult.User.OperatorRole);
-        //        var successMessage = _userMessageService.GetMessage(2001); // Login successful
-
-        //        return Ok(new
-        //        {
-        //            message = successMessage,
-        //            token,
-        //            isTempPassword = loginResult.IsTempPassword,
-        //            user = loginResult.User
-        //        });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        await _systemLogger.LogAsync("LogInController", "LoginEmployee", ex.ToString());
-        //        var errMsg = _userMessageService.GetMessage(5001); // Internal error
-        //        return StatusCode(500, new { message = errMsg });
-        //    }
-        //}
 
         [AllowAnonymous]
         [EnableRateLimiting("LoginRateLimit")]
@@ -178,7 +143,8 @@ namespace RouteCardProcess.Controllers
                 {
                     message = _userMessageService.GetMessage(2001),
                     isTempPassword = loginResult.IsTempPassword,
-                    //token,
+                   token,
+                    expires = DateTime.UtcNow.AddMinutes(30),
                     user = loginResult.User
                 });
             }

@@ -26,6 +26,8 @@ namespace RouteCardProcess.Controllers
         {
             try
             {
+                var userRole = User.Claims.FirstOrDefault(c => c.Type == "role")?.Value;
+
                 var result = await _lossOrderRepository.AddLossOrderAsync(request);
                 return result > 0
                     ? Ok(new { message = _userMessageService.GetMessage(5003) })
@@ -57,7 +59,7 @@ namespace RouteCardProcess.Controllers
                 return StatusCode(500, new { message = _userMessageService.GetMessage(5001), error = ex.Message });
             }
         }
-
+        [Authorize]
         [HttpGet("allLossOrders")]
         public async Task<IActionResult> GetAllLossOrders()
         {
