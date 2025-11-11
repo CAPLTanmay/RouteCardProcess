@@ -190,16 +190,48 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 });
 
 // Rate Limiting Configuration
+//builder.Services.AddRateLimiter(options =>
+//{
+//    options.AddFixedWindowLimiter("LoginRateLimit", opt =>
+//    {
+//        opt.PermitLimit = 5;                    // 5 attempts
+//        opt.Window = TimeSpan.FromMinutes(1);  // every 1 min
+//        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+//        opt.QueueLimit = 0;
+//    });
+//});
+
 builder.Services.AddRateLimiter(options =>
 {
-    options.AddFixedWindowLimiter("LoginRateLimit", opt =>
+    options.AddPolicy("LoginRateLimit", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+
+    options.AddPolicy("GeneralRateLimit", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+
+    // Common rejection message
+    options.OnRejected = async (context, token) =>
     {
-        opt.PermitLimit = 5;                    // 5 attempts
-        opt.Window = TimeSpan.FromMinutes(1);  // every 1 min
-        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        opt.QueueLimit = 0;
-    });
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        await context.HttpContext.Response.WriteAsync(
+            "Too many requests. Please try again later.", token);
+    };
 });
+
 
 builder.Services.AddAuthorization();
 
@@ -243,30 +275,64 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
 var app = builder.Build();
 
 // Security Headers Middleware
+// Security Headers Middleware (Environment-based CSP for VAPT)
 app.Use(async (context, next) =>
 {
+    // Common Security Headers
     context.Response.Headers["X-Content-Type-Options"] = "nosniff";
     context.Response.Headers["X-Frame-Options"] = "DENY";
-    context.Response.Headers["X-XSS-Protection"] = "1; mode=block";
-    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    context.Response.Headers["Referrer-Policy"] = "no-referrer";
     context.Response.Headers["Permissions-Policy"] =
         "geolocation=(), microphone=(), camera=(), payment=(), fullscreen=(self)";
+    context.Response.Headers["Strict-Transport-Security"] =
+        "max-age=31536000; includeSubDomains; preload";
+    context.Response.Headers["Cross-Origin-Embedder-Policy"] = "require-corp";
+    context.Response.Headers["Cross-Origin-Opener-Policy"] = "same-origin";
+    context.Response.Headers["Cross-Origin-Resource-Policy"] = "same-origin";
+    context.Response.Headers["X-Download-Options"] = "noopen";
+    context.Response.Headers["X-Permitted-Cross-Domain-Policies"] = "none";
 
-    //  Balanced CSP: secure + allows Swagger + Angular
-    context.Response.Headers["Content-Security-Policy"] =
-        "default-src 'self'; " +
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " + // needed for Swagger/Angular
-        "style-src 'self' 'unsafe-inline'; " +
-        "img-src 'self' data: blob:; " +
-        "font-src 'self' data:; " +
-        "connect-src 'self' https://* http://localhost:*; " + // allow API calls from Angular dev
-        "frame-ancestors 'none'; " +
-        "base-uri 'self'; " +
-        "form-action 'self'; " +
-        "object-src 'none';";
+    // Auto-switch CSP based on environment
+    string cspPolicy;
+    if (app.Environment.IsDevelopment())
+    {
+        // Development mode: allows Swagger & Angular
+        cspPolicy =
+            "default-src 'self'; " +
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+            "style-src 'self' 'unsafe-inline'; " +
+            "img-src 'self' data: blob:; " +
+            "font-src 'self' data:; " +
+            "connect-src 'self' https://* http://localhost:*; " +
+            "frame-ancestors 'none'; " +
+            "base-uri 'self'; " +
+            "form-action 'self'; " +
+            "object-src 'none';";
+    }
+    else
+    {
+        // Production / UAT / VAPT: Strict Mode
+        cspPolicy =
+            "default-src 'self'; " +
+            "script-src 'self'; " +
+            "style-src 'self'; " +
+            "img-src 'self' data:; " +
+            "font-src 'self'; " +
+            "connect-src 'self'; " +
+            "frame-ancestors 'none'; " +
+            "base-uri 'self'; " +
+            "form-action 'self'; " +
+            "object-src 'none'; " +
+            "manifest-src 'self'; " +
+            "upgrade-insecure-requests; " +
+            "block-all-mixed-content;";
+    }
+
+    context.Response.Headers["Content-Security-Policy"] = cspPolicy;
 
     await next();
 });
+
 
 
 // Global exception wrapper first so it catches everything below
@@ -298,12 +364,15 @@ app.UseAuthorization();
 app.UseRateLimiter();
 
 // Swagger, then endpoints
-app.UseSwagger();
-app.UseSwaggerUI(c =>
+if (app.Environment.IsDevelopment())
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "RouteCardProcess API V1");
-    c.RoutePrefix = "swagger";
-});
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "RouteCardProcess API V1");
+        c.RoutePrefix = "swagger";
+    });
+}
 
 app.MapControllers();
 

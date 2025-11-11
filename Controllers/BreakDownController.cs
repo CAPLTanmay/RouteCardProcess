@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model.DTOs.BreakDownDto;
 using RouteCardProcess.Repositories;
@@ -21,6 +22,7 @@ namespace RouteCardProcess.Controllers
             _userMessageService = userMessageService;
         }
 
+        [EnableRateLimiting("GeneralRateLimit")]
         [HttpPost("start")]
         public async Task<IActionResult> Start([FromBody] BreakDownStartRequest request)
         {
@@ -56,6 +58,7 @@ namespace RouteCardProcess.Controllers
             }
         }
 
+        [EnableRateLimiting("GeneralRateLimit")]
         [HttpPost("end")]
         public async Task<IActionResult> EndBreakdown([FromBody] BreakDownEndRequest request)
         {

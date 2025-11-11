@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using RouteCardProcess.Interfaces;
-using RouteCardProcess.Model.DTOs;
 
 namespace RouteCardProcess.Controllers
 {
