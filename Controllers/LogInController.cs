@@ -139,11 +139,17 @@ namespace RouteCardProcess.Controllers
 
                 Response.Cookies.Append("AuthToken", token, cookieOptions);
 
+                //  Log successful login with environment info
+                var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Unknown";
+                await _systemLogger.LogAsync("LogInController", $"LoginEmployee-Success ({env})",
+                    $"OperatorId: {request.OperatorId}, Role: {loginResult.User.OperatorRole}, Time: {indianTime}");
+
+
                 return Ok(new
                 {
                     message = _userMessageService.GetMessage(2001),
                     isTempPassword = loginResult.IsTempPassword,
-                   token,
+                   //token,
                     expires = DateTime.UtcNow.AddMinutes(30),
                     user = loginResult.User
                 });

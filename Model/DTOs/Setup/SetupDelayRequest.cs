@@ -9,7 +9,6 @@ namespace RouteCardProcess.Model.DTOs.Setup
         public List<ExceptionsRequest> Exceptions { get; set; } 
         public List<IdleTimeRequest> IdleTimes { get; set; }
     }
-
     public class ExceptionsRequest
     {
         public string ExceptionsReasonCode { get; set; }

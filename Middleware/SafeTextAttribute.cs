@@ -16,7 +16,7 @@ namespace RouteCardProcess.Middleware
     {
         private readonly SafeTextPattern _pattern;
         public int MaxLength { get; }
-
+        public bool AllowEmpty { get; set; } = false;
         public SafeTextAttribute(SafeTextPattern pattern = SafeTextPattern.AlphaNumeric, int maxLength = 100)
         {
             _pattern = pattern;

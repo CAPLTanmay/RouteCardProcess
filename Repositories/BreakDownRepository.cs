@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using System.Text;
+using Azure.Core;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using RouteCardProcess.Interfaces;
@@ -138,8 +139,6 @@ namespace RouteCardProcess.Repositories
                     await _systemLogger.LogAsync("BreakDownRepository", "Mail_SendError", mailEx.ToString());
                 }
 
-
-
                 return new BreakDownResponse
                 {
                     IsDbSuccess = isDbSuccess,
@@ -240,19 +239,40 @@ namespace RouteCardProcess.Repositories
                 // Step 3: Mail
                 try
                 {
+                    // Step 3A: Get WorkCenterNo and BreakdownCode using SP
+                    var breakdownInfo = await connection.QueryFirstOrDefaultAsync<(string WorkCenterNo, string BreakdownCode)>(
+                        "usp_GetBreakdownDetailsByNotifNo",
+                        new { notifNum },
+                        commandType: CommandType.StoredProcedure);
+
                     var mailTemplate = await connection.QueryFirstOrDefaultAsync<dynamic>(
                         "usp_GetOnlineBreakdownMailTemplate",
-                        new { Group = "GP_BR2" },
+                        new { Group = "GP_BR3" },
                         commandType: CommandType.StoredProcedure);
 
                     if (mailTemplate != null)
                     {
-                        string subject = (mailTemplate.MailSubject ?? "").Replace("{notifNum}", notifNum);
+                        string workCenterNo = breakdownInfo.WorkCenterNo ?? "Unknown";
+                        string reasonText = breakdownInfo.BreakdownCode ?? "Unknown Reason";
+
+                        string subject = (mailTemplate.MailSubject ?? "")
+                            .Replace("{workCenterNo}", workCenterNo);
+
                         string body = (mailTemplate.MailBody ?? "")
-                            .Replace("{notifNum}", notifNum)
+                            .Replace("{workCenterNo}", workCenterNo)
+                            .Replace("{reasonText}", reasonText)
                             .Replace("{Time}", DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss"));
 
-                        isMailSent = await _emailService.SendEmailAsync(subject, body, mailTemplate.MailTo, mailTemplate.MailCC, mailTemplate.MailBCC, mailTemplate.MailFrom);
+                        await _emailService.SendEmailAsync(
+                            subject,
+                            body,
+                            mailTemplate.MailTo,
+                            mailTemplate.MailCC,
+                            mailTemplate.MailBCC,
+                            mailTemplate.MailFrom
+                        );
+
+                        isMailSent = true;
                     }
                 }
                 catch (Exception mailEx)
