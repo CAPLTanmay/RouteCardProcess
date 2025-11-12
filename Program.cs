@@ -265,76 +265,56 @@ var app = builder.Build();
 
 app.Use(async (context, next) =>
 {
-    // --- Common security headers ---
     context.Response.Headers["X-Content-Type-Options"] = "nosniff";
-    context.Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
-    context.Response.Headers["Referrer-Policy"] = "no-referrer";
-    context.Response.Headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=(), payment=(), fullscreen=(self)";
-    context.Response.Headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload";
+    context.Response.Headers["X-Frame-Options"] = "DENY";
     context.Response.Headers["X-XSS-Protection"] = "1; mode=block";
-    context.Response.Headers["Cross-Origin-Opener-Policy"] = "same-origin";
-    context.Response.Headers["Cross-Origin-Resource-Policy"] = "same-origin";
-    context.Response.Headers["X-Permitted-Cross-Domain-Policies"] = "none";
+    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    context.Response.Headers["Permissions-Policy"] =
+        "geolocation=(), microphone=(), camera=(), payment=(), fullscreen=(self)";
 
-    var path = context.Request.Path.Value ?? string.Empty;
-    string cspPolicy;
-
-    // Angular UI & static resources
-    if (path.StartsWith("/RoutCardUAT/Web", StringComparison.OrdinalIgnoreCase)
-    || path.StartsWith("/RoutCardUAT", StringComparison.OrdinalIgnoreCase)
-    || path == "/"
-    || path.EndsWith(".html", StringComparison.OrdinalIgnoreCase)
-    || path.EndsWith(".js", StringComparison.OrdinalIgnoreCase)
-    || path.EndsWith(".css", StringComparison.OrdinalIgnoreCase)
-    || path.EndsWith(".woff2", StringComparison.OrdinalIgnoreCase)
-    || path.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase))
-    {
-        cspPolicy =
-            "default-src 'self'; " +
-            "script-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; " +
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; " +
-            "img-src 'self' data: blob:; " +
-            "font-src 'self' https://fonts.gstatic.com data:; " +
-            "connect-src 'self' https://uatintranet.kirloskarpumps.com; " +
-            "frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; manifest-src 'self'; " +
-            "upgrade-insecure-requests; block-all-mixed-content;";
-    }
-    else
-    {
-        // API endpoints – strict policy
-        cspPolicy =
-            "default-src 'self'; " +
-            "script-src 'self'; style-src 'self'; " +
-            "img-src 'self' data:; font-src 'self'; connect-src 'self'; " +
-            "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; manifest-src 'self'; " +
-            "upgrade-insecure-requests; block-all-mixed-content;";
-    }
-
-    context.Response.Headers["Content-Security-Policy"] = cspPolicy;
+    //  Balanced CSP: secure + allows Swagger + Angular
+    context.Response.Headers["Content-Security-Policy"] =
+        "default-src 'self'; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " + // needed for Swagger/Angular
+        "style-src 'self' 'unsafe-inline'; " +
+        "img-src 'self' data: blob:; " +
+        "font-src 'self' data:; " +
+        "connect-src 'self' https://* http://localhost:*; " + // allow API calls from Angular dev
+        "frame-ancestors 'none'; " +
+        "base-uri 'self'; " +
+        "form-action 'self'; " +
+        "object-src 'none';";
 
     await next();
 });
 
-// --- Static Files with Security Headers (Fix for IIS bypass) ---
-//app.UseStaticFiles(new StaticFileOptions
+//app.Use(async (context, next) =>
 //{
-//    OnPrepareResponse = ctx =>
+//    // --- Common security headers ---
+//    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+//    context.Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
+//    context.Response.Headers["Referrer-Policy"] = "no-referrer";
+//    context.Response.Headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=(), payment=(), fullscreen=(self)";
+//    context.Response.Headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload";
+//    context.Response.Headers["X-XSS-Protection"] = "1; mode=block";
+//    context.Response.Headers["Cross-Origin-Opener-Policy"] = "same-origin";
+//    context.Response.Headers["Cross-Origin-Resource-Policy"] = "same-origin";
+//    context.Response.Headers["X-Permitted-Cross-Domain-Policies"] = "none";
+
+//    var path = context.Request.Path.Value ?? string.Empty;
+//    string cspPolicy;
+
+//    // Angular UI & static resources
+//    if (path.StartsWith("/RoutCardUAT/Web", StringComparison.OrdinalIgnoreCase)
+//    || path.StartsWith("/RoutCardUAT", StringComparison.OrdinalIgnoreCase)
+//    || path == "/"
+//    || path.EndsWith(".html", StringComparison.OrdinalIgnoreCase)
+//    || path.EndsWith(".js", StringComparison.OrdinalIgnoreCase)
+//    || path.EndsWith(".css", StringComparison.OrdinalIgnoreCase)
+//    || path.EndsWith(".woff2", StringComparison.OrdinalIgnoreCase)
+//    || path.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase))
 //    {
-//        var headers = ctx.Context.Response.Headers;
-
-//        // Common Security Headers
-//        headers["X-Content-Type-Options"] = "nosniff";
-//        headers["X-Frame-Options"] = "SAMEORIGIN";
-//        headers["Referrer-Policy"] = "no-referrer";
-//        headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=(), payment=(), fullscreen=(self)";
-//        headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload";
-//        headers["X-XSS-Protection"] = "1; mode=block";
-//        headers["Cross-Origin-Opener-Policy"] = "same-origin";
-//        headers["Cross-Origin-Resource-Policy"] = "same-origin";
-//        headers["X-Permitted-Cross-Domain-Policies"] = "none";
-
-//        // Full CSP Policy (covers Angular static files)
-//        headers["Content-Security-Policy"] =
+//        cspPolicy =
 //            "default-src 'self'; " +
 //            "script-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; " +
 //            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; " +
@@ -344,10 +324,23 @@ app.Use(async (context, next) =>
 //            "frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; manifest-src 'self'; " +
 //            "upgrade-insecure-requests; block-all-mixed-content;";
 //    }
+//    else
+//    {
+//        // API endpoints – strict policy
+//        cspPolicy =
+//            "default-src 'self'; " +
+//            "script-src 'self'; style-src 'self'; " +
+//            "img-src 'self' data:; font-src 'self'; connect-src 'self'; " +
+//            "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; manifest-src 'self'; " +
+//            "upgrade-insecure-requests; block-all-mixed-content;";
+//    }
+
+//    context.Response.Headers["Content-Security-Policy"] = cspPolicy;
+
+//    await next();
 //});
 
-
-app.UseStaticFiles();
+//app.UseStaticFiles();
 
 
 //  Block known debug endpoints (VAPT hardening)
