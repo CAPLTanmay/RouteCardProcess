@@ -28,10 +28,10 @@ namespace RouteCardProcess.Model.DTOs.Machining
         [SafeText(SafeTextPattern.AlphaNumeric, 10)]
         public string ExceptionsReasonCode { get; set; }
 
-        [SafeText(SafeTextPattern.AlphaNumeric, 10, AllowEmpty = true)]
+        //[SafeText(SafeTextPattern.AlphaNumeric, 10, AllowEmpty = true)]
         public string? Std_exceptions_ReasonCode { get; set; }
 
-        [SafeText(SafeTextPattern.AlphaNumericWithSymbols, 250,AllowEmpty = true)]
+        //[SafeText(SafeTextPattern.AlphaNumericWithSymbols, 250,AllowEmpty = true)]
         public string? Std_exceptions_Remark { get; set; }
 
         public TimeSpan? ExceptionsTime { get; set; } // stored as hh:mm:ss

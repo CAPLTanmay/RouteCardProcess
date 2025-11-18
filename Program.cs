@@ -272,18 +272,22 @@ app.Use(async (context, next) =>
     context.Response.Headers["Permissions-Policy"] =
         "geolocation=(), microphone=(), camera=(), payment=(), fullscreen=(self)";
 
-    //  Balanced CSP: secure + allows Swagger + Angular
-    context.Response.Headers["Content-Security-Policy"] =
-        "default-src 'self'; " +
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " + // needed for Swagger/Angular
-        "style-src 'self' 'unsafe-inline'; " +
-        "img-src 'self' data: blob:; " +
-        "font-src 'self' data:; " +
-        "connect-src 'self' https://* http://localhost:*; " + // allow API calls from Angular dev
-        "frame-ancestors 'none'; " +
-        "base-uri 'self'; " +
-        "form-action 'self'; " +
-        "object-src 'none';";
+    if (app.Environment.IsDevelopment())
+    {
+        context.Response.Headers["Content-Security-Policy"] =
+            "default-src 'self'; " +
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+            "style-src 'self' 'unsafe-inline'; " +
+            "img-src 'self' data: blob:; " +
+            "font-src 'self' data:; " +
+            "connect-src 'self' https://* http://localhost:*;";
+    }
+    else
+    {
+        context.Response.Headers["Content-Security-Policy"] =
+            "default-src 'self'; style-src 'self'; img-src 'self';";
+    }
+
 
     await next();
 });
