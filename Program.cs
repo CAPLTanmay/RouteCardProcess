@@ -32,6 +32,7 @@ builder.Services.Configure<EncryptionSettings>(builder.Configuration.GetSection(
 builder.Services.AddHttpClient<ISapSyncService, SapSyncService>();
 builder.Services.AddHttpClient();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<LoginAttemptService>();
 
 var environment = builder.Environment.EnvironmentName;
 
@@ -189,38 +190,55 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     };
 });
 
+builder.Services.Configure<RateLimiterSettings>(
+    builder.Configuration.GetSection("RateLimiter"));
+
+var rateLimiterSettings = builder.Configuration
+    .GetSection("RateLimiter")
+    .Get<RateLimiterSettings>();
+
 
 builder.Services.AddRateLimiter(options =>
 {
+    var rl = rateLimiterSettings;
+
+    // Login Rate Limit
     options.AddPolicy("LoginRateLimit", context =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             factory: _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 5,
-                Window = TimeSpan.FromMinutes(1),
-                QueueLimit = 0
-            }));
+                PermitLimit = rl.LoginRateLimit.PermitLimit,
+                Window = TimeSpan.FromMinutes(rl.LoginRateLimit.WindowInMinutes),
+                QueueLimit = rl.LoginRateLimit.QueueLimit
+            })
+    );
 
+    // General Rate Limit
     options.AddPolicy("GeneralRateLimit", context =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             factory: _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 5,
-                Window = TimeSpan.FromMinutes(1),
-                QueueLimit = 0
-            }));
+                PermitLimit = rl.GeneralRateLimit.PermitLimit,
+                Window = TimeSpan.FromMinutes(rl.GeneralRateLimit.WindowInMinutes),
+                QueueLimit = rl.GeneralRateLimit.QueueLimit
+            })
+    );
 
-    // Common rejection message
+    // Common rejection
     options.OnRejected = async (context, token) =>
     {
-        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
-        await context.HttpContext.Response.WriteAsync(
-            "Too many requests. Please try again later.", token);
+        context.HttpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        context.HttpContext.Response.ContentType = "application/json";
+
+        var json = "{\"message\":\"Too many requests. Please slow down\"}";
+        await context.HttpContext.Response.WriteAsync(json, token);
     };
 });
 
+builder.Services.Configure<LoginAttemptSettings>(
+    builder.Configuration.GetSection("LoginAttemptSettings"));
 
 builder.Services.AddAuthorization();
 
@@ -291,60 +309,6 @@ app.Use(async (context, next) =>
 
     await next();
 });
-
-//app.Use(async (context, next) =>
-//{
-//    // --- Common security headers ---
-//    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
-//    context.Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
-//    context.Response.Headers["Referrer-Policy"] = "no-referrer";
-//    context.Response.Headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=(), payment=(), fullscreen=(self)";
-//    context.Response.Headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload";
-//    context.Response.Headers["X-XSS-Protection"] = "1; mode=block";
-//    context.Response.Headers["Cross-Origin-Opener-Policy"] = "same-origin";
-//    context.Response.Headers["Cross-Origin-Resource-Policy"] = "same-origin";
-//    context.Response.Headers["X-Permitted-Cross-Domain-Policies"] = "none";
-
-//    var path = context.Request.Path.Value ?? string.Empty;
-//    string cspPolicy;
-
-//    // Angular UI & static resources
-//    if (path.StartsWith("/RoutCardUAT/Web", StringComparison.OrdinalIgnoreCase)
-//    || path.StartsWith("/RoutCardUAT", StringComparison.OrdinalIgnoreCase)
-//    || path == "/"
-//    || path.EndsWith(".html", StringComparison.OrdinalIgnoreCase)
-//    || path.EndsWith(".js", StringComparison.OrdinalIgnoreCase)
-//    || path.EndsWith(".css", StringComparison.OrdinalIgnoreCase)
-//    || path.EndsWith(".woff2", StringComparison.OrdinalIgnoreCase)
-//    || path.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase))
-//    {
-//        cspPolicy =
-//            "default-src 'self'; " +
-//            "script-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; " +
-//            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; " +
-//            "img-src 'self' data: blob:; " +
-//            "font-src 'self' https://fonts.gstatic.com data:; " +
-//            "connect-src 'self' https://uatintranet.kirloskarpumps.com; " +
-//            "frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; manifest-src 'self'; " +
-//            "upgrade-insecure-requests; block-all-mixed-content;";
-//    }
-//    else
-//    {
-//        // API endpoints – strict policy
-//        cspPolicy =
-//            "default-src 'self'; " +
-//            "script-src 'self'; style-src 'self'; " +
-//            "img-src 'self' data:; font-src 'self'; connect-src 'self'; " +
-//            "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; manifest-src 'self'; " +
-//            "upgrade-insecure-requests; block-all-mixed-content;";
-//    }
-
-//    context.Response.Headers["Content-Security-Policy"] = cspPolicy;
-
-//    await next();
-//});
-
-//app.UseStaticFiles();
 
 
 //  Block known debug endpoints (VAPT hardening)

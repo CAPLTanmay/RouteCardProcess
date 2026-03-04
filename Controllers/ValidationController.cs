@@ -274,42 +274,74 @@ namespace RouteCardProcess.Controllers
             }
         }
 
+        //[HttpPost("updateWorkCenter")]
+        //public async Task<IActionResult> UpdateWorkCenter([FromBody] WorkCenterUpdateRequest request)
+        //{
+        //    try
+        //    {
+        //        var response = await _repo.UpdateWorkCenterAsync(request);
+
+        //        return Ok(new
+        //        {
+        //            success = true,
+        //            message = _userMessageService.GetMessage(1069),
+        //            data = JsonSerializer.Deserialize<object>(response)
+        //        });
+        //    }
+        //    catch (HttpRequestException ex) when (ex.Message.Contains("400"))
+        //    {
+        //        await _systemLogger.LogAsync("ValidationController", "updateWorkCenter", ex.ToString());
+        //        return BadRequest(new
+        //        {
+        //            success = false,
+        //            message = _userMessageService.GetMessage(1107),
+        //            details = ex.Message
+        //        });
+        //    }
+        //    catch (HttpRequestException ex)
+        //    {
+        //        await _systemLogger.LogAsync("ValidationController", "updateWorkCenter", ex.ToString());
+        //        return StatusCode(502, new { success = false, message = _userMessageService.GetMessage(5002), details = ex.Message });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        await _systemLogger.LogAsync("ValidationController", "updateWorkCenter", ex.ToString());
+        //        return StatusCode(500, new { success = false, message = _userMessageService.GetMessage(5001), details = ex.Message });
+        //    }
+        //}
         [HttpPost("updateWorkCenter")]
         public async Task<IActionResult> UpdateWorkCenter([FromBody] WorkCenterUpdateRequest request)
         {
             try
             {
-                var response = await _repo.UpdateWorkCenterAsync(request);
+                var result = await _repo.UpdateWorkCenterAsync(request);
+
+                if (!result)
+                {
+                    return Ok(new
+                    {
+                        success = false,
+                        message = "Record not found"
+                    });
+                }
 
                 return Ok(new
                 {
                     success = true,
-                    message = _userMessageService.GetMessage(1069),
-                    data = JsonSerializer.Deserialize<object>(response)
+                    message = _userMessageService.GetMessage(1069)
                 });
-            }
-            catch (HttpRequestException ex) when (ex.Message.Contains("400"))
-            {
-                await _systemLogger.LogAsync("ValidationController", "updateWorkCenter", ex.ToString());
-                return BadRequest(new
-                {
-                    success = false,
-                    message = _userMessageService.GetMessage(1107),
-                    details = ex.Message
-                });
-            }
-            catch (HttpRequestException ex)
-            {
-                await _systemLogger.LogAsync("ValidationController", "updateWorkCenter", ex.ToString());
-                return StatusCode(502, new { success = false, message = _userMessageService.GetMessage(5002), details = ex.Message });
             }
             catch (Exception ex)
             {
                 await _systemLogger.LogAsync("ValidationController", "updateWorkCenter", ex.ToString());
-                return StatusCode(500, new { success = false, message = _userMessageService.GetMessage(5001), details = ex.Message });
+
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = _userMessageService.GetMessage(5001)
+                });
             }
         }
-
         [HttpPost("confirmProductionOrder")]
         public async Task<IActionResult> ConfirmProductionOrder([FromBody] CombinedSAPConfirmationRequest request)
         {

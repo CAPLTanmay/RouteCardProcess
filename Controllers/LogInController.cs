@@ -20,15 +20,16 @@ namespace RouteCardProcess.Controllers
         private readonly ISystemLoggerRepository _systemLogger;
         private readonly IUserMessageService _userMessageService;
         private readonly ITokenBlacklistService _tokenBlacklistService;
+        private readonly LoginAttemptService _loginAttemptService;
 
-
-        public LogInController(ILogInRepository repo, IJwtTokenService jwtService, ISystemLoggerRepository systemLogger, IUserMessageService userMessageService, ITokenBlacklistService tokenBlacklistService)
+        public LogInController(ILogInRepository repo, IJwtTokenService jwtService, ISystemLoggerRepository systemLogger, IUserMessageService userMessageService, ITokenBlacklistService tokenBlacklistService, LoginAttemptService loginAttemptService)
         {
             _repo = repo;
             _jwtService = jwtService;
             _systemLogger = systemLogger;
             _userMessageService = userMessageService;
             _tokenBlacklistService = tokenBlacklistService;
+            _loginAttemptService = loginAttemptService;
         }
 
         [HttpGet("GetAllUsers")]
@@ -93,7 +94,7 @@ namespace RouteCardProcess.Controllers
                 var successMessage = _userMessageService.GetMessage(2001); // Login successful
 
                 return Ok(new { message = successMessage,
-                    //token,
+                    token,
                     user });
 
             }
@@ -105,7 +106,6 @@ namespace RouteCardProcess.Controllers
             }
         }
 
-
         [AllowAnonymous]
         [EnableRateLimiting("LoginRateLimit")]
         [HttpPost("validateEmployee")]
@@ -116,40 +116,69 @@ namespace RouteCardProcess.Controllers
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
+                // 1. Create lockout key (Per Operator)
+                string key = request.OperatorId;
+
+                // 2. Check lockout
+                var lockStatus = _loginAttemptService.CheckAttempt(key);
+                if (lockStatus.IsLocked)
+                {
+                    int minutes = lockStatus.RemainingLockout?.Minutes ?? 0;
+
+                    return Unauthorized(new
+                    {
+                        message = $"User locked due to multiple failed attempts. Try after {minutes} minutes"
+                    });
+                }
+
+                // 3. Validate login
                 var loginResult = await _repo.LoginEmployeeAsync(request.OperatorId, request.Password);
 
                 if (!loginResult.IsSuccess)
-                    return Unauthorized(new { message = _userMessageService.GetMessage(1001) });
+                {
+                    // Register failed attempt
+                    _loginAttemptService.RegisterFailedAttempt(key);
 
+                    // Wrong password message
+                    return Unauthorized(new
+                    {
+                        message = _userMessageService.GetMessage(1001) // "Invalid operator ID or password"
+                    });
+                }
+
+                // 4. Success  Reset attempts
+                _loginAttemptService.ResetAttempts(key);
+
+                // Generate JWT
                 var token = await _jwtService.GenerateTokenAsync(request.OperatorId, loginResult.User.OperatorRole);
 
-                //  Convert to Indian Time (IST) for cookie expiration 
+                // Generate IST timestamp
                 TimeZoneInfo indianZone = TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
                 DateTime indianTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, indianZone);
 
+                // Cookie settings
                 var cookieOptions = new CookieOptions
                 {
                     HttpOnly = true,
-                    Secure = true,               // Only send over HTTPS
+                    Secure = true,
                     SameSite = SameSiteMode.None,
-                    //Expires = indianTime.AddMinutes(30),
                     Expires = DateTime.UtcNow.AddMinutes(30),
                     Path = "/"
                 };
 
                 Response.Cookies.Append("AuthToken", token, cookieOptions);
 
-                //  Log successful login with environment info
+                // Log success
                 var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Unknown";
-                await _systemLogger.LogAsync("LogInController", $"LoginEmployee-Success ({env})",
+                await _systemLogger.LogAsync(
+                    "LogInController",
+                    $"LoginEmployee-Success ({env})",
                     $"OperatorId: {request.OperatorId}, Role: {loginResult.User.OperatorRole}, Time: {indianTime}");
-
 
                 return Ok(new
                 {
                     message = _userMessageService.GetMessage(2001),
                     isTempPassword = loginResult.IsTempPassword,
-                   //token,
                     expires = DateTime.UtcNow.AddMinutes(30),
                     user = loginResult.User
                 });
@@ -209,6 +238,5 @@ namespace RouteCardProcess.Controllers
                 return StatusCode(500, new { Success = false, Message = errorMessage });
             }
         }
-
     }
 }

@@ -1,8 +1,10 @@
 ﻿using System.Data;
 using System.Net.Http.Headers;
+using System.Net.NetworkInformation;
 using System.Text;
 using System.Text.Json;
 using Dapper;
+using Microsoft.Data.SqlClient;
 using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model.DTOs.RouteCardReport;
 using RouteCardProcess.Model.DTOs.SapValidation;
@@ -126,28 +128,47 @@ namespace RouteCardProcess.Repositories
 
 
         // Update Work Center
-        public async Task<string> UpdateWorkCenterAsync(WorkCenterUpdateRequest request)
+        //public async Task<string> UpdateWorkCenterAsync(WorkCenterUpdateRequest request)
+        //{
+        //    string fetchUrl = $"{_baseUrl}ZWC_UPDATESet";
+        //    var (csrfToken, cookie) = await FetchCsrfTokenAsync(fetchUrl);
+
+        //    var postRequest = new HttpRequestMessage(HttpMethod.Post, fetchUrl);
+        //    postRequest.Headers.Add("X-CSRF-Token", csrfToken);
+
+        //    if (!string.IsNullOrEmpty(cookie))
+        //        postRequest.Headers.Add("Cookie", cookie);
+
+        //    postRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+        //    var json = JsonSerializer.Serialize(request);
+        //    postRequest.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        //    var response = await _httpClient.SendAsync(postRequest);
+        //    response.EnsureSuccessStatusCode();
+
+        //    return await response.Content.ReadAsStringAsync();
+        //}
+
+
+        public async Task<bool> UpdateWorkCenterAsync(WorkCenterUpdateRequest request)
         {
-            string fetchUrl = $"{_baseUrl}ZWC_UPDATESet";
-            var (csrfToken, cookie) = await FetchCsrfTokenAsync(fetchUrl);
+            using var connection = _connectionFactory.CreateConnection();
+            await connection.OpenAsync();
 
-            var postRequest = new HttpRequestMessage(HttpMethod.Post, fetchUrl);
-            postRequest.Headers.Add("X-CSRF-Token", csrfToken);
+            var parameters = new DynamicParameters();
+            parameters.Add("@OrderNumber", request.ORDER_NUMBER);
+            parameters.Add("@OperationNo", request.OPERATION);
+            parameters.Add("@OldWorkCenter", request.OLD_WORKCENTER);
+            parameters.Add("@NewWorkCenter", request.WORK_CENTER);
 
-            if (!string.IsNullOrEmpty(cookie))
-                postRequest.Headers.Add("Cookie", cookie);
+            var result = await connection.ExecuteAsync(
+                "usp_UpdateWorkCenterSAP",
+                parameters,
+                commandType: CommandType.StoredProcedure);
 
-            postRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-            var json = JsonSerializer.Serialize(request);
-            postRequest.Content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            var response = await _httpClient.SendAsync(postRequest);
-            response.EnsureSuccessStatusCode();
-
-            return await response.Content.ReadAsStringAsync();
+            return result > 0;
         }
-
 
         // Confirm Production Order
         public async Task<string> ConfirmProductionOrderAsync(CombinedSAPConfirmationRequest request)
