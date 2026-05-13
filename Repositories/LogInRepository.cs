@@ -276,7 +276,7 @@ namespace RouteCardProcess.Repositories
                         };
 
                         var kblAuthResponse = await _kblService.AuthenticateLoginAsync(kblLogin);
-                        if (kblAuthResponse == "success")
+                        if (kblAuthResponse == "Success")
                         {
                             var token = await _kblService.GetTokenAsync();
                             var empInfoResponse = await _kblService.GetEmployeeInfoAsync(token, operatorId);

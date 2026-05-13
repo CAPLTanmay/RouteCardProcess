@@ -139,6 +139,7 @@ builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IKblAuthService, KblAuthService>();
 builder.Services.AddHttpClient<IKblAuthService, KblAuthService>();
 builder.Services.AddSingleton<IUserMessageService, UserMessageService>();
+builder.Services.AddHostedService<ContractEmployeeAutoInactivationHostedService>();
 
 
 // JWT Auth
@@ -242,7 +243,7 @@ builder.Services.Configure<LoginAttemptSettings>(
 
 builder.Services.AddAuthorization();
 
-//  Configure strong TLS — works on Linux, safely skipped on Windows
+//  Configure strong TLS â€” works on Linux, safely skipped on Windows
 builder.WebHost.ConfigureKestrel(serverOptions =>
 {
     serverOptions.ConfigureHttpsDefaults(httpsOptions =>
@@ -251,7 +252,7 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
             System.Security.Authentication.SslProtocols.Tls12 |
             System.Security.Authentication.SslProtocols.Tls13;
 
-        // CipherSuitesPolicy is unsupported on Windows Schannel — guard with OS check
+        // CipherSuitesPolicy is unsupported on Windows Schannel â€” guard with OS check
         if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
         {
             try
@@ -269,7 +270,7 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
             }
             catch (PlatformNotSupportedException)
             {
-                Console.WriteLine("CipherSuitesPolicy not supported on this OS — using system defaults.");
+                Console.WriteLine("CipherSuitesPolicy not supported on this OS â€” using system defaults.");
             }
         }
         else
@@ -303,7 +304,10 @@ app.Use(async (context, next) =>
     else
     {
         context.Response.Headers["Content-Security-Policy"] =
-            "default-src 'self'; style-src 'self'; img-src 'self';";
+     "default-src 'self'; " +
+     "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+     "style-src 'self' 'unsafe-inline'; " +
+     "img-src 'self' data:;";
     }
 
 
@@ -359,15 +363,13 @@ app.UseAuthorization();
 app.UseRateLimiter();
 
 // Swagger, then endpoints
-if (app.Environment.IsDevelopment())
+app.UseSwagger();
+
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "RouteCardProcess API V1");
-        c.RoutePrefix = "swagger";
-    });
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "RouteCardProcess API V1");
+    c.RoutePrefix = "swagger";
+});
 
 app.MapControllers();
 

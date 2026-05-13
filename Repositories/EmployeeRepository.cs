@@ -15,15 +15,50 @@ namespace RouteCardProcess.Repositories
         private readonly IUserMessageService _userMessageService;
         private readonly IPasswordSecurityService _passwordService;
         private readonly ISystemLoggerRepository _systemLogger;
-
-        public EmployeeRepository(SqlConnectionFactory connectionFactory, IUserMessageService userMessageService,IPasswordSecurityService passwordSecurityService, ISystemLoggerRepository systemLogger)
+        private readonly IConfiguration _configuration;
+        public EmployeeRepository(SqlConnectionFactory connectionFactory, IUserMessageService userMessageService,IPasswordSecurityService passwordSecurityService, ISystemLoggerRepository systemLogger, IConfiguration configuration)
         {
             _connectionFactory = connectionFactory;
             _userMessageService = userMessageService;
             _systemLogger = systemLogger;
             _passwordService = passwordSecurityService;
+            _configuration = configuration;
         }
         private SqlConnection CreateConnection() => _connectionFactory.CreateConnection();
+
+        public async Task<int> InactivateExpiredContractEmployeesAsync(DateTime? asOfDate = null)
+        {
+            using var connection = CreateConnection();
+            await connection.OpenAsync();
+
+            try
+            {
+                var effectiveAsOfDate = (asOfDate ?? DateTime.Today).Date;
+
+                const string sql = @"
+                UPDATE dbo.MSTEmployee
+                SET IsActive = 0,
+                    UpdatedOn = @Now
+                WHERE IsContractEmployee = 1
+                  AND IsActive = 1
+                  AND (IsDeleted = 0 OR IsDeleted IS NULL)
+                  AND EmployeeEndDate IS NOT NULL
+                  AND CAST(EmployeeEndDate AS date) < @AsOfDate;
+                ";
+
+                return await connection.ExecuteAsync(sql, new
+                {
+                    AsOfDate = effectiveAsOfDate,
+                    Now = DateTime.Now
+                });
+            }
+            catch (Exception ex)
+            {
+                await _systemLogger.LogAsync("EmployeeRepository", "InactivateExpiredContractEmployeesAsync", ex.ToString());
+                return 0;
+            }
+        }
+
         public async Task<string> AddEmployeeAsync(EmployeeRequest request)
         {
             using var connection = CreateConnection();
@@ -32,7 +67,9 @@ namespace RouteCardProcess.Repositories
 
             try
             {
-                string plainPassword = request.EmployeePassword ?? string.Empty;
+                //string plainPassword = request.EmployeePassword ?? string.Empty;
+
+                string plainPassword= _configuration["ContractEmployeeSettings:ContractEmployeeDefaultPassword"];
 
                 string encryptedPassword = request.IsContractEmployee
                     ? await _passwordService.EncryptPassword(plainPassword)
@@ -53,6 +90,7 @@ namespace RouteCardProcess.Repositories
                 parameters.Add("CreatedBy", request.CreatedBy);
                 parameters.Add("CreatedOn", DateTime.Now);
                 parameters.Add("Result", dbType: DbType.String, size: 50, direction: ParameterDirection.Output);
+                parameters.Add("Prefix", _configuration["ContractEmployeeSettings:ContractEmpPrefix"]);
 
                 await connection.ExecuteAsync("usp_AddEmployee", parameters, transaction, commandType: CommandType.StoredProcedure);
                 string result = parameters.Get<string>("Result");

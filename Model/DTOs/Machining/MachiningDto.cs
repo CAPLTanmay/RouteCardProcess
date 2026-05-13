@@ -24,7 +24,7 @@ namespace RouteCardProcess.Model.DTOs.Machining
         public string? OperationNo { get; set; }
 
         [Required(ErrorMessage = "OperatorId is required.")]
-        [SafeText(SafeTextPattern.NumericOnly, 10)]
+        [SafeText(SafeTextPattern.AlphaNumeric, 10)]
         public string? OperatorId { get; set; }
 
         [Required(ErrorMessage = "StandardMachiningTime is required.")]

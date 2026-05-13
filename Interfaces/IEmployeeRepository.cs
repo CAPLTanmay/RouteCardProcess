@@ -11,5 +11,6 @@ namespace RouteCardProcess.Interfaces
         Task<EmployeeResponse?> GetEmployeeByIdAsync(GetEmployeeRequest request);
         Task<string> SoftDeleteEmployeeAsync(int employeeId, int updatedBy);
         Task<bool> ResetTempPasswordAsync(ResetPasswordDto request);
+        Task<int> InactivateExpiredContractEmployeesAsync(DateTime? asOfDate = null);
     }
 }

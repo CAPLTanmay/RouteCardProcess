@@ -1,11 +1,8 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using RouteCardProcess.Interfaces;
 using RouteCardProcess.Model.DTOs.Employee;
 using RouteCardProcess.Model.DTOs.RBACEmployee;
 using RouteCardProcess.Repositories;
-using System;
-using System.Threading.Tasks;
 
 namespace RouteCardProcess.Controllers
 {
@@ -17,12 +14,13 @@ namespace RouteCardProcess.Controllers
         private readonly IEmployeeRepository _employeeRepository;
         private readonly ISystemLoggerRepository _systemLogger;
         private readonly IUserMessageService _userMessageService;
-
-        public RBACEmployeeController(IEmployeeRepository employeeRepository, ISystemLoggerRepository systemLogger, IUserMessageService userMessageService)
+        private readonly IConfiguration _configuration;
+        public RBACEmployeeController(IEmployeeRepository employeeRepository, ISystemLoggerRepository systemLogger, IUserMessageService userMessageService, IConfiguration configuration)
         {
             _employeeRepository = employeeRepository;
             _systemLogger = systemLogger;
             _userMessageService = userMessageService;
+            _configuration = configuration;
         }
         [HttpPost("addEmployee")]
         public async Task<IActionResult> AddEmployee([FromBody] EmployeeRequest request)
@@ -123,9 +121,6 @@ namespace RouteCardProcess.Controllers
                 });
             }
         }
-
-
-
         [HttpPost("deleteEmployee")]
         public async Task<IActionResult> SoftDelete([FromBody] DeleteEmployeeRequest request)
         {
