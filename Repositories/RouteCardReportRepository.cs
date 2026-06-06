@@ -189,6 +189,16 @@ namespace RouteCardProcess.Repositories
                     timingInfo.MachiningTotalOperatorTime = machiningResult.MachiningTotalOperatorTime;
 
                     timingInfo.MachiningOperatorTransactionId = request.MachiningOperatorTransactionId;
+
+                    timingInfo.MachiningPauseStartDate = machiningResult.MachiningPauseStartDate;
+                    timingInfo.MachiningPauseStartTime = machiningResult.MachiningPauseStartTime;
+
+                    timingInfo.MachiningPauseEndDate = machiningResult.MachiningPauseEndDate;
+                    timingInfo.MachiningPauseEndTime = machiningResult.MachiningPauseEndTime;
+
+                    timingInfo.MachiningTotalPauseTime = machiningResult.MachiningTotalPauseTime;
+
+                    timingInfo.MachiningTimeDiff = machiningResult.MachiningTimeDiff;
                 }
             }
 
@@ -222,6 +232,16 @@ namespace RouteCardProcess.Repositories
                     timingInfo.SetupOperatorEndDate = setupResult.SetupOperatorEndDate;
                     timingInfo.SetupOperatorEndTime = setupResult.SetupOperatorEndTime;
                     timingInfo.SetupTotalOperatorTime = setupResult.SetupTotalOperatorTime;
+
+                    timingInfo.SetupPauseStartDate = setupResult.SetupPauseStartDate;
+                    timingInfo.SetupPauseStartTime = setupResult.SetupPauseStartTime;
+
+                    timingInfo.SetupPauseEndDate = setupResult.SetupPauseEndDate;
+                    timingInfo.SetupPauseEndTime = setupResult.SetupPauseEndTime;
+
+                    timingInfo.SetupTotalPauseTime = setupResult.SetupTotalPauseTime;
+
+                    timingInfo.SetupTimeDiff = setupResult.SetupTimeDiff;
                 }
             }
 

@@ -291,7 +291,8 @@ namespace RouteCardProcess.Repositories
                                     {
                                         OperatorId = emp.Tktno,
                                         OperatorName = emp.Name,
-                                        OperatorRole = emp.Designation,
+                                        //OperatorRole = emp.Designation,
+                                        OperatorRole = employee.UserRole,
                                         DepartmentId = 3,
                                         DepartmentName = emp.Deptnm,
                                         Shift = shift.ShiftCode,

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using RouteCardProcess.Interfaces;
 
 namespace RouteCardProcess.Controllers
@@ -15,7 +16,7 @@ namespace RouteCardProcess.Controllers
             _moduleRepository = moduleRepository;
             _config = config;
         }
-
+        [AllowAnonymous]
         [HttpGet("GetAllModules")]
         public async Task<IActionResult> GetAllModules()
         {

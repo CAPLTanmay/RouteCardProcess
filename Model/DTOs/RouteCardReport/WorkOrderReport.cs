@@ -62,6 +62,8 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
         public TimeSpan? SetupEndTime { get; set; } // for the TIME part 
 
         public TimeSpan? StandardSetupTime { get; set; }
+        public int? StandardSetupTime_Minutes { get; set; }
+
         public int ActualSetupTime { get; set; }
         public string ActualSetupTime_HHMMSS { get; set; }
         public int TotalSetupIdleMinutes { get; set; }
@@ -81,6 +83,7 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
         public DateTime? MachiningEndDate { get; set; }
         public TimeSpan? MachiningEndTime { get; set; } // for the TIME part 
         public TimeSpan? StandardMachiningTime { get; set; }
+        public int? StandardMachiningTime_Minutes { get; set; }
         public int ActualMachiningTime { get; set; }
         public string ActualMachiningTime_HHMMSS { get; set; }
         public int TotalMachiningIdleMinutes { get; set; }
@@ -219,6 +222,16 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
         public TimeSpan? SetupOperatorEndTime { get; set; }
         public TimeSpan? SetupTotalOperatorTime { get; set; }
 
+        public DateTime? SetupPauseStartDate { get; set; }
+        public TimeSpan? SetupPauseStartTime { get; set; }
+
+        public DateTime? SetupPauseEndDate { get; set; }
+        public TimeSpan? SetupPauseEndTime { get; set; }
+
+        public TimeSpan? SetupTotalPauseTime { get; set; }
+
+        public string? SetupTimeDiff { get; set; }
+
         // Machining fields...
         [JsonConverter(typeof(DateOnlyConverter))]
         public DateTime? MachiningStartDate { get; set; }
@@ -245,6 +258,14 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
         // Newly added
         public Guid? OperatorTransactionId { get; set; }
         public Guid? MachiningOperatorTransactionId { get; set; }
+        public DateTime? MachiningPauseStartDate { get; set; }
+        public TimeSpan? MachiningPauseStartTime { get; set; }
 
+        public DateTime? MachiningPauseEndDate { get; set; }
+        public TimeSpan? MachiningPauseEndTime { get; set; }
+
+        public string? MachiningTotalPauseTime { get; set; }
+
+        public string? MachiningTimeDiff { get; set; }
     }
 }

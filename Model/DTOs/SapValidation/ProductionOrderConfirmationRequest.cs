@@ -40,6 +40,9 @@ namespace RouteCardProcess.Model.DTOs.SapValidation
         [JsonPropertyName("PERS_NO")]
         public string PERS_NO { get; set; }
 
+        [JsonPropertyName("PERS_DUMMY_NO")]
+        public string? PERS_DUMMY_NO { get; set; }
+
         [JsonPropertyName("SHIFT")]
         public string SHIFT { get; set; }
 

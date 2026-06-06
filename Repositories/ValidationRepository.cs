@@ -161,6 +161,7 @@ namespace RouteCardProcess.Repositories
             parameters.Add("@OperationNo", request.OPERATION);
             parameters.Add("@OldWorkCenter", request.OLD_WORKCENTER);
             parameters.Add("@NewWorkCenter", request.WORK_CENTER);
+            parameters.Add("@WorkCenterText", request.WORK_CENTER_TEXT);
 
             var result = await connection.ExecuteAsync(
                 "usp_UpdateWorkCenterSAP",
@@ -186,10 +187,12 @@ namespace RouteCardProcess.Repositories
                     {
                         // check employee
                         var employee = await GetEmployeeByContractEmpIdAsync(nav.PERS_NO);
+                        nav.PERS_DUMMY_NO = "";
 
                         if (employee != null && employee.IsContractEmployee)
                         {
                             // replace PERS_NO with EmployeeCode
+                            nav.PERS_DUMMY_NO = nav.PERS_NO;
                             nav.PERS_NO = employee.EmployeeCode;
                         }
                     }
