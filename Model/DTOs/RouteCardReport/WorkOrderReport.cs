@@ -102,9 +102,22 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
         public decimal ActualLaborTime_Hours { get; set; }
         public Guid? OperatorTransactionId { get; set; }
         public Guid? MachiningOperatorTransactionId { get; set; }
+
+        public DateTime? SetupPauseStartDate { get; set; }
+        public TimeSpan? SetupPauseStartTime { get; set; }
+        public DateTime? SetupPauseEndDate { get; set; }
+        public TimeSpan? SetupPauseEndTime { get; set; }
+        public TimeSpan? SetupTotalPauseTime { get; set; }
+        public string? SetupTimeDiff { get; set; }
+        public DateTime? MachiningPauseStartDate { get; set; }
+        public TimeSpan? MachiningPauseStartTime { get; set; }
+        public DateTime? MachiningPauseEndDate { get; set; }
+        public TimeSpan? MachiningPauseEndTime { get; set; }
+        public string? MachiningTotalPauseTime { get; set; }
+        public string? MachiningTimeDiff { get; set; }
     }
 
-        public class LossOrderResponseDto
+    public class LossOrderResponseDto
     {
         public string ORDER { get; set; }
         public List<SetupIdleDto> SetupIdleRecords { get; set; }

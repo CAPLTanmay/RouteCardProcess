@@ -461,8 +461,36 @@ namespace RouteCardProcess.Controllers
             {
                 var (productionResponse, lossResponse) = await _repo.ConfirmProdAndLossOrderAsync(request);
 
-                bool productionSuccess = productionResponse != null && !productionResponse.ToString().Contains("error", StringComparison.OrdinalIgnoreCase);
-                bool lossSuccess = lossResponse != null && !lossResponse.ToString().Contains("error", StringComparison.OrdinalIgnoreCase);
+                //bool productionSuccess = productionResponse != null && !productionResponse.ToString().Contains("error", StringComparison.OrdinalIgnoreCase);
+                //bool lossSuccess = lossResponse != null && !lossResponse.ToString().Contains("error", StringComparison.OrdinalIgnoreCase);
+
+                bool productionSuccess = true;
+
+                if (productionResponse != null)
+                {
+                    var json = JsonSerializer.Serialize(productionResponse);
+
+                    if (json.Contains("\"success\":false", StringComparison.OrdinalIgnoreCase))
+                    {
+                        productionSuccess = false;
+                    }
+                }
+                else
+                {
+                    productionSuccess = false;
+                }
+
+                bool lossSuccess = true;
+
+                if (lossResponse != null)
+                {
+                    var json = JsonSerializer.Serialize(lossResponse);
+
+                    if (json.Contains("\"success\":false", StringComparison.OrdinalIgnoreCase))
+                    {
+                        lossSuccess = false;
+                    }
+                }
 
                 string message;
 

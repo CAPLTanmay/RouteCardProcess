@@ -327,8 +327,17 @@ namespace RouteCardProcess.Repositories
 
                 if (!setupData.Any() && !machData.Any())
                 {
-                    lossResult = new { message = "No loss data found for provided SetupId and MachiningId." };
-                    transaction.Rollback();
+                    //lossResult = new { message = "No loss data found for provided SetupId and MachiningId." };
+                    ////transaction.Rollback();
+                    //return (productionResult, lossResult);
+
+                    transaction.Commit();
+
+                    lossResult = new
+                    {
+                        message = "No loss data found for provided SetupId and MachiningId."
+                    };
+
                     return (productionResult, lossResult);
                 }
 
@@ -392,13 +401,29 @@ namespace RouteCardProcess.Repositories
 
                 transaction.Commit();
             }
+            //catch (Exception ex)
+            //{
+
+            //    transaction.Rollback();
+            //    string sapMessage = ValidationRepository.ExtractSapErrorMessage(ex.Message);
+            //    //throw new Exception("Error in ConfirmProdAndLossOrderAsync", ex);
+            //    return (new { success = false, type = "System", message = sapMessage }, null);
+            //}
+
             catch (Exception ex)
             {
-
                 transaction.Rollback();
-                string sapMessage = ValidationRepository.ExtractSapErrorMessage(ex.Message);
-                //throw new Exception("Error in ConfirmProdAndLossOrderAsync", ex);
-                return (new { success = false, type = "System", message = sapMessage }, null);
+
+                return (
+                    new
+                    {
+                        success = false,
+                        type = "System",
+                        message = ex.Message,
+                        stackTrace = ex.StackTrace
+                    },
+                    null
+                );
             }
 
             return (productionResult, lossResult);
