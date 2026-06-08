@@ -115,6 +115,7 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
         public TimeSpan? MachiningPauseEndTime { get; set; }
         public string? MachiningTotalPauseTime { get; set; }
         public string? MachiningTimeDiff { get; set; }
+        public string? TotalMachiningTimeDiff { get; set; }
     }
 
     public class LossOrderResponseDto
