@@ -60,13 +60,12 @@ namespace RouteCardProcess.Services
                 // Convert expiry to IST (UTC +5:30)
                 //var expiryUtc = TimeZoneInfo.ConvertTimeFromUtc(
                 //    DateTime.UtcNow.AddMinutes(
-                //        double.TryParse(jwtSettings["DurationInMinutes"], out var mins) ? mins : 15),
+                //        double.TryParse(jwtSettings["DurationInMinutes"], out var mins) ? mins : 540),
                 //    TimeZoneInfo.FindSystemTimeZoneById("India Standard Time"));
 
                 //  keep expiry in UTC
                 var expiryUtc = DateTime.UtcNow.AddMinutes(
-                    double.TryParse(jwtSettings["DurationInMinutes"], out var mins) ? mins : 15);
-
+                    double.TryParse(jwtSettings["DurationInMinutes"], out var mins) ? mins : 540);
 
                 var token = new JwtSecurityToken(
                     issuer: jwtSettings["Issuer"],

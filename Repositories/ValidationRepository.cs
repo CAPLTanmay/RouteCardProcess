@@ -410,20 +410,10 @@ namespace RouteCardProcess.Repositories
             //    return (new { success = false, type = "System", message = sapMessage }, null);
             //}
 
-            catch (Exception ex)
+            catch (Exception)
             {
                 transaction.Rollback();
-
-                return (
-                    new
-                    {
-                        success = false,
-                        type = "System",
-                        message = ex.Message,
-                        stackTrace = ex.StackTrace
-                    },
-                    null
-                );
+                throw;
             }
 
             return (productionResult, lossResult);

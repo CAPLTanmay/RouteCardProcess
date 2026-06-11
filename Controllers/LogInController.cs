@@ -21,8 +21,9 @@ namespace RouteCardProcess.Controllers
         private readonly IUserMessageService _userMessageService;
         private readonly ITokenBlacklistService _tokenBlacklistService;
         private readonly LoginAttemptService _loginAttemptService;
+        private readonly IConfiguration _configuration;
 
-        public LogInController(ILogInRepository repo, IJwtTokenService jwtService, ISystemLoggerRepository systemLogger, IUserMessageService userMessageService, ITokenBlacklistService tokenBlacklistService, LoginAttemptService loginAttemptService)
+        public LogInController(ILogInRepository repo, IJwtTokenService jwtService, ISystemLoggerRepository systemLogger, IUserMessageService userMessageService, ITokenBlacklistService tokenBlacklistService, LoginAttemptService loginAttemptService, IConfiguration configuration)
         {
             _repo = repo;
             _jwtService = jwtService;
@@ -30,6 +31,7 @@ namespace RouteCardProcess.Controllers
             _userMessageService = userMessageService;
             _tokenBlacklistService = tokenBlacklistService;
             _loginAttemptService = loginAttemptService;
+            _configuration = configuration;
         }
 
         [HttpGet("GetAllUsers")]
@@ -156,13 +158,18 @@ namespace RouteCardProcess.Controllers
                 TimeZoneInfo indianZone = TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
                 DateTime indianTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, indianZone);
 
+                var jwtSettings = _configuration.GetSection("JwtSettings");
+                double.TryParse(jwtSettings["DurationInMinutes"], out var durationMins);
+                var expiryDuration = durationMins > 0 ? durationMins : 540;
+
+
                 // Cookie settings
                 var cookieOptions = new CookieOptions
                 {
                     HttpOnly = true,
                     Secure = true,
                     SameSite = SameSiteMode.None,
-                    Expires = DateTime.UtcNow.AddMinutes(30),
+                    Expires = DateTime.UtcNow.AddMinutes(expiryDuration),
                     Path = "/"
                 };
 
@@ -179,7 +186,7 @@ namespace RouteCardProcess.Controllers
                 {
                     message = _userMessageService.GetMessage(2001),
                     isTempPassword = loginResult.IsTempPassword,
-                    expires = DateTime.UtcNow.AddMinutes(30),
+                    expires = DateTime.UtcNow.AddMinutes(expiryDuration),
                     user = loginResult.User
                 });
             }

@@ -509,12 +509,43 @@ namespace RouteCardProcess.Controllers
                     loss = lossResponse
                 });
             }
+            catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.BadRequest)
+            {
+                await _systemLogger.LogAsync("ValidationController",
+                    "confirmProdAndLossOrder", ex.ToString());
+
+                string sapMessage = ValidationRepository.ExtractSapErrorMessage(ex.Message);
+
+                return BadRequest(new
+                {
+                    success = false,
+                    message = sapMessage
+                });
+            }
+            catch (HttpRequestException ex)
+            {
+                await _systemLogger.LogAsync("ValidationController",
+                    "confirmProdAndLossOrder", ex.ToString());
+
+                return StatusCode(502, new
+                {
+                    success = false,
+                    message = _userMessageService.GetMessage(5002),
+                    details = ex.Message
+                });
+            }
             catch (Exception ex)
             {
-                await _systemLogger.LogAsync("ValidationController", "confirmProdAndLossOrder", ex.ToString());
-                return StatusCode(500, new { success = false, message = "Internal server error", details = ex.Message });
+                await _systemLogger.LogAsync("ValidationController",
+                    "confirmProdAndLossOrder", ex.ToString());
+
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = _userMessageService.GetMessage(5001),
+                    details = ex.Message
+                });
             }
         }
-
     }
 }

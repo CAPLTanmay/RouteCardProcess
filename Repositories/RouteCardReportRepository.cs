@@ -44,15 +44,38 @@ namespace RouteCardProcess.Repositories
             return result;
         }
 
+        //public async Task<IEnumerable<RouteCardReportDto>> GetRouteCardReportFilteredAsync(RouteCardReportFilterRequest request)
+        //{
+        //    using var connection = _connectionFactory.CreateConnection();
+        //    await connection.OpenAsync();
+
+        //    //  Pad ProductionOrderNo before using it in the query
+        //    var paddedOrderNo = request.ProductionOrderNo?.PadLeft(12, '0');
+        //    var operatorId = request.ReqOperatorId;
+        //    var result = await connection.QueryAsync<RouteCardReportDto>(
+        //        "usp_GetRouteCardReportFiltered",
+        //        new
+        //        {
+        //            OperatorId = operatorId,
+        //            request.ConfirmationDate,
+        //            ProductionOrderNo = paddedOrderNo,
+        //            request.WorkCenterNo,
+        //            Dept = request.Department
+        //        },
+        //        commandType: CommandType.StoredProcedure);
+
+        //    return result;
+        //}
+
         public async Task<IEnumerable<RouteCardReportDto>> GetRouteCardReportFilteredAsync(RouteCardReportFilterRequest request)
         {
             using var connection = _connectionFactory.CreateConnection();
             await connection.OpenAsync();
 
-            //  Pad ProductionOrderNo before using it in the query
             var paddedOrderNo = request.ProductionOrderNo?.PadLeft(12, '0');
             var operatorId = request.ReqOperatorId;
-            var result = await connection.QueryAsync<RouteCardReportDto>(
+
+            var result = (await connection.QueryAsync<RouteCardReportDto>(
                 "usp_GetRouteCardReportFiltered",
                 new
                 {
@@ -62,7 +85,57 @@ namespace RouteCardProcess.Repositories
                     request.WorkCenterNo,
                     Dept = request.Department
                 },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure))
+                .ToList();
+
+            string? previousSetupId = null;
+            DateTime? previousSetupOperatorStartTime = null;
+            DateTime? previousSetupOperatorEndTime = null;
+
+            foreach (var item in result)
+            {
+                if (item.SetupId == previousSetupId
+                    && item.SetupOperatorStartTime == previousSetupOperatorStartTime
+                    && item.SetupOperatorEndTime == previousSetupOperatorEndTime)
+                {
+                    item.SetupId = null;
+
+                    item.SetupStartDate = null;
+                    item.SetupStartTime = null;
+                    item.SetupEndDate = null;
+                    item.SetupEndTime = null;
+
+                    item.StandardSetupTime = null;
+                    item.StandardSetupTime_Minutes = null;
+
+                    item.ActualSetupTime = 0;
+                    item.ActualSetupTime_HHMMSS = null;
+
+                    item.TotalSetupIdleMinutes = 0;
+                    item.TotalSetupIdle_HHMMSS = null;
+
+                    item.TotalSetupExceptionsMinutes = 0;
+                    item.TotalSetupExceptions_HHMMSS = null;
+
+                    item.SetupOperatorStartTime = null;
+                    item.SetupOperatorEndTime = null;
+
+                    item.OperatorTransactionId = null;
+
+                    item.SetupPauseStartDate = null;
+                    item.SetupPauseStartTime = null;
+                    item.SetupPauseEndDate = null;
+                    item.SetupPauseEndTime = null;
+                    item.SetupTotalPauseTime = null;
+                    item.SetupTimeDiff = null;
+                }
+                else
+                {
+                    previousSetupId = item.SetupId;
+                    previousSetupOperatorStartTime = item.SetupOperatorStartTime;
+                    previousSetupOperatorEndTime = item.SetupOperatorEndTime;
+                }
+            }
 
             return result;
         }

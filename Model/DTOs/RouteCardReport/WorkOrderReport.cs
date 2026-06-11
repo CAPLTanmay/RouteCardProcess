@@ -97,7 +97,7 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
         public int ActualOperationTime { get; set; }
         public int IdleOperationTime { get; set; }
         public int ExceptionOperationTime { get; set; }
-        public DateTime? FinishDate { get; set; }
+        public DateTime? FinishDate { get; set; }   
         public int ActualLaborTime { get; set; }
         public decimal ActualLaborTime_Hours { get; set; }
         public Guid? OperatorTransactionId { get; set; }
