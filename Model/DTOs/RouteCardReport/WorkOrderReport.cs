@@ -109,6 +109,8 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
         public TimeSpan? SetupPauseEndTime { get; set; }
         public TimeSpan? SetupTotalPauseTime { get; set; }
         public string? SetupTimeDiff { get; set; }
+        public int? ProductiveSetupTime_Minutes { get; set; }
+        public string? ProductiveSetupTime_HHMMSS { get; set; }
         public DateTime? MachiningPauseStartDate { get; set; }
         public TimeSpan? MachiningPauseStartTime { get; set; }
         public DateTime? MachiningPauseEndDate { get; set; }
@@ -116,6 +118,12 @@ namespace RouteCardProcess.Model.DTOs.RouteCardReport
         public string? MachiningTotalPauseTime { get; set; }
         public string? MachiningTimeDiff { get; set; }
         public string? TotalMachiningTimeDiff { get; set; }
+
+        public int? ProductiveMachiningTime_Minutes { get; set; }
+        public string? ProductiveMachiningTime_HHMMSS { get; set; }
+
+        public int? TotalProductiveTime_Minutes { get; set; }
+        public string? TotalProductiveTime_HHMMSS { get; set; }
     }
 
     public class LossOrderResponseDto
