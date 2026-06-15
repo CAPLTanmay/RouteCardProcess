@@ -128,6 +128,18 @@ namespace RouteCardProcess.Repositories
                     item.SetupPauseEndTime = null;
                     item.SetupTotalPauseTime = null;
                     item.SetupTimeDiff = null;
+
+                    item.ActualOperationTime = item.ActualMachiningTime;
+                    item.IdleOperationTime = item.TotalMachiningIdleMinutes;
+                    item.ExceptionOperationTime = item.TotalMachiningExceptionsMinutes;
+
+                    item.ActualOperationTime = item.ActualMachiningTime;
+                    item.ActualLaborTime = item.ActualMachiningTime;
+
+                    item.ActualLaborTime_Hours =Math.Round(item.ActualLaborTime / 60m, 2);
+
+                    item.TotalMachiningTimeDiff =
+                        item.MachiningTimeDiff;
                 }
                 else
                 {
@@ -140,26 +152,110 @@ namespace RouteCardProcess.Repositories
             return result;
         }
 
+        //public async Task<IEnumerable<RouteCardReportDto>> GetRouteCardReportAllAsync(RouteCardReportFilterRequest request)
+        //{
+        //    using var connection = _connectionFactory.CreateConnection();
+        //    await connection.OpenAsync();
+
+        //    //  Pad ProductionOrderNo before using it in the query
+        //    var paddedOrderNo = request.ProductionOrderNo?.PadLeft(12, '0');
+        //    var operatorId = request.ReqOperatorId;
+
+        //    var result = await connection.QueryAsync<RouteCardReportDto>(
+        //        "usp_GetRouteCardReportAll",
+        //        new
+        //        {
+        //            OperatorId= operatorId,
+        //            request.ConfirmationDate,
+        //            ProductionOrderNo = paddedOrderNo,
+        //            request.WorkCenterNo,
+        //            Dept = request.Department
+        //        },
+        //        commandType: CommandType.StoredProcedure);
+
+        //    return result;
+        //}
+
         public async Task<IEnumerable<RouteCardReportDto>> GetRouteCardReportAllAsync(RouteCardReportFilterRequest request)
         {
             using var connection = _connectionFactory.CreateConnection();
             await connection.OpenAsync();
 
-            //  Pad ProductionOrderNo before using it in the query
             var paddedOrderNo = request.ProductionOrderNo?.PadLeft(12, '0');
             var operatorId = request.ReqOperatorId;
 
-            var result = await connection.QueryAsync<RouteCardReportDto>(
-                "usp_GetRouteCardReportAll",
+            var result = (await connection.QueryAsync<RouteCardReportDto>(
+                "usp_GetRouteCardReportUploaded",
                 new
                 {
-                    OperatorId= operatorId,
+                    OperatorId = operatorId,
                     request.ConfirmationDate,
                     ProductionOrderNo = paddedOrderNo,
                     request.WorkCenterNo,
                     Dept = request.Department
                 },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure))
+                .ToList();
+
+            string? previousSetupId = null;
+            DateTime? previousSetupOperatorStartTime = null;
+            DateTime? previousSetupOperatorEndTime = null;
+
+            foreach (var item in result)
+            {
+                if (item.SetupId == previousSetupId
+                    && item.SetupOperatorStartTime == previousSetupOperatorStartTime
+                    && item.SetupOperatorEndTime == previousSetupOperatorEndTime)
+                {
+                    item.SetupId = null;
+
+                    item.SetupStartDate = null;
+                    item.SetupStartTime = null;
+                    item.SetupEndDate = null;
+                    item.SetupEndTime = null;
+
+                    item.StandardSetupTime = null;
+                    item.StandardSetupTime_Minutes = null;
+
+                    item.ActualSetupTime = 0;
+                    item.ActualSetupTime_HHMMSS = null;
+
+                    item.TotalSetupIdleMinutes = 0;
+                    item.TotalSetupIdle_HHMMSS = null;
+
+                    item.TotalSetupExceptionsMinutes = 0;
+                    item.TotalSetupExceptions_HHMMSS = null;
+
+                    item.SetupOperatorStartTime = null;
+                    item.SetupOperatorEndTime = null;
+
+                    item.OperatorTransactionId = null;
+
+                    item.SetupPauseStartDate = null;
+                    item.SetupPauseStartTime = null;
+                    item.SetupPauseEndDate = null;
+                    item.SetupPauseEndTime = null;
+                    item.SetupTotalPauseTime = null;
+                    item.SetupTimeDiff = null;
+
+                    item.ActualOperationTime = item.ActualMachiningTime;
+                    item.IdleOperationTime = item.TotalMachiningIdleMinutes;
+                    item.ExceptionOperationTime = item.TotalMachiningExceptionsMinutes;
+
+                    item.ActualLaborTime = item.ActualMachiningTime;
+
+                    item.ActualLaborTime_Hours =
+                        Math.Round(item.ActualLaborTime / 60m, 2);
+
+                    item.TotalMachiningTimeDiff = item.MachiningTimeDiff;
+                }
+                else
+                {
+                    previousSetupId = item.SetupId;
+                    previousSetupOperatorStartTime = item.SetupOperatorStartTime;
+                    previousSetupOperatorEndTime = item.SetupOperatorEndTime;
+                }
+            }
 
             return result;
         }

@@ -18,5 +18,9 @@
         public string? TotalSetupTime { get; set; }
         public string OrderTypeDesc { get; set; }
         public string? TimeDiff { get; set; }  // hh:mm:ss format
+
+        public int? DebugElapsedSeconds { get; set; }
+        public int? DebugPauseSeconds { get; set; }
+        public int? DebugFinalSeconds { get; set; }
     }
 }
