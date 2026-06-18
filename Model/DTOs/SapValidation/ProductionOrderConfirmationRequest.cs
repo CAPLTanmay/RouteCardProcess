@@ -156,6 +156,11 @@ namespace RouteCardProcess.Model.DTOs.SapValidation
 
         [JsonPropertyName("WORKCENTER")]
         public string WORKCENTER { get; set; }
+        [JsonPropertyName("PERS_NO")]
+        public string PERS_NO { get; set; }
+
+        [JsonPropertyName("PERS_DUMMY_NO")]
+        public string? PERS_DUMMY_NO { get; set; }
     }
 
     public class CombinedConfirmationRequest

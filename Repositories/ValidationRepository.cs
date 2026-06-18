@@ -299,6 +299,12 @@ namespace RouteCardProcess.Repositories
             {
                 // Step 1: SAP call for Production Order (NO DB update here)
                 var productionJson = await ConfirmProductionOrderAsync(request);
+
+                var navConf = request.ProductionOrder?.NAV_CONF?.FirstOrDefault();
+
+                string? persNo = navConf?.PERS_NO;
+                string? persDummyNo = navConf?.PERS_DUMMY_NO;
+
                 productionResult = JsonSerializer.Deserialize<object>(productionJson);
 
                 bool isProductionSuccess = productionResult != null &&
@@ -352,7 +358,9 @@ namespace RouteCardProcess.Repositories
                     OPR_NUM = s.MSTIdleCode,
                     SETUP_IDEAL_TIME = s.SetupIdleTime.ToString(@"hh\:mm\:ss"),
                     MACH_IDEAL_TIME = "00:00:00",
-                    WORKCENTER = s.WorkCenterNo
+                    WORKCENTER = s.WorkCenterNo,
+                    PERS_NO = persNo,
+                    PERS_DUMMY_NO = persDummyNo
                 }));
 
                 sapLossItems.AddRange(machData.Select(m => new LossOrderItem
@@ -361,7 +369,9 @@ namespace RouteCardProcess.Repositories
                     OPR_NUM = m.MSTIdleCode,
                     SETUP_IDEAL_TIME = "00:00:00",
                     MACH_IDEAL_TIME = m.MachiningIdleTime.ToString(@"hh\:mm\:ss"),
-                    WORKCENTER = m.WorkCenterNo
+                    WORKCENTER = m.WorkCenterNo,
+                    PERS_NO = persNo,
+                    PERS_DUMMY_NO = persDummyNo
                 }));
 
                 var lossSapRequest = new LossOrderSapRequest
